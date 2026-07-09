@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.subAgentAssociation.SubAgentAssociationRepository">
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into sub_agent_association(id, main_agent, sub_agent, create_time, update_time)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.id}, #{entity.mainAgent}, #{entity.subAgent}, #{entity.createTime}, #{entity.updateTime})
+        </foreach>
+    </insert>
+</mapper>
+

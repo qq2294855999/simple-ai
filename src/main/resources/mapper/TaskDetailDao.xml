@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.taskDetail.TaskDetailRepository">
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into task_detail(id, task_id, sequence, step_name, step_type, step_content, request_params, response_params, execution_status, create_time, update_time)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.id}, #{entity.taskId}, #{entity.sequence}, #{entity.stepName}, #{entity.stepType}, #{entity.stepContent}, #{entity.requestParams}, #{entity.responseParams},
+            #{entity.executionStatus}, #{entity.createTime}, #{entity.updateTime})
+        </foreach>
+    </insert>
+</mapper>
+
