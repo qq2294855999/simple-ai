@@ -254,25 +254,54 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      */
     private String executeMemorySteps(Task task, CommandDispatchRequest request, AgentContext context, List<AgentMemory> memories,
                                       Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
+
+        // 选取匹配优先级最高的记忆作为本次任务执行依据
         AgentMemory memory = memories.get(0);
+
+        // 将任务主记录绑定到命中的智能体记忆，便于后续追踪复用来源
         task.setAgentMemoryId(memory.getId());
+
+        // 从上下文中过滤当前记忆可执行的启用步骤详情
         List<AgentMemoryDetail> details = filterMemoryDetails(context, memory);
         AssertUtils.notEmpty(details, "命中记忆[{}]缺少步骤详情", memory.getId());
+
+        // 构建步骤主键索引，支持后续按 nextStepId 或 branchRoute 快速跳转
         Map<String, AgentMemoryDetail> detailMap = buildMemoryDetailMap(details);
+
+        // 查找步骤链入口，优先使用没有父步骤的记忆详情
         AgentMemoryDetail currentDetail = findStartDetail(details);
+
+        // 预加载启用状态的原子命令列表，避免步骤循环中重复访问数据库
+        List<AtomicCommand> atomicCommands = loadEnabledAtomicCommands();
+
+        // 记录循环步骤执行次数，防止循环配置错误导致重复回跳
         Map<String, Integer> loopExecuteCountMap = new HashMap<>();
+
+        // 计算步骤链最大执行次数，使用详情数量和循环上限组成整体安全边界
         int maxStepCount = details.size() * MAX_LOOP_COUNT;
         int executedStepCount = 0;
         String responseContent = "";
 
         // 按步骤游标推进执行，并用最大步数防止配置错误导致死循环
         while (currentDetail != null) {
+
+            // 校验整体步骤执行次数，避免非循环链路配置成环后无限执行
             AssertUtils.isTrue(executedStepCount < maxStepCount, "记忆步骤链执行超过安全上限");
+
+            // 校验循环开始步骤执行次数，避免循环体超过安全阈值
             assertLoopExecutionAllowed(currentDetail, loopExecuteCountMap);
             executedStepCount++;
+
+            // 发布步骤开始事件，通知调用方当前即将执行的记忆详情
             publishProgress(progressConsumer, request, task, "STEP_STARTED", currentDetail.getStepName(), currentDetail.getExecContent(), Boolean.FALSE, "");
-            responseContent = executeMemoryDetail(task, request, context, currentDetail, progressConsumer, recursionDepth);
+
+            // 执行当前记忆详情，并保存该步骤对应的任务详情记录
+            responseContent = executeMemoryDetail(task, request, context, currentDetail, progressConsumer, recursionDepth, atomicCommands);
+
+            // 发布步骤完成事件，携带当前步骤返回内容供前端或 WebSocket 消费
             publishProgress(progressConsumer, request, task, "STEP_COMPLETED", currentDetail.getStepName(), responseContent, Boolean.FALSE, "");
+
+            // 根据当前步骤类型、分支条件和返回内容计算下一执行步骤
             currentDetail = findNextDetail(detailMap, currentDetail, responseContent, loopExecuteCountMap);
         }
         return responseContent;
@@ -522,16 +551,17 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      * @return 步骤响应内容
      */
     private String executeMemoryDetail(Task task, CommandDispatchRequest request, AgentContext context, AgentMemoryDetail detail,
-                                       Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
+                                       Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth,
+                                       List<AtomicCommand> atomicCommands) {
 
         // 子智能体步骤转交给子智能体递归调度
         if (isSubAgentStep(context, detail)) {
             return executeSubAgentStep(task, request, context, detail, progressConsumer, recursionDepth);
         }
 
-        // 原子命令步骤执行命令处理器
+        // 原子命令步骤使用预加载的原子命令列表执行，避免循环内重复查询数据库
         if (AgentStepTypeProcess.ATOMIC_COMMAND.getCode().equals(detail.getStepType())) {
-            return executeAtomicCommand(task, request, detail);
+            return executeAtomicCommand(task, request, detail, atomicCommands);
         }
 
         // 判断和循环步骤先记录为成功详情，后续由专用执行器扩展
@@ -687,8 +717,9 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      * @param detail 记忆详情
      * @return 响应内容
      */
-    private String executeAtomicCommand(Task task, CommandDispatchRequest request, AgentMemoryDetail detail) {
-        AtomicCommandInvokeRequest invokeRequest = buildAtomicCommandRequest(task, request, detail.getExecContent());
+    private String executeAtomicCommand(Task task, CommandDispatchRequest request, AgentMemoryDetail detail,
+                                        List<AtomicCommand> atomicCommands) {
+        AtomicCommandInvokeRequest invokeRequest = buildAtomicCommandRequest(task, request, detail.getExecContent(), atomicCommands);
         AtomicCommandExecutor executor = atomicCommandExecutorRegistry.findExecutor(invokeRequest);
         AtomicCommandInvokeResponse invokeResponse = executor.execute(invokeRequest);
         saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(invokeRequest), invokeResponse);
@@ -739,10 +770,12 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      * @param task 任务主记录
      * @param request 命令调度请求
      * @param commandContent 命令内容
+     * @param atomicCommands 预加载的启用原子命令列表
      * @return 原子命令调用请求
      */
-    private AtomicCommandInvokeRequest buildAtomicCommandRequest(Task task, CommandDispatchRequest request, String commandContent) {
-        AtomicCommand atomicCommand = findMatchedAtomicCommand(commandContent);
+    private AtomicCommandInvokeRequest buildAtomicCommandRequest(Task task, CommandDispatchRequest request, String commandContent,
+                                                                  List<AtomicCommand> atomicCommands) {
+        AtomicCommand atomicCommand = findMatchedAtomicCommand(commandContent, atomicCommands);
         AtomicCommandInvokeRequest invokeRequest = new AtomicCommandInvokeRequest();
         invokeRequest.setTaskId(task.getId());
         invokeRequest.setTaskDetailId("");
@@ -771,6 +804,38 @@ class DefaultCommandDispatchService implements CommandDispatchService {
             }
         }
         return null;
+    }
+
+    /**
+     * 从预加载列表中匹配原子命令定义。
+     *
+     * @param commandContent 命令内容
+     * @param preloadedCommands 预加载的启用原子命令列表
+     * @return 原子命令定义
+     */
+    private AtomicCommand findMatchedAtomicCommand(String commandContent, List<AtomicCommand> preloadedCommands) {
+
+        // 遍历预加载的启用原子命令，查找名称或命令内容命中的定义
+        for (AtomicCommand atomicCommand : preloadedCommands) {
+            if (isAtomicCommandMatched(commandContent, atomicCommand)) {
+                return atomicCommand;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 加载所有启用状态的原子命令列表。
+     *
+     * <p>在记忆步骤链执行前调用一次，后续所有步骤复用此列表，
+     * 避免每个步骤都重复查询数据库。</p>
+     *
+     * @return 启用状态的原子命令列表
+     */
+    private List<AtomicCommand> loadEnabledAtomicCommands() {
+        FindAllAtomicCommandRequest request = new FindAllAtomicCommandRequest();
+        request.setStatus(Status.ON);
+        return atomicCommandView.findAll(request);
     }
 
     /**
