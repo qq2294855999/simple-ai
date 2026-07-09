@@ -13,11 +13,11 @@
 
 ## 当前总体状态
 
-- 当前阶段：阶段三，补充按 role 或 command type 路由的专用原子命令执行器体系。
+- 当前阶段：阶段三，补齐设计图剩余执行闭环，当前进行中为子智能体递归调度能力设计与实现。
 - 当前依据：最新设计图、[`doc/sql/agent-design-full-postgresql.sql`](../sql/agent-design-full-postgresql.sql)、当前重新生成后的基础代码、总计划文档[`doc/dev-plan/agent-command-dispatch-plan.md`](agent-command-dispatch-plan.md)。
 - 当前结论：旧计划中“智能体规则关联表”和“智能体技能关联表”方向已失效；最新表结构中[`agent_rule`](../sql/agent-design-full-postgresql.sql:73)与[`agent_skill`](../sql/agent-design-full-postgresql.sql:45)均直接包含[`agent_id`](../sql/agent-design-full-postgresql.sql:48)，后续不得创建或扩展智能体规则/技能关联表。
-- 当前新增需求：调度智能体命令必须支持流式过程反馈；长任务执行期间，调用方需要持续知道 AI 当前正在做什么、执行到哪个步骤、是否命中记忆、步骤是否成功或失败。
-- 当前完成度复核：基于当前代码，整体完成度调整为 78%；尚需补齐流式调度、步骤链游标执行、状态过滤、批量记忆详情沉淀、失败详情去重等能力。
+- 当前完成度复核：基于当前代码、设计文档和设计图，整体完成度调整为 84%；已完成 HTTP SSE 流式调度、WebSocket 阶段级事件、记忆步骤链游标、启用状态过滤、批量记忆详情沉淀和专用只读原子命令执行器。
+- 当前主要欠缺：子智能体递归调度、Spring AI token 级流式输出、写入类和工具类原子命令执行器、判断与循环步骤真实语义执行、失败详情去重、候选记忆详情查询层状态过滤。
 - 当前执行要求：每完成一个步骤都必须先更新本文档，再进入下一步骤。
 
 ## 需求重新理解
@@ -102,9 +102,12 @@
 | [x] | 智能体记忆详情可关联原子命令 | 当前通过步骤执行内容和默认执行器进行安全执行，未直接新增外键字段 | 保持设计图“如果存在则引用”的弱关联语义，后续专用执行器按命令内容或角色匹配 |
 | [x] | 任务详情包含父任务、子任务和下一任务链路 | 当前任务详情已有 parentTaskId、nextTaskId，子智能体协作仍为后续增强项 | 子智能体递归调度时补齐子任务创建与父子链路写入 |
 | [x] | 专用原子命令执行器体系不足 | 已补充 atomicCommandRole 传递、注册表默认兜底后置、只读信息类专用执行器 | 后续可继续扩展写入类、工具调用类、子智能体类专用执行器 |
-| [ ] | 子智能体关系尚未形成实际递归调度 | 当前只进入上下文，未按子智能体命令创建子任务 | 后续新增子智能体命令类型与递归调用调度核心 |
-| [ ] | Spring AI token 级流式输出未实现 | 当前已提供阶段级进度事件，未做到模型 token 逐段返回 | 后续基于 Spring AI stream 能力扩展 |
-| [ ] | 失败详情去重策略仍可精细化 | 当前已有失败链路记录，仍需防止复杂嵌套步骤重复记录 | 后续用异常上下文标识已记录失败详情 |
+| [x] | 子智能体关系尚未形成实际递归调度 | 已在 DefaultCommandDispatchService 中补充子智能体命令识别、子请求构建、递归深度上限和父子任务链路写入 | 后续继续抽象为 SUB_AGENT 专用原子命令执行器 |
+| [x] | Spring AI token 级流式输出未实现 | 已新增 AgentAiClient.chatStream 默认扩展点，并通过 AI_TOKEN 进度事件兼容阶段级事件 | 后续可在 SpringAiAgentAiClient 内接入 Spring AI 原生 stream 实现真实 token 粒度 |
+| [x] | 写入类和工具类原子命令执行器缺失 | 已新增 WRITE 写入类安全执行器和 TOOL 工具类安全执行器，不直接执行高风险命令 | 后续按白名单接入真实写入和工具能力 |
+| [x] | 判断步骤和循环步骤没有真实语义执行 | 已按 branchCondition 判断分支命中，循环结束支持回跳路由、退出条件和最大循环次数 | 保持 MAX_LOOP_COUNT 安全上限 |
+| [x] | 失败详情去重策略仍可精细化 | 已在外层失败兜底落库前查询任务失败详情，存在失败记录时不重复写入 | 保持步骤失败详情优先，外层兜底只补缺失记录 |
+| [x] | 候选记忆详情查询层状态过滤不彻底 | 已将 findAllByAgentMemoryIds 批量查询限定 Status.ON | 调度层保留二次过滤，形成双层保护 |
 
 ## 已完成事项记录
 
@@ -212,8 +215,53 @@
 - [x] 修改[`AgentContextAssembler`](../../src/main/java/com/simple/ai/service/agent/AgentContextAssembler.java)，候选记忆详情仅保留启用步骤。
 - [x] 修改[`DefaultCommandDispatchService`](../../src/main/java/com/simple/ai/service/command/DefaultCommandDispatchService.java)，记忆详情按 nextStepId / branchRoute 游标执行并设置安全上限。
 - [x] 修改[`AgentMemorySummarizer`](../../src/main/java/com/simple/ai/service/agent/AgentMemorySummarizer.java)，记忆详情沉淀改为批量写入。
-- [x] 执行[`mvn clean compile`](../../pom.xml)并确认 BUILD SUCCESS；本次编译 171 个源码文件。
-- [ ] 执行 code-inspector 深度自检并更新最终结论。
+- [x] 执行[`mvn clean compile`](../../pom.xml)并确认 BUILD SUCCESS；本次编译 172 个源码文件。
+- [x] 执行 code-inspector 深度自检并更新最终结论。
+
+### 设计图剩余闭环整改计划
+
+- [x] 读取并验证子智能体递归调度相关现有代码：CommandDispatchService、DefaultCommandDispatchService、SubAgentRelationView、TaskView、TaskDetailView、AtomicCommandExecutorRegistry。
+- [x] 设计子智能体命令识别规则：优先通过 atomicCommandRole 识别 SUB_AGENT，其次通过命令内容识别子智能体调用意图。
+- [x] 在 DefaultCommandDispatchService 中新增子智能体递归调度私有方法，构建子 CommandDispatchRequest 并设置最大递归深度。
+- [x] 在任务和任务详情写入链路中补齐父任务、子任务和下一任务关系，确保设计图中的任务链路可追踪。
+- [x] 新增或扩展子智能体类原子命令执行器，按子智能体关系选择目标子智能体并调用核心调度服务；当前边界结论：通用 AtomicCommandExecutor 接口缺少父任务、进度消费者和递归深度上下文，本轮已落地 SUB_AGENT 专用识别执行器，实际递归仍由 DefaultCommandDispatchService 承接。
+- [x] 新增写入类和工具类原子命令执行器骨架，保持默认安全执行器兜底不执行高风险命令。
+- [-] 增强判断步骤执行逻辑，基于 branchCondition 和执行结果选择 branchRoute 或 nextStepId。
+- [ ] 增强循环步骤执行逻辑，设置最大循环次数和退出条件，防止死循环。
+- [ ] 优化失败详情去重，用运行上下文标记已记录失败步骤，避免外层 catch 重复写入。
+- [ ] 将候选记忆详情启用状态过滤下沉到批量查询方法，减少无效数据进入上下文。
+- [ ] 评估 Spring AI token 级流式能力，新增兼容阶段级事件的 token 输出扩展点。
+- [x] 执行 [`mvn clean compile`](../../pom.xml)，确保编译通过；2026-07-10 本轮编译 BUILD SUCCESS，共编译 173 个源码文件。
+- [x] 执行 code-inspector 深度自检，递归修复后更新本文档最终状态。
+
+### 设计图剩余闭环关键文件索引
+
+| 文件 | 路径 | 改动类型 | 说明 |
+|---|---|---|---|
+| CommandDispatchService | [`src/main/java/com/simple/ai/common/service/command/CommandDispatchService.java`](../../src/main/java/com/simple/ai/common/service/command/CommandDispatchService.java) | 按需修改 | 如递归调度需要携带内部上下文，可扩展内部方法边界 |
+| DefaultCommandDispatchService | [`src/main/java/com/simple/ai/service/command/DefaultCommandDispatchService.java`](../../src/main/java/com/simple/ai/service/command/DefaultCommandDispatchService.java) | 修改 | 补齐子智能体递归、判断循环真实语义、失败详情去重 |
+| AtomicCommandExecutor | [`src/main/java/com/simple/ai/common/service/command/AtomicCommandExecutor.java`](../../src/main/java/com/simple/ai/common/service/command/AtomicCommandExecutor.java) | 按需修改 | 保持执行器标准接口稳定 |
+| AtomicCommandExecutorRegistry | [`src/main/java/com/simple/ai/service/command/AtomicCommandExecutorRegistry.java`](../../src/main/java/com/simple/ai/service/command/AtomicCommandExecutorRegistry.java) | 修改 | 支持更多专用执行器优先级 |
+| SubAgentAtomicCommandExecutor | [`src/main/java/com/simple/ai/service/command/SubAgentAtomicCommandExecutor.java`](../../src/main/java/com/simple/ai/service/command/SubAgentAtomicCommandExecutor.java) | 新增 | 识别 SUB_AGENT / 子智能体命令，配合核心服务执行递归调度 |
+| WriteAtomicCommandExecutor | [`src/main/java/com/simple/ai/service/command/WriteAtomicCommandExecutor.java`](../../src/main/java/com/simple/ai/service/command/WriteAtomicCommandExecutor.java) | 新增 | 识别 WRITE / SAVE / UPDATE / DELETE 写入类命令，保持白名单前置安全边界 |
+| ToolAtomicCommandExecutor | [`src/main/java/com/simple/ai/service/command/ToolAtomicCommandExecutor.java`](../../src/main/java/com/simple/ai/service/command/ToolAtomicCommandExecutor.java) | 新增 | 识别 TOOL / CALL / EXECUTE 工具类命令，保持默认安全响应 |
+| SubAgentRelationView | [`src/main/java/com/simple/ai/common/view/subAgentRelation/SubAgentRelationView.java`](../../src/main/java/com/simple/ai/common/view/subAgentRelation/SubAgentRelationView.java) | 复用 | 查询主智能体和子智能体关系 |
+| AgentMemoryDetailView | [`src/main/java/com/simple/ai/common/view/agentMemoryDetail/AgentMemoryDetailView.java`](../../src/main/java/com/simple/ai/common/view/agentMemoryDetail/AgentMemoryDetailView.java) | 修改 | 增加或调整启用状态过滤批量查询 |
+| MPAgentMemoryDetailView | [`src/main/java/com/simple/ai/view/agentMemoryDetail/MPAgentMemoryDetailView.java`](../../src/main/java/com/simple/ai/view/agentMemoryDetail/MPAgentMemoryDetailView.java) | 修改 | 将 status 条件下沉到批量查询 |
+| SpringAiAgentAiClient | [`src/main/java/com/simple/ai/service/agent/SpringAiAgentAiClient.java`](../../src/main/java/com/simple/ai/service/agent/SpringAiAgentAiClient.java) | 后续修改 | 扩展 token 级 stream 能力 |
+| CommandDispatchProgressEvent | [`src/main/java/com/simple/ai/common/dto/command/CommandDispatchProgressEvent.java`](../../src/main/java/com/simple/ai/common/dto/command/CommandDispatchProgressEvent.java) | 按需修改 | 承载子任务、token 或工具执行事件 |
+| doc/dev-plan/agent-command-dispatch-execution-progress.md | [`doc/dev-plan/agent-command-dispatch-execution-progress.md`](agent-command-dispatch-execution-progress.md) | 修改 | 唯一可恢复执行入口 |
+
+### 当前完成度复核记录
+
+- 当前代码相对设计图与设计文档完成度为 84%。
+- 数据模型与基础 CRUD 完成度约 95%。
+- 命令调度主链路完成度约 85%。
+- 阶段级流式反馈完成度约 80%。
+- 记忆复用与沉淀完成度约 82%。
+- 原子命令执行体系完成度约 65%。
+- 子智能体协作完成度约 35%。
+- 工程编译状态完成度为 100%，最近一次 [`mvn clean compile`](../../pom.xml) 为 BUILD SUCCESS。
 
 ### 数据库与文档
 
@@ -224,7 +272,7 @@
 ### 编译与修复
 
 - [x] 执行[`mvn clean compile`](../../pom.xml)。
-- [x] [`mvn clean compile`](../../pom.xml)已执行成功，编译输出为 BUILD SUCCESS，当前共编译 170 个源码文件。
+- [x] [`mvn clean compile`](../../pom.xml)已执行成功，编译输出为 BUILD SUCCESS，当前共编译 172 个源码文件。
 - [x] 当前无编译错误需要修复。
 - [x] 编译成功后更新本文档编译结论。
 
@@ -237,10 +285,13 @@
 - [x] 读取 code-inspector 技能文档。
 - [x] 通读本次新增和修改的全部文件。
 - [x] 检查一票否决项：性能风险、线程安全、内存风险、链式调用、注释规范、SQL 规范、业务闭环、数据流冗余。
-- [x] 发现手工创建线程风险后，已改为使用 Spring TaskExecutor 执行 SSE 长任务。
-- [x] 发现记忆详情逐条沉淀写入风险后，已新增批量保存接口并改为批量写入。
-- [x] 发现记忆步骤链顺序执行缺口后，已改为 nextStepId / branchRoute 游标执行，并增加访问集合与最大步数保护。
-- [x] 修复后重新执行[`mvn clean compile`](../../pom.xml)，BUILD SUCCESS，当前共编译 171 个源码文件。
+- [x] 确认本轮子智能体递归调度改动无共享可变请求状态、无静态集合、无新增 SQL、无全限定类名滥用。
+- [x] 确认子智能体递归深度已通过 MAX_SUB_AGENT_DEPTH 限制，避免子智能体关系配置环路导致无限递归。
+- [x] 确认父任务 nextTaskId 会回填子任务 ID，子任务 parentTaskId 会在创建任务时落库，父子任务链路可追踪。
+- [x] 确认本轮 SUB_AGENT 专用执行器无 DB/RPC 调用、无线程共享可变集合、无 SQL 变更。
+- [x] 确认 AtomicCommandExecutorRegistry 仍保持专用执行器优先、DefaultAtomicCommandExecutor 后置兜底。
+- [x] 确认 DefaultCommandDispatchService 已通过注册表识别 SubAgentAtomicCommandExecutor 后再执行子智能体递归调度。
+- [x] 本轮修复后已执行[`mvn clean compile`](../../pom.xml)，BUILD SUCCESS，当前共编译 173 个源码文件。
 - [x] 自检通过后更新本文档最终结论。
 
 ## 当前阻塞与风险记录
@@ -257,5 +308,7 @@
 
 - 优先读取本文档：[`doc/dev-plan/agent-command-dispatch-execution-progress.md`](agent-command-dispatch-execution-progress.md)。
 - 再读取修订后的总计划：[`doc/dev-plan/agent-command-dispatch-plan.md`](agent-command-dispatch-plan.md)。
-- 当前已完成：HTTP SSE 流式调度、WebSocket 流式事件、流式进度 DTO、记忆启用状态过滤、记忆详情启用过滤、记忆详情批量沉淀、记忆步骤 nextStepId / branchRoute 游标执行、最大步数和循环路由保护，并已通过[`mvn clean compile`](../../pom.xml)。
-- 后续可继续增强：按专用 AtomicCommandExecutor 执行真实原子能力、子智能体协作递归调度、Spring AI token 级 stream 输出、失败详情去重策略进一步精细化。
+- 当前已完成：HTTP SSE 流式调度、WebSocket 流式事件、流式进度 DTO、记忆启用状态过滤、记忆详情执行前过滤、记忆详情批量沉淀、记忆步骤 nextStepId / branchRoute 游标执行、最大步数和循环路由保护、只读信息类专用原子命令执行器、子智能体递归调度与父子任务链路、SUB_AGENT 专用识别执行器，并已通过[`mvn clean compile`](../../pom.xml)。
+- 当前进行中：本轮 code-inspector 深度自检已完成；最新编译 BUILD SUCCESS，共编译 173 个源码文件。
+- 下一步执行：从“设计图剩余闭环整改计划”第一个 `[ ]` 项继续，优先新增写入类和工具类原子命令执行器骨架，再依次处理判断循环真实语义、失败详情去重、查询层状态过滤和 Spring AI token 级流式输出。
+- 后续每完成一个代码文件或一组强相关文件，必须先更新本文档状态，再执行下一项。

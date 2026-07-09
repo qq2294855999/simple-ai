@@ -18,6 +18,7 @@ import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.FindOneAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.FindAllAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.DeleteAgentMemoryDetailRequest;
+import com.simple.common.mp.common.enums.Status;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,7 +94,8 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
     @Override
     public List<AgentMemoryDetail> findAllByAgentMemoryIds(List<String> agentMemoryIds) {
         LambdaQueryWrapper<AgentMemoryDetail> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.in(CollectionUtil.isNotEmpty(agentMemoryIds), AgentMemoryDetail::getAgentMemoryId, agentMemoryIds);
+        queryWrapper.in(CollectionUtil.isNotEmpty(agentMemoryIds), AgentMemoryDetail::getAgentMemoryId, agentMemoryIds)
+                    .eq(AgentMemoryDetail::getStatus, Status.ON);
         return repository.selectList(queryWrapper);
     }
 
