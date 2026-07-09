@@ -42,6 +42,13 @@ public interface AgentMemoryDetailService {
     String save(CreateAgentMemoryDetailRequest createRequest);
 
     /**
+     * 批量新增。
+     *
+     * @param createRequests 智能体记忆详情请求列表
+     */
+    void saves(List<CreateAgentMemoryDetailRequest> createRequests);
+
+    /**
      * 根据主键修改
      *
      * @param updateRequest 智能体记忆详情 请求对象

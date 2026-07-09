@@ -35,6 +35,12 @@ public class AtomicCommandInvokeRequest {
     private String atomicCommandId;
 
     /**
+     * 原子命令作用
+     */
+    @Schema(description = "原子命令作用")
+    private String atomicCommandRole;
+
+    /**
      * 命令内容
      */
     @Schema(description = "命令内容")

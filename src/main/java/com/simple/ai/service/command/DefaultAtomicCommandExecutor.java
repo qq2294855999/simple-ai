@@ -42,6 +42,7 @@ public class DefaultAtomicCommandExecutor implements AtomicCommandExecutor {
         AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
         response.setSuccess(Boolean.TRUE);
         response.setResponseContent("默认安全执行器已接收命令，命令内容需由人工或专用执行器处理：" + request.getCommandContent());
+        response.setFailureReason("");
         return response;
     }
 

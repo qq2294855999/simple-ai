@@ -13,7 +13,7 @@
 
 ## 当前总体状态
 
-- 当前阶段：阶段三，补充流式调度能力并修复完成度复核发现的欠缺项。
+- 当前阶段：阶段三，补充按 role 或 command type 路由的专用原子命令执行器体系。
 - 当前依据：最新设计图、[`doc/sql/agent-design-full-postgresql.sql`](../sql/agent-design-full-postgresql.sql)、当前重新生成后的基础代码、总计划文档[`doc/dev-plan/agent-command-dispatch-plan.md`](agent-command-dispatch-plan.md)。
 - 当前结论：旧计划中“智能体规则关联表”和“智能体技能关联表”方向已失效；最新表结构中[`agent_rule`](../sql/agent-design-full-postgresql.sql:73)与[`agent_skill`](../sql/agent-design-full-postgresql.sql:45)均直接包含[`agent_id`](../sql/agent-design-full-postgresql.sql:48)，后续不得创建或扩展智能体规则/技能关联表。
 - 当前新增需求：调度智能体命令必须支持流式过程反馈；长任务执行期间，调用方需要持续知道 AI 当前正在做什么、执行到哪个步骤、是否命中记忆、步骤是否成功或失败。
@@ -91,6 +91,21 @@
 | 任务 | [`task`](../sql/agent-design-full-postgresql.sql:221) | [`Task`](../../src/main/java/com/simple/ai/common/entity/task/Task.java:36) | 已包含执行状态和失败原因，作为一次命令调度主记录。 |
 | 任务详情 | [`task_detail`](../sql/agent-design-full-postgresql.sql:263) | [`TaskDetail`](../../src/main/java/com/simple/ai/common/entity/taskDetail/TaskDetail.java:36) | 记录每个执行步骤和请求响应内容。 |
 
+## 设计图缺口复核清单
+
+本节用于持续对比设计文档与[`设计图/类图1.jpg`](../../设计图/类图1.jpg)，所有缺口必须独立标记状态。新对话恢复时，优先从本节第一个未完成项继续，避免只看总计划而遗漏设计图差异。
+
+| 状态 | 设计图要点 | 当前文档或代码表现 | 后续处理 |
+|---|---|---|---|
+| [x] | 智能体定义直接聚合规则、技能、子智能体关系、记忆 | 总计划和执行进度已明确规则、技能通过 agentId 直属智能体，子智能体关系进入上下文 | 保持当前方向，不恢复旧关联表 |
+| [x] | 智能体记忆与任务存在同步关系 | 当前实现已支持探索成功后沉淀记忆，并可由任务详情反向生成记忆详情 | 后续增强时继续保证任务详情到记忆详情字段映射一致 |
+| [x] | 智能体记忆详情可关联原子命令 | 当前通过步骤执行内容和默认执行器进行安全执行，未直接新增外键字段 | 保持设计图“如果存在则引用”的弱关联语义，后续专用执行器按命令内容或角色匹配 |
+| [x] | 任务详情包含父任务、子任务和下一任务链路 | 当前任务详情已有 parentTaskId、nextTaskId，子智能体协作仍为后续增强项 | 子智能体递归调度时补齐子任务创建与父子链路写入 |
+| [x] | 专用原子命令执行器体系不足 | 已补充 atomicCommandRole 传递、注册表默认兜底后置、只读信息类专用执行器 | 后续可继续扩展写入类、工具调用类、子智能体类专用执行器 |
+| [ ] | 子智能体关系尚未形成实际递归调度 | 当前只进入上下文，未按子智能体命令创建子任务 | 后续新增子智能体命令类型与递归调用调度核心 |
+| [ ] | Spring AI token 级流式输出未实现 | 当前已提供阶段级进度事件，未做到模型 token 逐段返回 | 后续基于 Spring AI stream 能力扩展 |
+| [ ] | 失败详情去重策略仍可精细化 | 当前已有失败链路记录，仍需防止复杂嵌套步骤重复记录 | 后续用异常上下文标识已记录失败详情 |
+
 ## 已完成事项记录
 
 | 状态 | 事项 | 产物 | 备注 |
@@ -143,7 +158,7 @@
 
 - [x] 新增[`CommandDispatchRequest`](../../src/main/java/com/simple/ai/common/dto/command/CommandDispatchRequest.java)，字段包含 agentId、commandName、commandContent、sessionId、requestParams。
 - [x] 新增[`CommandDispatchResponse`](../../src/main/java/com/simple/ai/common/dto/command/CommandDispatchResponse.java)，字段包含 taskId、execStatus、responseContent、failureReason。
-- [x] 新增[`AtomicCommandInvokeRequest`](../../src/main/java/com/simple/ai/common/dto/command/AtomicCommandInvokeRequest.java)，字段包含 taskId、taskDetailId、atomicCommandId、commandContent、requestParams。
+- [x] 新增[`AtomicCommandInvokeRequest`](../../src/main/java/com/simple/ai/common/dto/command/AtomicCommandInvokeRequest.java)，字段包含 taskId、taskDetailId、atomicCommandId、atomicCommandRole、commandContent、requestParams。
 - [x] 新增[`AtomicCommandInvokeResponse`](../../src/main/java/com/simple/ai/common/dto/command/AtomicCommandInvokeResponse.java)，字段包含 success、responseContent、failureReason。
 - [x] 新增[`CommandDispatchEvent`](../../src/main/java/com/simple/ai/common/dto/command/CommandDispatchEvent.java)，用于 WebSocket 或后续事件推送。
 - [x] 新增[`AgentContext`](../../src/main/java/com/simple/ai/common/dto/agent/AgentContext.java)，封装智能体定义、规则正文、技能正文、记忆摘要和会话摘要。
@@ -171,6 +186,11 @@
 - [x] 新增[`AtomicCommandExecutorRegistry`](../../src/main/java/com/simple/ai/service/command/AtomicCommandExecutorRegistry.java)。
 - [x] 新增[`DefaultAtomicCommandExecutor`](../../src/main/java/com/simple/ai/service/command/DefaultAtomicCommandExecutor.java)。
 - [x] 确认默认执行器不执行高风险系统命令，仅返回标准执行结果或记录待人工处理。
+- [x] 修改[`AtomicCommandInvokeRequest`](../../src/main/java/com/simple/ai/common/dto/command/AtomicCommandInvokeRequest.java)，新增 atomicCommandRole 字段承接 atomic_command.role。
+- [x] 修改[`DefaultCommandDispatchService`](../../src/main/java/com/simple/ai/service/command/DefaultCommandDispatchService.java)，匹配原子命令后传递 atomicCommandRole。
+- [x] 修改[`AtomicCommandExecutorRegistry`](../../src/main/java/com/simple/ai/service/command/AtomicCommandExecutorRegistry.java)，专用执行器优先，默认执行器后置兜底。
+- [x] 修改[`DefaultAtomicCommandExecutor`](../../src/main/java/com/simple/ai/service/command/DefaultAtomicCommandExecutor.java)，默认成功响应显式写入空 failureReason。
+- [x] 新增[`ReadOnlyInfoAtomicCommandExecutor`](../../src/main/java/com/simple/ai/service/command/ReadOnlyInfoAtomicCommandExecutor.java)，支持 READ / QUERY / INFO 只读信息类命令。
 
 ### 统一入口与核心编排
 

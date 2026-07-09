@@ -411,6 +411,7 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         invokeRequest.setTaskId(task.getId());
         invokeRequest.setTaskDetailId("");
         invokeRequest.setAtomicCommandId(resolveAtomicCommandId(atomicCommand));
+        invokeRequest.setAtomicCommandRole(resolveAtomicCommandRole(atomicCommand));
         invokeRequest.setCommandContent(resolveCommandContent(request, commandContent, atomicCommand));
         invokeRequest.setRequestParams(request.getRequestParams());
         return invokeRequest;
@@ -470,6 +471,21 @@ class DefaultCommandDispatchService implements CommandDispatchService {
             return "";
         }
         return atomicCommand.getId();
+    }
+
+    /**
+     * 解析原子命令作用。
+     *
+     * @param atomicCommand 原子命令定义
+     * @return 原子命令作用
+     */
+    private String resolveAtomicCommandRole(AtomicCommand atomicCommand) {
+
+        // 未匹配到原子命令时不指定作用，由默认安全执行器兜底
+        if (atomicCommand == null) {
+            return "";
+        }
+        return atomicCommand.getRole();
     }
 
     /**

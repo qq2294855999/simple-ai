@@ -61,6 +61,18 @@ class DefaultAgentMemoryDetailService implements AgentMemoryDetailService {
     }
 
     @Override
+    public void saves(List<CreateAgentMemoryDetailRequest> createRequests) {
+        List<AgentMemoryDetail> entities = new ArrayList<>();
+
+        // 遍历创建请求列表，转换为批量写入实体
+        for (CreateAgentMemoryDetailRequest createRequest : createRequests) {
+            AgentMemoryDetail entity = copy.toEntity(createRequest);
+            entities.add(entity);
+        }
+        agentMemoryDetailView.saves(entities);
+    }
+
+    @Override
     public String updateById(UpdateAgentMemoryDetailRequest updateRequest) {
         var agentMemoryDetail = agentMemoryDetailView.findById(updateRequest.getId());
         AssertUtils.notEmpty(agentMemoryDetail, "主键[{}]的数据不存在", updateRequest.getId());
