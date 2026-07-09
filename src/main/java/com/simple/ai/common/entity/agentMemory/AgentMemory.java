@@ -54,16 +54,22 @@ public class AgentMemory {
     private String memoryName;
 
     /**
+     * 步骤名称
+     */
+    @TableField(value = "step_name")
+    private String stepName;
+
+    /**
      * 触发条件
      */
     @TableField(value = "trigger_condition")
     private String triggerCondition;
 
     /**
-     * 状态
+     * 触发动作
      */
-    @TableField(value = "status")
-    private Status status;
+    @TableField(value = "trigger_action")
+    private String triggerAction;
 
     /**
      * 创建时间
@@ -76,6 +82,24 @@ public class AgentMemory {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

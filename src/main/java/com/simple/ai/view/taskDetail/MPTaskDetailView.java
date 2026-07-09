@@ -40,13 +40,18 @@ class MPTaskDetailView implements TaskDetailView {
     public IPage<TaskDetail> findAll(PageTaskDetailRequest pageRequest) {
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getTaskId()), TaskDetail::getTaskId, pageRequest.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(pageRequest.getSequence()), TaskDetail::getSequence, pageRequest.getSequence())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getStepName()), TaskDetail::getStepName, pageRequest.getStepName())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getTaskName()), TaskDetail::getTaskName, pageRequest.getTaskName())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getParentTaskId()), TaskDetail::getParentTaskId, pageRequest.getParentTaskId())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getNextTaskId()), TaskDetail::getNextTaskId, pageRequest.getNextTaskId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getStepType()), TaskDetail::getStepType, pageRequest.getStepType())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getStepContent()), TaskDetail::getStepContent, pageRequest.getStepContent())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getBranchCondition()), TaskDetail::getBranchCondition, pageRequest.getBranchCondition())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getBranchRoute()), TaskDetail::getBranchRoute, pageRequest.getBranchRoute())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRequestParams()), TaskDetail::getRequestParams, pageRequest.getRequestParams())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getResponseParams()), TaskDetail::getResponseParams, pageRequest.getResponseParams())
-                    .eq(ObjUtil.isNotEmpty(pageRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, pageRequest.getExecutionStatus());
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReturnParams()), TaskDetail::getReturnParams, pageRequest.getReturnParams())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getExecStatus()), TaskDetail::getExecStatus, pageRequest.getExecStatus())
+                    .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), TaskDetail::getStatus, pageRequest.getStatus())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), TaskDetail::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), TaskDetail::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(TaskDetail.class), queryWrapper);
     }
 
@@ -55,22 +60,32 @@ class MPTaskDetailView implements TaskDetailView {
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), TaskDetail::getId, findAllRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getTaskId()), TaskDetail::getTaskId, findAllRequest.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getSequence()), TaskDetail::getSequence, findAllRequest.getSequence())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStepName()), TaskDetail::getStepName, findAllRequest.getStepName())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getTaskName()), TaskDetail::getTaskName, findAllRequest.getTaskName())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getParentTaskId()), TaskDetail::getParentTaskId, findAllRequest.getParentTaskId())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getNextTaskId()), TaskDetail::getNextTaskId, findAllRequest.getNextTaskId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStepType()), TaskDetail::getStepType, findAllRequest.getStepType())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStepContent()), TaskDetail::getStepContent, findAllRequest.getStepContent())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getBranchCondition()), TaskDetail::getBranchCondition, findAllRequest.getBranchCondition())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getBranchRoute()), TaskDetail::getBranchRoute, findAllRequest.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRequestParams()), TaskDetail::getRequestParams, findAllRequest.getRequestParams())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getResponseParams()), TaskDetail::getResponseParams, findAllRequest.getResponseParams())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, findAllRequest.getExecutionStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReturnParams()), TaskDetail::getReturnParams, findAllRequest.getReturnParams())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getExecStatus()), TaskDetail::getExecStatus, findAllRequest.getExecStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), TaskDetail::getStatus, findAllRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), TaskDetail::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), TaskDetail::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), TaskDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskId()), TaskDetail::getTaskId, neRequest.getTaskId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getSequence()), TaskDetail::getSequence, neRequest.getSequence())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), TaskDetail::getStepName, neRequest.getStepName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getTaskName()), TaskDetail::getTaskName, neRequest.getTaskName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getParentTaskId()), TaskDetail::getParentTaskId, neRequest.getParentTaskId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getNextTaskId()), TaskDetail::getNextTaskId, neRequest.getNextTaskId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), TaskDetail::getStepType, neRequest.getStepType())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepContent()), TaskDetail::getStepContent, neRequest.getStepContent())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchCondition()), TaskDetail::getBranchCondition, neRequest.getBranchCondition())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), TaskDetail::getBranchRoute, neRequest.getBranchRoute())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRequestParams()), TaskDetail::getRequestParams, neRequest.getRequestParams())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getResponseParams()), TaskDetail::getResponseParams, neRequest.getResponseParams())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, neRequest.getExecutionStatus());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReturnParams()), TaskDetail::getReturnParams, neRequest.getReturnParams())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), TaskDetail::getExecStatus, neRequest.getExecStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), TaskDetail::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), TaskDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), TaskDetail::getRemark, neRequest.getRemark());
 
         return repository.selectList(queryWrapper);
     }
@@ -80,22 +95,32 @@ class MPTaskDetailView implements TaskDetailView {
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), TaskDetail::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTaskId()), TaskDetail::getTaskId, findOneRequest.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getSequence()), TaskDetail::getSequence, findOneRequest.getSequence())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepName()), TaskDetail::getStepName, findOneRequest.getStepName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getTaskName()), TaskDetail::getTaskName, findOneRequest.getTaskName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getParentTaskId()), TaskDetail::getParentTaskId, findOneRequest.getParentTaskId())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getNextTaskId()), TaskDetail::getNextTaskId, findOneRequest.getNextTaskId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStepType()), TaskDetail::getStepType, findOneRequest.getStepType())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepContent()), TaskDetail::getStepContent, findOneRequest.getStepContent())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchCondition()), TaskDetail::getBranchCondition, findOneRequest.getBranchCondition())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchRoute()), TaskDetail::getBranchRoute, findOneRequest.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRequestParams()), TaskDetail::getRequestParams, findOneRequest.getRequestParams())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getResponseParams()), TaskDetail::getResponseParams, findOneRequest.getResponseParams())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, findOneRequest.getExecutionStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnParams()), TaskDetail::getReturnParams, findOneRequest.getReturnParams())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getExecStatus()), TaskDetail::getExecStatus, findOneRequest.getExecStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), TaskDetail::getStatus, findOneRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), TaskDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), TaskDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), TaskDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskId()), TaskDetail::getTaskId, neRequest.getTaskId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getSequence()), TaskDetail::getSequence, neRequest.getSequence())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), TaskDetail::getStepName, neRequest.getStepName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getTaskName()), TaskDetail::getTaskName, neRequest.getTaskName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getParentTaskId()), TaskDetail::getParentTaskId, neRequest.getParentTaskId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getNextTaskId()), TaskDetail::getNextTaskId, neRequest.getNextTaskId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), TaskDetail::getStepType, neRequest.getStepType())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepContent()), TaskDetail::getStepContent, neRequest.getStepContent())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchCondition()), TaskDetail::getBranchCondition, neRequest.getBranchCondition())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), TaskDetail::getBranchRoute, neRequest.getBranchRoute())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRequestParams()), TaskDetail::getRequestParams, neRequest.getRequestParams())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getResponseParams()), TaskDetail::getResponseParams, neRequest.getResponseParams())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, neRequest.getExecutionStatus());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReturnParams()), TaskDetail::getReturnParams, neRequest.getReturnParams())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), TaskDetail::getExecStatus, neRequest.getExecStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), TaskDetail::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), TaskDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), TaskDetail::getRemark, neRequest.getRemark());
 
         List<TaskDetail> list = repository.selectList(queryWrapper);
         if (list.isEmpty()) {
@@ -111,22 +136,32 @@ class MPTaskDetailView implements TaskDetailView {
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), TaskDetail::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTaskId()), TaskDetail::getTaskId, findOneRequest.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getSequence()), TaskDetail::getSequence, findOneRequest.getSequence())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepName()), TaskDetail::getStepName, findOneRequest.getStepName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getTaskName()), TaskDetail::getTaskName, findOneRequest.getTaskName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getParentTaskId()), TaskDetail::getParentTaskId, findOneRequest.getParentTaskId())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getNextTaskId()), TaskDetail::getNextTaskId, findOneRequest.getNextTaskId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStepType()), TaskDetail::getStepType, findOneRequest.getStepType())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepContent()), TaskDetail::getStepContent, findOneRequest.getStepContent())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchCondition()), TaskDetail::getBranchCondition, findOneRequest.getBranchCondition())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchRoute()), TaskDetail::getBranchRoute, findOneRequest.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRequestParams()), TaskDetail::getRequestParams, findOneRequest.getRequestParams())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getResponseParams()), TaskDetail::getResponseParams, findOneRequest.getResponseParams())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, findOneRequest.getExecutionStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnParams()), TaskDetail::getReturnParams, findOneRequest.getReturnParams())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getExecStatus()), TaskDetail::getExecStatus, findOneRequest.getExecStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), TaskDetail::getStatus, findOneRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), TaskDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), TaskDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), TaskDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskId()), TaskDetail::getTaskId, neRequest.getTaskId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getSequence()), TaskDetail::getSequence, neRequest.getSequence())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), TaskDetail::getStepName, neRequest.getStepName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getTaskName()), TaskDetail::getTaskName, neRequest.getTaskName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getParentTaskId()), TaskDetail::getParentTaskId, neRequest.getParentTaskId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getNextTaskId()), TaskDetail::getNextTaskId, neRequest.getNextTaskId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), TaskDetail::getStepType, neRequest.getStepType())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepContent()), TaskDetail::getStepContent, neRequest.getStepContent())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchCondition()), TaskDetail::getBranchCondition, neRequest.getBranchCondition())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), TaskDetail::getBranchRoute, neRequest.getBranchRoute())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRequestParams()), TaskDetail::getRequestParams, neRequest.getRequestParams())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getResponseParams()), TaskDetail::getResponseParams, neRequest.getResponseParams())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getExecutionStatus()), TaskDetail::getExecutionStatus, neRequest.getExecutionStatus());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReturnParams()), TaskDetail::getReturnParams, neRequest.getReturnParams())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), TaskDetail::getExecStatus, neRequest.getExecStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), TaskDetail::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), TaskDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), TaskDetail::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
 
@@ -167,13 +202,18 @@ class MPTaskDetailView implements TaskDetailView {
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), TaskDetail::getId, request.getId())
                     .eq(ObjUtil.isNotEmpty(request.getTaskId()), TaskDetail::getTaskId, request.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(request.getSequence()), TaskDetail::getSequence, request.getSequence())
-                    .eq(ObjUtil.isNotEmpty(request.getStepName()), TaskDetail::getStepName, request.getStepName())
+                    .eq(ObjUtil.isNotEmpty(request.getTaskName()), TaskDetail::getTaskName, request.getTaskName())
+                    .eq(ObjUtil.isNotEmpty(request.getParentTaskId()), TaskDetail::getParentTaskId, request.getParentTaskId())
+                    .eq(ObjUtil.isNotEmpty(request.getNextTaskId()), TaskDetail::getNextTaskId, request.getNextTaskId())
                     .eq(ObjUtil.isNotEmpty(request.getStepType()), TaskDetail::getStepType, request.getStepType())
-                    .eq(ObjUtil.isNotEmpty(request.getStepContent()), TaskDetail::getStepContent, request.getStepContent())
+                    .eq(ObjUtil.isNotEmpty(request.getBranchCondition()), TaskDetail::getBranchCondition, request.getBranchCondition())
+                    .eq(ObjUtil.isNotEmpty(request.getBranchRoute()), TaskDetail::getBranchRoute, request.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(request.getRequestParams()), TaskDetail::getRequestParams, request.getRequestParams())
-                    .eq(ObjUtil.isNotEmpty(request.getResponseParams()), TaskDetail::getResponseParams, request.getResponseParams())
-                    .eq(ObjUtil.isNotEmpty(request.getExecutionStatus()), TaskDetail::getExecutionStatus, request.getExecutionStatus());
+                    .eq(ObjUtil.isNotEmpty(request.getReturnParams()), TaskDetail::getReturnParams, request.getReturnParams())
+                    .eq(ObjUtil.isNotEmpty(request.getExecStatus()), TaskDetail::getExecStatus, request.getExecStatus())
+                    .eq(ObjUtil.isNotEmpty(request.getStatus()), TaskDetail::getStatus, request.getStatus())
+                    .eq(ObjUtil.isNotEmpty(request.getReserver()), TaskDetail::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getRemark()), TaskDetail::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
 }

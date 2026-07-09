@@ -56,20 +56,8 @@ public class AtomicCommand {
     /**
      * 作用
      */
-    @TableField(value = "func")
-    private String func;
-
-    /**
-     * 状态
-     */
-    @TableField(value = "status")
-    private Status status;
-
-    /**
-     * 同步
-     */
-    @TableField(value = "sync")
-    private Integer sync;
+    @TableField(value = "role")
+    private String role;
 
     /**
      * 创建时间
@@ -82,6 +70,24 @@ public class AtomicCommand {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

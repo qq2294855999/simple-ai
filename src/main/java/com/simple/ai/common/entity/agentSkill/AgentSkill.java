@@ -42,10 +42,10 @@ public class AgentSkill {
     private String id;
 
     /**
-     * 名称
+     * 智能体ID
      */
-    @TableField(value = "name")
-    private String name;
+    @TableField(value = "agent_id")
+    private String agentId;
 
     /**
      * 定义描述
@@ -54,10 +54,16 @@ public class AgentSkill {
     private String definitionDesc;
 
     /**
-     * 状态
+     * 执行内容
      */
-    @TableField(value = "status")
-    private Status status;
+    @TableField(value = "exec_content")
+    private String execContent;
+
+    /**
+     * 返回的数据格式
+     */
+    @TableField(value = "return_data_format")
+    private String returnDataFormat;
 
     /**
      * 创建时间
@@ -70,6 +76,24 @@ public class AgentSkill {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

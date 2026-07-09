@@ -54,10 +54,58 @@ public class Task {
     private String taskName;
 
     /**
+     * 父任务ID
+     */
+    @TableField(value = "parent_task_id")
+    private String parentTaskId;
+
+    /**
+     * 下一个任务ID
+     */
+    @TableField(value = "next_task_id")
+    private String nextTaskId;
+
+    /**
+     * 步骤类型：智能体步骤类型
+     */
+    @TableField(value = "step_type")
+    private String stepType;
+
+    /**
+     * 分支条件
+     */
+    @TableField(value = "branch_condition")
+    private String branchCondition;
+
+    /**
+     * 分支路由
+     */
+    @TableField(value = "branch_route")
+    private String branchRoute;
+
+    /**
+     * 请求参数
+     */
+    @TableField(value = "request_params")
+    private String requestParams;
+
+    /**
+     * 返回参数
+     */
+    @TableField(value = "return_params")
+    private String returnParams;
+
+    /**
      * 执行状态
      */
-    @TableField(value = "execution_status")
-    private Integer executionStatus;
+    @TableField(value = "exec_status")
+    private String execStatus;
+
+    /**
+     * 失败原因
+     */
+    @TableField(value = "failure_reason")
+    private String failureReason;
 
     /**
      * 创建时间
@@ -70,6 +118,24 @@ public class Task {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

@@ -24,8 +24,23 @@ public class CreateAgentMemoryRequest {
     @NotEmpty(message = "记忆名称不能为空")
     private String memoryName;
 
+    @Schema(description = "步骤名称")
+    @NotEmpty(message = "步骤名称不能为空")
+    private String stepName;
+
     @Schema(description = "触发条件")
     @NotEmpty(message = "触发条件不能为空")
     private String triggerCondition;
+
+    @Schema(description = "触发动作")
+    @NotEmpty(message = "触发动作不能为空")
+    private String triggerAction;
+
+    @Schema(description = "扩展")
+    @NotEmpty(message = "扩展不能为空")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

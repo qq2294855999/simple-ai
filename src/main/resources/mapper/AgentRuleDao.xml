@@ -3,10 +3,11 @@
 <mapper namespace="com.simple.ai.view.agentRule.AgentRuleRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_rule(id, name, definition_desc, status, create_time, update_time)
+        insert into agent_rule(id, agent_id, definition_desc, trigger_condition, trigger_action, create_time, update_time, status, reserver, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.status}, #{entity.createTime}, #{entity.updateTime})
+            (#{entity.id}, #{entity.agentId}, #{entity.definitionDesc}, #{entity.triggerCondition}, #{entity.triggerAction}, #{entity.createTime}, #{entity.updateTime}, #{entity.status},
+            #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
 </mapper>

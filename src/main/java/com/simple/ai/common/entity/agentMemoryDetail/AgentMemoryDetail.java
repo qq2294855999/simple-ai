@@ -54,6 +54,24 @@ public class AgentMemoryDetail {
     private String stepName;
 
     /**
+     * 步骤类型：智能体记忆步骤类型
+     */
+    @TableField(value = "step_type")
+    private String stepType;
+
+    /**
+     * 执行内容
+     */
+    @TableField(value = "exec_content")
+    private String execContent;
+
+    /**
+     * 返回的数据格式
+     */
+    @TableField(value = "return_data_format")
+    private String returnDataFormat;
+
+    /**
      * 父步骤ID
      */
     @TableField(value = "parent_step_id")
@@ -64,12 +82,6 @@ public class AgentMemoryDetail {
      */
     @TableField(value = "next_step_id")
     private String nextStepId;
-
-    /**
-     * 步骤类型
-     */
-    @TableField(value = "step_type")
-    private String stepType;
 
     /**
      * 分支条件
@@ -84,6 +96,12 @@ public class AgentMemoryDetail {
     private String branchRoute;
 
     /**
+     * 模型
+     */
+    @TableField(value = "model")
+    private String model;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
@@ -94,6 +112,24 @@ public class AgentMemoryDetail {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

@@ -56,8 +56,8 @@ public class AgentDefinition {
     /**
      * 第一铁律
      */
-    @TableField(value = "first_rule")
-    private String firstRule;
+    @TableField(value = "first_principle")
+    private String firstPrinciple;
 
     /**
      * 第二规则
@@ -70,12 +70,6 @@ public class AgentDefinition {
      */
     @TableField(value = "third_skill")
     private String thirdSkill;
-
-    /**
-     * 状态
-     */
-    @TableField(value = "status")
-    private Status status;
 
     /**
      * 模型
@@ -106,6 +100,24 @@ public class AgentDefinition {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

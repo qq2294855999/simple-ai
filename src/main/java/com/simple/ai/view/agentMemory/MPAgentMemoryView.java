@@ -41,8 +41,12 @@ class MPAgentMemoryView implements AgentMemoryView {
         LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getAgentId()), AgentMemory::getAgentId, pageRequest.getAgentId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getMemoryName()), AgentMemory::getMemoryName, pageRequest.getMemoryName())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getStepName()), AgentMemory::getStepName, pageRequest.getStepName())
                     .like(ObjUtil.isNotEmpty(pageRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, pageRequest.getTriggerCondition())
-                    .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemory::getStatus, pageRequest.getStatus());
+                    .like(ObjUtil.isNotEmpty(pageRequest.getTriggerAction()), AgentMemory::getTriggerAction, pageRequest.getTriggerAction())
+                    .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemory::getStatus, pageRequest.getStatus())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentMemory::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentMemory::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentMemory.class), queryWrapper);
     }
 
@@ -52,13 +56,21 @@ class MPAgentMemoryView implements AgentMemoryView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), AgentMemory::getId, findAllRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentId()), AgentMemory::getAgentId, findAllRequest.getAgentId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getMemoryName()), AgentMemory::getMemoryName, findAllRequest.getMemoryName())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStepName()), AgentMemory::getStepName, findAllRequest.getStepName())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, findAllRequest.getTriggerCondition())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerAction()), AgentMemory::getTriggerAction, findAllRequest.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemory::getStatus, findAllRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentMemory::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentMemory::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getMemoryName()), AgentMemory::getMemoryName, neRequest.getMemoryName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemory::getStepName, neRequest.getStepName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, neRequest.getTriggerCondition())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentMemory::getTriggerAction, neRequest.getTriggerAction())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemory::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemory::getRemark, neRequest.getRemark());
 
         return repository.selectList(queryWrapper);
     }
@@ -69,13 +81,21 @@ class MPAgentMemoryView implements AgentMemoryView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentMemory::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentId()), AgentMemory::getAgentId, findOneRequest.getAgentId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getMemoryName()), AgentMemory::getMemoryName, findOneRequest.getMemoryName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepName()), AgentMemory::getStepName, findOneRequest.getStepName())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, findOneRequest.getTriggerCondition())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getTriggerAction()), AgentMemory::getTriggerAction, findOneRequest.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemory::getStatus, findOneRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentMemory::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentMemory::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getMemoryName()), AgentMemory::getMemoryName, neRequest.getMemoryName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemory::getStepName, neRequest.getStepName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, neRequest.getTriggerCondition())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentMemory::getTriggerAction, neRequest.getTriggerAction())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemory::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemory::getRemark, neRequest.getRemark());
 
         List<AgentMemory> list = repository.selectList(queryWrapper);
         if (list.isEmpty()) {
@@ -92,13 +112,21 @@ class MPAgentMemoryView implements AgentMemoryView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentMemory::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentId()), AgentMemory::getAgentId, findOneRequest.getAgentId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getMemoryName()), AgentMemory::getMemoryName, findOneRequest.getMemoryName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepName()), AgentMemory::getStepName, findOneRequest.getStepName())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, findOneRequest.getTriggerCondition())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getTriggerAction()), AgentMemory::getTriggerAction, findOneRequest.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemory::getStatus, findOneRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentMemory::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentMemory::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getMemoryName()), AgentMemory::getMemoryName, neRequest.getMemoryName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemory::getStepName, neRequest.getStepName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, neRequest.getTriggerCondition())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentMemory::getTriggerAction, neRequest.getTriggerAction())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemory::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemory::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
 
@@ -140,8 +168,12 @@ class MPAgentMemoryView implements AgentMemoryView {
         queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentMemory::getId, request.getId())
                     .eq(ObjUtil.isNotEmpty(request.getAgentId()), AgentMemory::getAgentId, request.getAgentId())
                     .eq(ObjUtil.isNotEmpty(request.getMemoryName()), AgentMemory::getMemoryName, request.getMemoryName())
+                    .eq(ObjUtil.isNotEmpty(request.getStepName()), AgentMemory::getStepName, request.getStepName())
                     .eq(ObjUtil.isNotEmpty(request.getTriggerCondition()), AgentMemory::getTriggerCondition, request.getTriggerCondition())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemory::getStatus, request.getStatus());
+                    .eq(ObjUtil.isNotEmpty(request.getTriggerAction()), AgentMemory::getTriggerAction, request.getTriggerAction())
+                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemory::getStatus, request.getStatus())
+                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentMemory::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentMemory::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
 }

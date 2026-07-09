@@ -21,12 +21,15 @@ public class PageAtomicCommandRequest extends PageBase {
     private String command;
 
     @Schema(description = "作用")
-    private String func;
+    private String role;
 
     @Schema(description = "状态")
     private Status status;
 
-    @Schema(description = "同步")
-    private Integer sync;
+    @Schema(description = "扩展")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

@@ -26,10 +26,13 @@ public class CreateAtomicCommandRequest {
 
     @Schema(description = "作用")
     @NotEmpty(message = "作用不能为空")
-    private String func;
+    private String role;
 
-    @Schema(description = "同步")
-    @NotNull(message = "同步不能为空")
-    private Integer sync;
+    @Schema(description = "扩展")
+    @NotEmpty(message = "扩展不能为空")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

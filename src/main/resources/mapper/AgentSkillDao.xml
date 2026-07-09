@@ -3,10 +3,11 @@
 <mapper namespace="com.simple.ai.view.agentSkill.AgentSkillRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_skill(id, name, definition_desc, status, create_time, update_time)
+        insert into agent_skill(id, agent_id, definition_desc, exec_content, return_data_format, create_time, update_time, status, reserver, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.status}, #{entity.createTime}, #{entity.updateTime})
+            (#{entity.id}, #{entity.agentId}, #{entity.definitionDesc}, #{entity.execContent}, #{entity.returnDataFormat}, #{entity.createTime}, #{entity.updateTime}, #{entity.status},
+            #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
 </mapper>

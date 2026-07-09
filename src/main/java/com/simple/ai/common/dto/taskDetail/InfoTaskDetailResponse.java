@@ -24,31 +24,46 @@ public class InfoTaskDetailResponse {
     @Schema(description = "任务主键")
     private String taskId;
 
-    @Schema(description = "序号")
-    private Integer sequence;
+    @Schema(description = "任务名称")
+    private String taskName;
 
-    @Schema(description = "步骤名称")
-    private String stepName;
+    @Schema(description = "父任务ID")
+    private String parentTaskId;
 
-    @Schema(description = "步骤类型")
+    @Schema(description = "下一个任务ID")
+    private String nextTaskId;
+
+    @Schema(description = "步骤类型：智能体步骤类型")
     private String stepType;
 
-    @Schema(description = "步骤内容")
-    private String stepContent;
+    @Schema(description = "分支条件")
+    private String branchCondition;
+
+    @Schema(description = "分支路由")
+    private String branchRoute;
 
     @Schema(description = "请求参数")
     private String requestParams;
 
     @Schema(description = "返回参数")
-    private String responseParams;
+    private String returnParams;
 
     @Schema(description = "执行状态")
-    private Integer executionStatus;
+    private String execStatus;
 
     @Schema(description = "创建时间")
     private Date createTime;
 
     @Schema(description = "修改时间")
     private Date updateTime;
+
+    @Schema(description = "状态")
+    private Status status;
+
+    @Schema(description = "扩展")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

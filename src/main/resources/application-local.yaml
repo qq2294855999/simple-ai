@@ -39,6 +39,13 @@ spring:
         default-requeue-rejected: false # 消费失败的q是否重新放回队列重新消费
         # concurrency: 1 # 消费线程数
         # max-concurrency: 10 # 消费线程最大数量
+  ai:
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${SPRING_AI_OPENAI_CHAT_MODEL:gpt-4o-mini}
 # doc文档配置
 springdoc:
   swagger-ui:
@@ -57,6 +64,10 @@ springdoc:
 
 # 项目配置
 simple:
+  websocket:
+    command:
+      type: agent-command
+      cli-key: default
   annex:
     # 附件上传配置
     server-url: http://minio.dev.joyswon.com

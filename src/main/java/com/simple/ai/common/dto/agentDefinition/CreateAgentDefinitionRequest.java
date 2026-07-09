@@ -26,7 +26,7 @@ public class CreateAgentDefinitionRequest {
 
     @Schema(description = "第一铁律")
     @NotEmpty(message = "第一铁律不能为空")
-    private String firstRule;
+    private String firstPrinciple;
 
     @Schema(description = "第二规则")
     @NotEmpty(message = "第二规则不能为空")
@@ -47,5 +47,12 @@ public class CreateAgentDefinitionRequest {
     @Schema(description = "修改人")
     @NotEmpty(message = "修改人不能为空")
     private String updateBy;
+
+    @Schema(description = "扩展")
+    @NotEmpty(message = "扩展不能为空")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

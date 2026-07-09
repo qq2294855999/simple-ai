@@ -20,21 +20,29 @@ public class CreateTaskDetailRequest {
     @NotEmpty(message = "任务主键不能为空")
     private String taskId;
 
-    @Schema(description = "序号")
-    @NotNull(message = "序号不能为空")
-    private Integer sequence;
+    @Schema(description = "任务名称")
+    @NotEmpty(message = "任务名称不能为空")
+    private String taskName;
 
-    @Schema(description = "步骤名称")
-    @NotEmpty(message = "步骤名称不能为空")
-    private String stepName;
+    @Schema(description = "父任务ID")
+    @NotEmpty(message = "父任务ID不能为空")
+    private String parentTaskId;
 
-    @Schema(description = "步骤类型")
-    @NotEmpty(message = "步骤类型不能为空")
+    @Schema(description = "下一个任务ID")
+    @NotEmpty(message = "下一个任务ID不能为空")
+    private String nextTaskId;
+
+    @Schema(description = "步骤类型：智能体步骤类型")
+    @NotEmpty(message = "步骤类型：智能体步骤类型不能为空")
     private String stepType;
 
-    @Schema(description = "步骤内容")
-    @NotEmpty(message = "步骤内容不能为空")
-    private String stepContent;
+    @Schema(description = "分支条件")
+    @NotEmpty(message = "分支条件不能为空")
+    private String branchCondition;
+
+    @Schema(description = "分支路由")
+    @NotEmpty(message = "分支路由不能为空")
+    private String branchRoute;
 
     @Schema(description = "请求参数")
     @NotEmpty(message = "请求参数不能为空")
@@ -42,10 +50,17 @@ public class CreateTaskDetailRequest {
 
     @Schema(description = "返回参数")
     @NotEmpty(message = "返回参数不能为空")
-    private String responseParams;
+    private String returnParams;
 
     @Schema(description = "执行状态")
-    @NotNull(message = "执行状态不能为空")
-    private Integer executionStatus;
+    @NotEmpty(message = "执行状态不能为空")
+    private String execStatus;
+
+    @Schema(description = "扩展")
+    @NotEmpty(message = "扩展不能为空")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

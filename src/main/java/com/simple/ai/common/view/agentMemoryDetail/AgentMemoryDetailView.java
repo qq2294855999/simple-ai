@@ -37,6 +37,14 @@ public interface AgentMemoryDetailView {
     List<AgentMemoryDetail> findAll(FindAllAgentMemoryDetailRequest findAllRequest, FindAllAgentMemoryDetailRequest neRequest);
 
     /**
+     * 根据记忆主键批量查询详情。
+     *
+     * @param agentMemoryIds 智能体记忆主键列表
+     * @return 记忆详情列表
+     */
+    List<AgentMemoryDetail> findAllByAgentMemoryIds(List<String> agentMemoryIds);
+
+    /**
      * 获取单条数据
      *
      * @param id 主键

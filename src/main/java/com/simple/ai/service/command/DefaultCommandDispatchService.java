@@ -1,0 +1,850 @@
+package com.simple.ai.service.command;
+
+import com.simple.ai.common.dto.agent.AgentAiRequest;
+import com.simple.ai.common.dto.agent.AgentAiResponse;
+import com.simple.ai.common.dto.agent.AgentContext;
+import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
+import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
+import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
+import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
+import com.simple.ai.common.dto.command.CommandDispatchRequest;
+import com.simple.ai.common.dto.command.CommandDispatchResponse;
+import com.simple.ai.common.entity.agentMemory.AgentMemory;
+import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
+import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
+import com.simple.ai.common.entity.task.Task;
+import com.simple.ai.common.entity.taskDetail.TaskDetail;
+import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.enums.AgentStepTypeProcess;
+import com.simple.ai.common.service.agent.AgentAiClient;
+import com.simple.ai.common.service.command.AtomicCommandExecutor;
+import com.simple.ai.common.service.command.CommandDispatchService;
+import com.simple.ai.common.service.session.AgentSessionService;
+import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
+import com.simple.ai.common.view.task.TaskView;
+import com.simple.ai.common.view.taskDetail.TaskDetailView;
+import com.simple.ai.service.agent.AgentContextAssembler;
+import com.simple.ai.service.agent.AgentMemoryMatcher;
+import com.simple.ai.service.agent.AgentMemorySummarizer;
+import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.core.utils.JsonUtils;
+import com.simple.common.mp.common.enums.Status;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+
+/**
+ * 默认智能体命令调度服务实现。
+ *
+ * @author qty
+ */
+@Slf4j
+@Service
+@Transactional
+class DefaultCommandDispatchService implements CommandDispatchService {
+
+    /**
+     * 智能体上下文组装器
+     */
+    @Autowired
+    private AgentContextAssembler agentContextAssembler;
+
+    /**
+     * 智能体记忆匹配器
+     */
+    @Autowired
+    private AgentMemoryMatcher agentMemoryMatcher;
+
+    /**
+     * 智能体 AI 调用客户端
+     */
+    @Autowired
+    private AgentAiClient agentAiClient;
+
+    /**
+     * 原子命令执行器注册表
+     */
+    @Autowired
+    private AtomicCommandExecutorRegistry atomicCommandExecutorRegistry;
+
+    /**
+     * 智能体会话服务
+     */
+    @Autowired
+    private AgentSessionService agentSessionService;
+
+    /**
+     * 智能体记忆摘要器
+     */
+    @Autowired
+    private AgentMemorySummarizer agentMemorySummarizer;
+
+    /**
+     * 原子命令视图
+     */
+    @Autowired
+    private AtomicCommandView atomicCommandView;
+
+    /**
+     * 任务视图
+     */
+    @Autowired
+    private TaskView taskView;
+
+    /**
+     * 任务详情视图
+     */
+    @Autowired
+    private TaskDetailView taskDetailView;
+
+    @Override
+    public CommandDispatchResponse dispatch(CommandDispatchRequest request) {
+        return dispatchStream(request, progressEvent -> {
+        });
+    }
+
+    @Override
+    public CommandDispatchResponse dispatchStream(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer) {
+
+        // 参数校验：智能体ID不能为空
+        AssertUtils.notEmpty(request.getAgentId(), "智能体ID不能为空");
+
+        // 参数校验：命令名称不能为空
+        AssertUtils.notEmpty(request.getCommandName(), "命令名称不能为空");
+
+        // 参数校验：命令内容不能为空
+        AssertUtils.notEmpty(request.getCommandContent(), "命令内容不能为空");
+
+        // 创建任务主记录并标记执行中
+        Task task = createRunningTask(request);
+        publishProgress(progressConsumer, request, task, "TASK_CREATED", "任务已创建", "", Boolean.FALSE, "");
+
+        try {
+            // 组装智能体上下文
+            publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
+            AgentContext context = agentContextAssembler.assemble(request);
+            publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLED", "智能体上下文装配完成", context.getPromptContent(), Boolean.FALSE, "");
+
+            // 匹配候选记忆
+            publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
+            List<AgentMemory> memories = agentMemoryMatcher.match(request);
+            publishMemoryMatchProgress(progressConsumer, request, task, memories);
+
+            // 执行智能体命令流程
+            String responseContent = executeCommand(task, request, context, memories, progressConsumer);
+
+            // 标记任务执行成功
+            markTaskSuccess(task, responseContent);
+
+            // 保存会话摘要
+            saveSessionSummary(request, responseContent);
+            publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
+            return buildSuccessResponse(task, responseContent);
+        } catch (Exception e) {
+            // 保存失败任务详情，确保失败链路可追踪
+            saveFailedTaskDetail(task, request, e.getMessage());
+
+            // 标记任务执行失败
+            markTaskFailed(task, e.getMessage());
+            publishProgress(progressConsumer, request, task, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, e.getMessage());
+            return buildFailedResponse(task, e.getMessage());
+        }
+    }
+
+    /**
+     * 创建执行中的任务主记录。
+     *
+     * @param request 命令调度请求
+     * @return 任务主记录
+     */
+    private Task createRunningTask(CommandDispatchRequest request) {
+        Task task = new Task();
+        task.setAgentMemoryId("");
+        task.setTaskName(request.getCommandName());
+        task.setParentTaskId("");
+        task.setNextTaskId("");
+        task.setStepType(AgentStepTypeProcess.ATOMIC_COMMAND.getCode());
+        task.setBranchCondition("");
+        task.setBranchRoute("");
+        task.setRequestParams(JsonUtils.toJsonStr(request));
+        task.setReturnParams("");
+        task.setExecStatus(AgentExecutionStatusProcess.RUNNING.getCode());
+        task.setFailureReason("");
+        task.setReserver("");
+        task.setRemark("智能体命令调度任务");
+        taskView.save(task);
+        return task;
+    }
+
+    /**
+     * 执行智能体命令流程。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param context 智能体上下文
+     * @param memories 候选记忆
+     * @param progressConsumer 进度事件消费者
+     * @return 响应内容
+     */
+    private String executeCommand(Task task, CommandDispatchRequest request, AgentContext context, List<AgentMemory> memories,
+                                  Consumer<CommandDispatchProgressEvent> progressConsumer) {
+
+        // 命中记忆时按记忆详情步骤链执行
+        if (!memories.isEmpty()) {
+            return executeMemorySteps(task, request, context, memories, progressConsumer);
+        }
+
+        // 未命中记忆时调用 AI 生成探索响应并沉淀记忆
+        String responseContent = executeAiExploration(task, request, context, progressConsumer);
+        publishProgress(progressConsumer, request, task, "MEMORY_SUMMARIZING", "正在沉淀智能体记忆", "", Boolean.FALSE, "");
+        String memoryId = agentMemorySummarizer.summarize(request.getAgentId(), task.getId(), request.getCommandName());
+        task.setAgentMemoryId(memoryId);
+        publishProgress(progressConsumer, request, task, "MEMORY_SUMMARIZED", "智能体记忆沉淀完成", memoryId, Boolean.FALSE, "");
+        return responseContent;
+    }
+
+    /**
+     * 执行命中的记忆步骤链。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param context 智能体上下文
+     * @param memories 命中的记忆列表
+     * @param progressConsumer 进度事件消费者
+     * @return 最后一个步骤响应内容
+     */
+    private String executeMemorySteps(Task task, CommandDispatchRequest request, AgentContext context, List<AgentMemory> memories,
+                                      Consumer<CommandDispatchProgressEvent> progressConsumer) {
+        AgentMemory memory = memories.get(0);
+        task.setAgentMemoryId(memory.getId());
+        List<AgentMemoryDetail> details = filterMemoryDetails(context, memory);
+        AssertUtils.notEmpty(details, "命中记忆[{}]缺少步骤详情", memory.getId());
+        Map<String, AgentMemoryDetail> detailMap = buildMemoryDetailMap(details);
+        AgentMemoryDetail currentDetail = findStartDetail(details);
+        Set<String> visitedDetailIds = new HashSet<>();
+        int maxStepCount = details.size() * 2;
+        int executedStepCount = 0;
+        String responseContent = "";
+
+        // 按步骤游标推进执行，并用最大步数防止配置错误导致死循环
+        while (currentDetail != null) {
+            AssertUtils.isTrue(executedStepCount < maxStepCount, "记忆步骤链执行超过安全上限");
+            AssertUtils.isTrue(!visitedDetailIds.contains(currentDetail.getId()), "记忆步骤链存在循环路由");
+            visitedDetailIds.add(currentDetail.getId());
+            executedStepCount++;
+            publishProgress(progressConsumer, request, task, "STEP_STARTED", currentDetail.getStepName(), currentDetail.getExecContent(), Boolean.FALSE, "");
+            responseContent = executeMemoryDetail(task, request, currentDetail);
+            publishProgress(progressConsumer, request, task, "STEP_COMPLETED", currentDetail.getStepName(), responseContent, Boolean.FALSE, "");
+            currentDetail = findNextDetail(detailMap, currentDetail);
+        }
+        return responseContent;
+    }
+
+    /**
+     * 构建记忆详情索引。
+     *
+     * @param details 记忆详情列表
+     * @return 记忆详情索引
+     */
+    private Map<String, AgentMemoryDetail> buildMemoryDetailMap(List<AgentMemoryDetail> details) {
+        Map<String, AgentMemoryDetail> detailMap = new HashMap<>();
+
+        // 遍历记忆详情列表，按主键建立后续步骤查找索引
+        for (AgentMemoryDetail detail : details) {
+            detailMap.put(detail.getId(), detail);
+        }
+        return detailMap;
+    }
+
+    /**
+     * 查找步骤链入口。
+     *
+     * @param details 记忆详情列表
+     * @return 起始步骤
+     */
+    private AgentMemoryDetail findStartDetail(List<AgentMemoryDetail> details) {
+
+        // 优先使用没有父步骤的详情作为入口
+        for (AgentMemoryDetail detail : details) {
+            if (detail.getParentStepId() == null || detail.getParentStepId().isBlank()) {
+                return detail;
+            }
+        }
+        return details.get(0);
+    }
+
+    /**
+     * 查找下一步骤。
+     *
+     * @param detailMap 记忆详情索引
+     * @param currentDetail 当前步骤
+     * @return 下一步骤
+     */
+    private AgentMemoryDetail findNextDetail(Map<String, AgentMemoryDetail> detailMap, AgentMemoryDetail currentDetail) {
+
+        // 分支路由优先于普通下一步骤
+        if (currentDetail.getBranchRoute() != null && !currentDetail.getBranchRoute().isBlank()) {
+            return detailMap.get(currentDetail.getBranchRoute());
+        }
+
+        // 普通下一步骤为空时表示步骤链结束
+        if (currentDetail.getNextStepId() == null || currentDetail.getNextStepId().isBlank()) {
+            return null;
+        }
+        return detailMap.get(currentDetail.getNextStepId());
+    }
+
+
+    /**
+     * 过滤当前记忆对应的详情列表。
+     *
+     * @param context 智能体上下文
+     * @param memory 命中的智能体记忆
+     * @return 当前记忆详情列表
+     */
+    private List<AgentMemoryDetail> filterMemoryDetails(AgentContext context, AgentMemory memory) {
+        List<AgentMemoryDetail> result = new ArrayList<>();
+
+        // 遍历上下文中的记忆详情，保留当前记忆的启用步骤
+        for (AgentMemoryDetail detail : context.getMemoryDetails()) {
+            if (isEnabledMemoryDetail(memory, detail)) {
+                result.add(detail);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 判断记忆详情是否属于当前记忆且已启用。
+     *
+     * @param memory 命中的智能体记忆
+     * @param detail 记忆详情
+     * @return 是否可执行
+     */
+    private boolean isEnabledMemoryDetail(AgentMemory memory, AgentMemoryDetail detail) {
+
+        // 只执行当前命中记忆下的启用步骤
+        if (!memory.getId().equals(detail.getAgentMemoryId())) {
+            return false;
+        }
+        return Status.ON.equals(detail.getStatus());
+    }
+
+    /**
+     * 执行单条记忆详情。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param detail 记忆详情
+     * @return 步骤响应内容
+     */
+    private String executeMemoryDetail(Task task, CommandDispatchRequest request, AgentMemoryDetail detail) {
+
+        // 原子命令步骤执行命令处理器
+        if (AgentStepTypeProcess.ATOMIC_COMMAND.getCode().equals(detail.getStepType())) {
+            return executeAtomicCommand(task, request, detail);
+        }
+
+        // 判断和循环步骤先记录为成功详情，后续由专用执行器扩展
+        AtomicCommandInvokeResponse response = buildStepRecordResponse(detail);
+        saveTaskDetail(task, request, detail, detail.getExecContent(), response);
+        return response.getResponseContent();
+    }
+
+    /**
+     * 执行默认安全原子命令。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param detail 记忆详情
+     * @return 响应内容
+     */
+    private String executeAtomicCommand(Task task, CommandDispatchRequest request, AgentMemoryDetail detail) {
+        AtomicCommandInvokeRequest invokeRequest = buildAtomicCommandRequest(task, request, detail.getExecContent());
+        AtomicCommandExecutor executor = atomicCommandExecutorRegistry.findExecutor(invokeRequest);
+        AtomicCommandInvokeResponse invokeResponse = executor.execute(invokeRequest);
+        saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(invokeRequest), invokeResponse);
+        AssertUtils.isTrue(Boolean.TRUE.equals(invokeResponse.getSuccess()), invokeResponse.getFailureReason());
+        return invokeResponse.getResponseContent();
+    }
+
+    /**
+     * 执行 AI 探索流程。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param context 智能体上下文
+     * @param progressConsumer 进度事件消费者
+     * @return 响应内容
+     */
+    private String executeAiExploration(Task task, CommandDispatchRequest request, AgentContext context,
+                                        Consumer<CommandDispatchProgressEvent> progressConsumer) {
+        publishProgress(progressConsumer, request, task, "AI_STARTED", "AI 开始生成探索方案", request.getCommandContent(), Boolean.FALSE, "");
+        AgentAiRequest aiRequest = buildAiRequest(request, context);
+        AgentAiResponse aiResponse = agentAiClient.chat(aiRequest);
+        saveAiTaskDetail(task, request, aiRequest, aiResponse);
+        AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
+        publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
+        return aiResponse.getResponseContent();
+    }
+
+    /**
+     * 构建原子命令调用请求。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param commandContent 命令内容
+     * @return 原子命令调用请求
+     */
+    private AtomicCommandInvokeRequest buildAtomicCommandRequest(Task task, CommandDispatchRequest request, String commandContent) {
+        AtomicCommand atomicCommand = findMatchedAtomicCommand(commandContent);
+        AtomicCommandInvokeRequest invokeRequest = new AtomicCommandInvokeRequest();
+        invokeRequest.setTaskId(task.getId());
+        invokeRequest.setTaskDetailId("");
+        invokeRequest.setAtomicCommandId(resolveAtomicCommandId(atomicCommand));
+        invokeRequest.setCommandContent(resolveCommandContent(request, commandContent, atomicCommand));
+        invokeRequest.setRequestParams(request.getRequestParams());
+        return invokeRequest;
+    }
+
+    /**
+     * 匹配原子命令定义。
+     *
+     * @param commandContent 命令内容
+     * @return 原子命令定义
+     */
+    private AtomicCommand findMatchedAtomicCommand(String commandContent) {
+        FindAllAtomicCommandRequest request = new FindAllAtomicCommandRequest();
+        request.setStatus(Status.ON);
+        List<AtomicCommand> commands = atomicCommandView.findAll(request);
+
+        // 遍历启用原子命令，查找名称或命令内容命中的定义
+        for (AtomicCommand atomicCommand : commands) {
+            if (isAtomicCommandMatched(commandContent, atomicCommand)) {
+                return atomicCommand;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 判断原子命令是否命中。
+     *
+     * @param commandContent 命令内容
+     * @param atomicCommand 原子命令定义
+     * @return 是否命中
+     */
+    private boolean isAtomicCommandMatched(String commandContent, AtomicCommand atomicCommand) {
+
+        // 原子命令名称命中时直接使用该命令定义
+        if (atomicCommand.getName() != null && commandContent.contains(atomicCommand.getName())) {
+            return true;
+        }
+
+        // 原子命令正文命中时直接使用该命令定义
+        if (atomicCommand.getCommand() != null && commandContent.contains(atomicCommand.getCommand())) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 解析原子命令主键。
+     *
+     * @param atomicCommand 原子命令定义
+     * @return 原子命令主键
+     */
+    private String resolveAtomicCommandId(AtomicCommand atomicCommand) {
+
+        // 未匹配到原子命令时保留为空，由默认安全执行器处理
+        if (atomicCommand == null) {
+            return "";
+        }
+        return atomicCommand.getId();
+    }
+
+    /**
+     * 解析最终执行命令内容。
+     *
+     * @param request 命令调度请求
+     * @param commandContent 步骤命令内容
+     * @param atomicCommand 原子命令定义
+     * @return 最终执行命令内容
+     */
+    private String resolveCommandContent(CommandDispatchRequest request, String commandContent, AtomicCommand atomicCommand) {
+
+        // 匹配到原子命令时优先使用原子命令标准正文
+        if (atomicCommand != null) {
+            return atomicCommand.getCommand();
+        }
+
+        // 记忆步骤命令为空时回退到用户原始命令
+        if (commandContent == null || commandContent.isBlank()) {
+            return request.getCommandContent();
+        }
+        return commandContent;
+    }
+
+    /**
+     * 构建 AI 调用请求。
+     *
+     * @param request 命令调度请求
+     * @param context 智能体上下文
+     * @return AI 调用请求
+     */
+    private AgentAiRequest buildAiRequest(CommandDispatchRequest request, AgentContext context) {
+        AgentAiRequest aiRequest = new AgentAiRequest();
+        aiRequest.setModel(context.getAgentDefinition().getModel());
+        aiRequest.setPromptContent(context.getPromptContent());
+        aiRequest.setCommandContent(request.getCommandContent());
+        aiRequest.setSessionSummary(context.getSessionSummary());
+        return aiRequest;
+    }
+
+    /**
+     * 构建非原子命令步骤记录响应。
+     *
+     * @param detail 记忆详情
+     * @return 原子命令调用响应
+     */
+    private AtomicCommandInvokeResponse buildStepRecordResponse(AgentMemoryDetail detail) {
+        AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
+        response.setSuccess(Boolean.TRUE);
+        response.setResponseContent("已记录步骤：" + detail.getStepName());
+        response.setFailureReason("");
+        return response;
+    }
+
+    /**
+     * 保存原子命令任务详情。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param detail 记忆详情
+     * @param requestParams 请求参数
+     * @param invokeResponse 原子命令调用响应
+     */
+    private void saveTaskDetail(Task task, CommandDispatchRequest request, AgentMemoryDetail detail, String requestParams,
+                                AtomicCommandInvokeResponse invokeResponse) {
+        TaskDetail taskDetail = new TaskDetail();
+        taskDetail.setTaskId(task.getId());
+        taskDetail.setTaskName(resolveTaskDetailName(request, detail));
+        taskDetail.setParentTaskId(resolveParentStepId(detail));
+        taskDetail.setNextTaskId(resolveNextStepId(detail));
+        taskDetail.setStepType(resolveStepType(detail));
+        taskDetail.setBranchCondition(resolveBranchCondition(detail));
+        taskDetail.setBranchRoute(resolveBranchRoute(detail));
+        taskDetail.setRequestParams(requestParams);
+        taskDetail.setReturnParams(JsonUtils.toJsonStr(invokeResponse));
+        taskDetail.setExecStatus(resolveDetailStatus(invokeResponse.getSuccess()));
+        taskDetail.setReserver("");
+        taskDetail.setRemark("智能体步骤执行详情");
+        taskDetailView.save(taskDetail);
+    }
+
+    /**
+     * 保存 AI 探索任务详情。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param aiRequest AI 调用请求
+     * @param aiResponse AI 调用响应
+     */
+    private void saveAiTaskDetail(Task task, CommandDispatchRequest request, AgentAiRequest aiRequest, AgentAiResponse aiResponse) {
+        TaskDetail taskDetail = new TaskDetail();
+        taskDetail.setTaskId(task.getId());
+        taskDetail.setTaskName(request.getCommandName());
+        taskDetail.setParentTaskId("");
+        taskDetail.setNextTaskId("");
+        taskDetail.setStepType(AgentStepTypeProcess.JUDGE.getCode());
+        taskDetail.setBranchCondition("");
+        taskDetail.setBranchRoute("");
+        taskDetail.setRequestParams(JsonUtils.toJsonStr(aiRequest));
+        taskDetail.setReturnParams(JsonUtils.toJsonStr(aiResponse));
+        taskDetail.setExecStatus(resolveDetailStatus(aiResponse.getSuccess()));
+        taskDetail.setReserver("");
+        taskDetail.setRemark("AI探索执行详情");
+        taskDetailView.save(taskDetail);
+    }
+
+    /**
+     * 保存失败任务详情。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param failureReason 失败原因
+     */
+    private void saveFailedTaskDetail(Task task, CommandDispatchRequest request, String failureReason) {
+        TaskDetail taskDetail = new TaskDetail();
+        taskDetail.setTaskId(task.getId());
+        taskDetail.setTaskName(request.getCommandName());
+        taskDetail.setParentTaskId("");
+        taskDetail.setNextTaskId("");
+        taskDetail.setStepType(AgentStepTypeProcess.JUDGE.getCode());
+        taskDetail.setBranchCondition("");
+        taskDetail.setBranchRoute("");
+        taskDetail.setRequestParams(JsonUtils.toJsonStr(request));
+        taskDetail.setReturnParams(failureReason == null ? "" : failureReason);
+        taskDetail.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        taskDetail.setReserver("");
+        taskDetail.setRemark("智能体命令调度失败详情");
+        taskDetailView.save(taskDetail);
+    }
+
+    /**
+     * 发布记忆匹配进度事件。
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request 命令调度请求
+     * @param task 任务主记录
+     * @param memories 候选记忆
+     */
+    private void publishMemoryMatchProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request,
+                                            Task task, List<AgentMemory> memories) {
+
+        // 候选记忆为空时发布未命中事件
+        if (memories.isEmpty()) {
+            publishProgress(progressConsumer, request, task, "MEMORY_MISSED", "未命中候选记忆，转入 AI 探索", "", Boolean.FALSE, "");
+            return;
+        }
+        publishProgress(progressConsumer, request, task, "MEMORY_MATCHED", "已命中候选记忆", JsonUtils.toJsonStr(memories), Boolean.FALSE, "");
+    }
+
+    /**
+     * 发布调度进度事件。
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request 命令调度请求
+     * @param task 任务主记录
+     * @param eventType 事件类型
+     * @param message 事件消息
+     * @param payload 事件数据
+     * @param completed 是否完成
+     * @param failureReason 失败原因
+     */
+    private void publishProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request, Task task,
+                                 String eventType, String message, String payload, Boolean completed, String failureReason) {
+
+        // 未传入进度消费者时跳过事件发布
+        if (progressConsumer == null) {
+            return;
+        }
+        CommandDispatchProgressEvent event = buildProgressEvent(request, task, eventType, message, payload, completed, failureReason);
+        progressConsumer.accept(event);
+    }
+
+    /**
+     * 构建调度进度事件。
+     *
+     * @param request 命令调度请求
+     * @param task 任务主记录
+     * @param eventType 事件类型
+     * @param message 事件消息
+     * @param payload 事件数据
+     * @param completed 是否完成
+     * @param failureReason 失败原因
+     * @return 调度进度事件
+     */
+    private CommandDispatchProgressEvent buildProgressEvent(CommandDispatchRequest request, Task task, String eventType, String message,
+                                                            String payload, Boolean completed, String failureReason) {
+        CommandDispatchProgressEvent event = new CommandDispatchProgressEvent();
+        event.setTaskId(task.getId());
+        event.setSessionId(request.getSessionId());
+        event.setEventType(eventType);
+        event.setStepName(message);
+        event.setExecStatus(task.getExecStatus());
+        event.setMessage(message);
+        event.setPayload(payload);
+        event.setCompleted(completed);
+        event.setFailureReason(failureReason);
+        return event;
+    }
+
+    /**
+     * 解析任务详情名称。
+     *
+     * @param request 命令调度请求
+     * @param detail 记忆详情
+     * @return 任务详情名称
+     */
+    private String resolveTaskDetailName(CommandDispatchRequest request, AgentMemoryDetail detail) {
+
+        // 记忆详情为空时使用命令名称
+        if (detail == null || detail.getStepName() == null || detail.getStepName().isBlank()) {
+            return request.getCommandName();
+        }
+        return detail.getStepName();
+    }
+
+    /**
+     * 解析父步骤主键。
+     *
+     * @param detail 记忆详情
+     * @return 父步骤主键
+     */
+    private String resolveParentStepId(AgentMemoryDetail detail) {
+
+        // 记忆详情为空时父步骤为空
+        if (detail == null) {
+            return "";
+        }
+        return detail.getParentStepId();
+    }
+
+    /**
+     * 解析下一步骤主键。
+     *
+     * @param detail 记忆详情
+     * @return 下一步骤主键
+     */
+    private String resolveNextStepId(AgentMemoryDetail detail) {
+
+        // 记忆详情为空时下一步骤为空
+        if (detail == null) {
+            return "";
+        }
+        return detail.getNextStepId();
+    }
+
+    /**
+     * 解析步骤类型。
+     *
+     * @param detail 记忆详情
+     * @return 步骤类型
+     */
+    private String resolveStepType(AgentMemoryDetail detail) {
+
+        // 记忆详情为空时按原子命令记录
+        if (detail == null || detail.getStepType() == null || detail.getStepType().isBlank()) {
+            return AgentStepTypeProcess.ATOMIC_COMMAND.getCode();
+        }
+        return detail.getStepType();
+    }
+
+    /**
+     * 解析分支条件。
+     *
+     * @param detail 记忆详情
+     * @return 分支条件
+     */
+    private String resolveBranchCondition(AgentMemoryDetail detail) {
+
+        // 记忆详情为空时分支条件为空
+        if (detail == null) {
+            return "";
+        }
+        return detail.getBranchCondition();
+    }
+
+    /**
+     * 解析分支路由。
+     *
+     * @param detail 记忆详情
+     * @return 分支路由
+     */
+    private String resolveBranchRoute(AgentMemoryDetail detail) {
+
+        // 记忆详情为空时分支路由为空
+        if (detail == null) {
+            return "";
+        }
+        return detail.getBranchRoute();
+    }
+
+    /**
+     * 解析任务详情执行状态。
+     *
+     * @param success 是否成功
+     * @return 执行状态
+     */
+    private String resolveDetailStatus(Boolean success) {
+
+        // 执行响应不为成功时统一标记失败
+        if (!Boolean.TRUE.equals(success)) {
+            return AgentExecutionStatusProcess.FAILED.getCode();
+        }
+        return AgentExecutionStatusProcess.SUCCESS.getCode();
+    }
+
+    /**
+     * 标记任务执行成功。
+     *
+     * @param task 任务主记录
+     * @param responseContent 响应内容
+     */
+    private void markTaskSuccess(Task task, String responseContent) {
+        task.setReturnParams(responseContent);
+        task.setExecStatus(AgentExecutionStatusProcess.SUCCESS.getCode());
+        task.setFailureReason("");
+        taskView.updateById(task);
+    }
+
+    /**
+     * 标记任务执行失败。
+     *
+     * @param task 任务主记录
+     * @param failureReason 失败原因
+     */
+    private void markTaskFailed(Task task, String failureReason) {
+        task.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        task.setFailureReason(failureReason);
+        taskView.updateById(task);
+    }
+
+    /**
+     * 保存会话摘要。
+     *
+     * @param request 命令调度请求
+     * @param responseContent 响应内容
+     */
+    private void saveSessionSummary(CommandDispatchRequest request, String responseContent) {
+
+        // 会话ID为空时不保存会话摘要
+        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+            return;
+        }
+        agentSessionService.saveSummary(request.getSessionId(), responseContent);
+        agentSessionService.appendMessage(request.getSessionId(), request.getCommandContent());
+    }
+
+    /**
+     * 构建成功响应。
+     *
+     * @param task 任务主记录
+     * @param responseContent 响应内容
+     * @return 命令调度响应
+     */
+    private CommandDispatchResponse buildSuccessResponse(Task task, String responseContent) {
+        CommandDispatchResponse response = new CommandDispatchResponse();
+        response.setTaskId(task.getId());
+        response.setExecStatus(AgentExecutionStatusProcess.SUCCESS.getCode());
+        response.setResponseContent(responseContent);
+        response.setFailureReason("");
+        return response;
+    }
+
+    /**
+     * 构建失败响应。
+     *
+     * @param task 任务主记录
+     * @param failureReason 失败原因
+     * @return 命令调度响应
+     */
+    private CommandDispatchResponse buildFailedResponse(Task task, String failureReason) {
+        CommandDispatchResponse response = new CommandDispatchResponse();
+        response.setTaskId(task.getId());
+        response.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        response.setResponseContent("");
+        response.setFailureReason(failureReason);
+        return response;
+    }
+}

@@ -23,17 +23,29 @@ public class FindAllAgentMemoryRequest {
     @Schema(description = "记忆名称")
     private String memoryName;
 
+    @Schema(description = "步骤名称")
+    private String stepName;
+
     @Schema(description = "触发条件")
     private String triggerCondition;
 
-    @Schema(description = "状态")
-    private Status status;
+    @Schema(description = "触发动作")
+    private String triggerAction;
 
     @Schema(description = "创建时间")
     private Date createTime;
 
     @Schema(description = "修改时间")
     private Date updateTime;
+
+    @Schema(description = "状态")
+    private Status status;
+
+    @Schema(description = "扩展")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 
 }
 

@@ -20,7 +20,40 @@ public class PageTaskRequest extends PageBase {
     @Schema(description = "任务名称")
     private String taskName;
 
+    @Schema(description = "父任务ID")
+    private String parentTaskId;
+
+    @Schema(description = "下一个任务ID")
+    private String nextTaskId;
+
+    @Schema(description = "步骤类型：智能体步骤类型")
+    private String stepType;
+
+    @Schema(description = "分支条件")
+    private String branchCondition;
+
+    @Schema(description = "分支路由")
+    private String branchRoute;
+
+    @Schema(description = "请求参数")
+    private String requestParams;
+
+    @Schema(description = "返回参数")
+    private String returnParams;
+
     @Schema(description = "执行状态")
-    private Integer executionStatus;
+    private String execStatus;
+
+    @Schema(description = "失败原因")
+    private String failureReason;
+
+    @Schema(description = "状态")
+    private Status status;
+
+    @Schema(description = "扩展")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 }
 

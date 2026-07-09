@@ -3,11 +3,11 @@
 <mapper namespace="com.simple.ai.view.agentDefinition.AgentDefinitionRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_definition(id, name, definition_desc, first_rule, second_rule, third_skill, status, model, create_by, update_by, create_time, update_time)
+        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, model, create_by, update_by, create_time, update_time, status, reserver, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstRule}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.status}, #{entity.model}, #{entity.createBy},
-            #{entity.updateBy}, #{entity.createTime}, #{entity.updateTime})
+            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstPrinciple}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.model}, #{entity.createBy}, #{entity.updateBy},
+            #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
 </mapper>

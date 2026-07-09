@@ -3,11 +3,12 @@
 <mapper namespace="com.simple.ai.view.taskDetail.TaskDetailRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into task_detail(id, task_id, sequence, step_name, step_type, step_content, request_params, response_params, execution_status, create_time, update_time)
+        insert into task_detail(id, task_id, task_name, parent_task_id, next_task_id, step_type, branch_condition, branch_route, request_params, return_params, exec_status, create_time, update_time,
+        status, reserver, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.taskId}, #{entity.sequence}, #{entity.stepName}, #{entity.stepType}, #{entity.stepContent}, #{entity.requestParams}, #{entity.responseParams},
-            #{entity.executionStatus}, #{entity.createTime}, #{entity.updateTime})
+            (#{entity.id}, #{entity.taskId}, #{entity.taskName}, #{entity.parentTaskId}, #{entity.nextTaskId}, #{entity.stepType}, #{entity.branchCondition}, #{entity.branchRoute},
+            #{entity.requestParams}, #{entity.returnParams}, #{entity.execStatus}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
 </mapper>

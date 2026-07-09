@@ -41,11 +41,17 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
         LambdaQueryWrapper<AgentMemoryDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, pageRequest.getAgentMemoryId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getStepName()), AgentMemoryDetail::getStepName, pageRequest.getStepName())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getStepType()), AgentMemoryDetail::getStepType, pageRequest.getStepType())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getExecContent()), AgentMemoryDetail::getExecContent, pageRequest.getExecContent())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, pageRequest.getReturnDataFormat())
                     .like(ObjUtil.isNotEmpty(pageRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, pageRequest.getParentStepId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, pageRequest.getNextStepId())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getStepType()), AgentMemoryDetail::getStepType, pageRequest.getStepType())
                     .like(ObjUtil.isNotEmpty(pageRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, pageRequest.getBranchCondition())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, pageRequest.getBranchRoute());
+                    .like(ObjUtil.isNotEmpty(pageRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, pageRequest.getBranchRoute())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getModel()), AgentMemoryDetail::getModel, pageRequest.getModel())
+                    .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemoryDetail::getStatus, pageRequest.getStatus())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentMemoryDetail::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentMemoryDetail::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentMemoryDetail.class), queryWrapper);
     }
 
@@ -55,20 +61,39 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), AgentMemoryDetail::getId, findAllRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, findAllRequest.getAgentMemoryId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStepName()), AgentMemoryDetail::getStepName, findAllRequest.getStepName())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStepType()), AgentMemoryDetail::getStepType, findAllRequest.getStepType())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getExecContent()), AgentMemoryDetail::getExecContent, findAllRequest.getExecContent())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, findAllRequest.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, findAllRequest.getParentStepId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, findAllRequest.getNextStepId())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStepType()), AgentMemoryDetail::getStepType, findAllRequest.getStepType())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, findAllRequest.getBranchCondition())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, findAllRequest.getBranchRoute())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getModel()), AgentMemoryDetail::getModel, findAllRequest.getModel())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemoryDetail::getStatus, findAllRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentMemoryDetail::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentMemoryDetail::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemoryDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, neRequest.getAgentMemoryId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemoryDetail::getStepName, neRequest.getStepName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), AgentMemoryDetail::getStepType, neRequest.getStepType())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getExecContent()), AgentMemoryDetail::getExecContent, neRequest.getExecContent())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, neRequest.getReturnDataFormat())
                     .ne(ObjUtil.isNotEmpty(neRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, neRequest.getParentStepId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, neRequest.getNextStepId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), AgentMemoryDetail::getStepType, neRequest.getStepType())
                     .ne(ObjUtil.isNotEmpty(neRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, neRequest.getBranchCondition())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getModel()), AgentMemoryDetail::getModel, neRequest.getModel())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemoryDetail::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemoryDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemoryDetail::getRemark, neRequest.getRemark());
 
+        return repository.selectList(queryWrapper);
+    }
+
+    @Override
+    public List<AgentMemoryDetail> findAllByAgentMemoryIds(List<String> agentMemoryIds) {
+        LambdaQueryWrapper<AgentMemoryDetail> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(CollectionUtil.isNotEmpty(agentMemoryIds), AgentMemoryDetail::getAgentMemoryId, agentMemoryIds);
         return repository.selectList(queryWrapper);
     }
 
@@ -78,19 +103,31 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentMemoryDetail::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, findOneRequest.getAgentMemoryId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStepName()), AgentMemoryDetail::getStepName, findOneRequest.getStepName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepType()), AgentMemoryDetail::getStepType, findOneRequest.getStepType())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getExecContent()), AgentMemoryDetail::getExecContent, findOneRequest.getExecContent())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, findOneRequest.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, findOneRequest.getParentStepId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, findOneRequest.getNextStepId())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepType()), AgentMemoryDetail::getStepType, findOneRequest.getStepType())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, findOneRequest.getBranchCondition())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, findOneRequest.getBranchRoute())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getModel()), AgentMemoryDetail::getModel, findOneRequest.getModel())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemoryDetail::getStatus, findOneRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentMemoryDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentMemoryDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemoryDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, neRequest.getAgentMemoryId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemoryDetail::getStepName, neRequest.getStepName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), AgentMemoryDetail::getStepType, neRequest.getStepType())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getExecContent()), AgentMemoryDetail::getExecContent, neRequest.getExecContent())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, neRequest.getReturnDataFormat())
                     .ne(ObjUtil.isNotEmpty(neRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, neRequest.getParentStepId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, neRequest.getNextStepId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), AgentMemoryDetail::getStepType, neRequest.getStepType())
                     .ne(ObjUtil.isNotEmpty(neRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, neRequest.getBranchCondition())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getModel()), AgentMemoryDetail::getModel, neRequest.getModel())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemoryDetail::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemoryDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemoryDetail::getRemark, neRequest.getRemark());
 
         List<AgentMemoryDetail> list = repository.selectList(queryWrapper);
         if (list.isEmpty()) {
@@ -107,19 +144,31 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentMemoryDetail::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, findOneRequest.getAgentMemoryId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStepName()), AgentMemoryDetail::getStepName, findOneRequest.getStepName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepType()), AgentMemoryDetail::getStepType, findOneRequest.getStepType())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getExecContent()), AgentMemoryDetail::getExecContent, findOneRequest.getExecContent())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, findOneRequest.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, findOneRequest.getParentStepId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, findOneRequest.getNextStepId())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStepType()), AgentMemoryDetail::getStepType, findOneRequest.getStepType())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, findOneRequest.getBranchCondition())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, findOneRequest.getBranchRoute())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getModel()), AgentMemoryDetail::getModel, findOneRequest.getModel())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemoryDetail::getStatus, findOneRequest.getStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentMemoryDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentMemoryDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemoryDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, neRequest.getAgentMemoryId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemoryDetail::getStepName, neRequest.getStepName())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), AgentMemoryDetail::getStepType, neRequest.getStepType())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getExecContent()), AgentMemoryDetail::getExecContent, neRequest.getExecContent())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, neRequest.getReturnDataFormat())
                     .ne(ObjUtil.isNotEmpty(neRequest.getParentStepId()), AgentMemoryDetail::getParentStepId, neRequest.getParentStepId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getNextStepId()), AgentMemoryDetail::getNextStepId, neRequest.getNextStepId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getStepType()), AgentMemoryDetail::getStepType, neRequest.getStepType())
                     .ne(ObjUtil.isNotEmpty(neRequest.getBranchCondition()), AgentMemoryDetail::getBranchCondition, neRequest.getBranchCondition())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute());
+                    .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getModel()), AgentMemoryDetail::getModel, neRequest.getModel())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemoryDetail::getStatus, neRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemoryDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemoryDetail::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
 
@@ -161,11 +210,17 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
         queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentMemoryDetail::getId, request.getId())
                     .eq(ObjUtil.isNotEmpty(request.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, request.getAgentMemoryId())
                     .eq(ObjUtil.isNotEmpty(request.getStepName()), AgentMemoryDetail::getStepName, request.getStepName())
+                    .eq(ObjUtil.isNotEmpty(request.getStepType()), AgentMemoryDetail::getStepType, request.getStepType())
+                    .eq(ObjUtil.isNotEmpty(request.getExecContent()), AgentMemoryDetail::getExecContent, request.getExecContent())
+                    .eq(ObjUtil.isNotEmpty(request.getReturnDataFormat()), AgentMemoryDetail::getReturnDataFormat, request.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(request.getParentStepId()), AgentMemoryDetail::getParentStepId, request.getParentStepId())
                     .eq(ObjUtil.isNotEmpty(request.getNextStepId()), AgentMemoryDetail::getNextStepId, request.getNextStepId())
-                    .eq(ObjUtil.isNotEmpty(request.getStepType()), AgentMemoryDetail::getStepType, request.getStepType())
                     .eq(ObjUtil.isNotEmpty(request.getBranchCondition()), AgentMemoryDetail::getBranchCondition, request.getBranchCondition())
-                    .eq(ObjUtil.isNotEmpty(request.getBranchRoute()), AgentMemoryDetail::getBranchRoute, request.getBranchRoute());
+                    .eq(ObjUtil.isNotEmpty(request.getBranchRoute()), AgentMemoryDetail::getBranchRoute, request.getBranchRoute())
+                    .eq(ObjUtil.isNotEmpty(request.getModel()), AgentMemoryDetail::getModel, request.getModel())
+                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemoryDetail::getStatus, request.getStatus())
+                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentMemoryDetail::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentMemoryDetail::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
 }

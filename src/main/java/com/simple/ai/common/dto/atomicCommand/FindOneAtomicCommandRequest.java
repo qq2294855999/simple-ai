@@ -24,19 +24,22 @@ public class FindOneAtomicCommandRequest {
     private String command;
 
     @Schema(description = "作用")
-    private String func;
-
-    @Schema(description = "状态")
-    private Status status;
-
-    @Schema(description = "同步")
-    private Integer sync;
+    private String role;
 
     @Schema(description = "创建时间")
     private Date createTime;
 
     @Schema(description = "修改时间")
     private Date updateTime;
+
+    @Schema(description = "状态")
+    private Status status;
+
+    @Schema(description = "扩展")
+    private String reserver;
+
+    @Schema(description = "备注")
+    private String remark;
 
 }
 

@@ -48,28 +48,40 @@ public class TaskDetail {
     private String taskId;
 
     /**
-     * 序号
+     * 任务名称
      */
-    @TableField(value = "sequence")
-    private Integer sequence;
+    @TableField(value = "task_name")
+    private String taskName;
 
     /**
-     * 步骤名称
+     * 父任务ID
      */
-    @TableField(value = "step_name")
-    private String stepName;
+    @TableField(value = "parent_task_id")
+    private String parentTaskId;
 
     /**
-     * 步骤类型
+     * 下一个任务ID
+     */
+    @TableField(value = "next_task_id")
+    private String nextTaskId;
+
+    /**
+     * 步骤类型：智能体步骤类型
      */
     @TableField(value = "step_type")
     private String stepType;
 
     /**
-     * 步骤内容
+     * 分支条件
      */
-    @TableField(value = "step_content")
-    private String stepContent;
+    @TableField(value = "branch_condition")
+    private String branchCondition;
+
+    /**
+     * 分支路由
+     */
+    @TableField(value = "branch_route")
+    private String branchRoute;
 
     /**
      * 请求参数
@@ -80,14 +92,14 @@ public class TaskDetail {
     /**
      * 返回参数
      */
-    @TableField(value = "response_params")
-    private String responseParams;
+    @TableField(value = "return_params")
+    private String returnParams;
 
     /**
      * 执行状态
      */
-    @TableField(value = "execution_status")
-    private Integer executionStatus;
+    @TableField(value = "exec_status")
+    private String execStatus;
 
     /**
      * 创建时间
@@ -100,6 +112,24 @@ public class TaskDetail {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 

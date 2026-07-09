@@ -42,10 +42,10 @@ public class AgentRule {
     private String id;
 
     /**
-     * 名称
+     * 智能体ID
      */
-    @TableField(value = "name")
-    private String name;
+    @TableField(value = "agent_id")
+    private String agentId;
 
     /**
      * 定义描述
@@ -54,10 +54,16 @@ public class AgentRule {
     private String definitionDesc;
 
     /**
-     * 状态
+     * 触发条件
      */
-    @TableField(value = "status")
-    private Status status;
+    @TableField(value = "trigger_condition")
+    private String triggerCondition;
+
+    /**
+     * 触发动作
+     */
+    @TableField(value = "trigger_action")
+    private String triggerAction;
 
     /**
      * 创建时间
@@ -70,6 +76,24 @@ public class AgentRule {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 状态
+     */
+    @TableField(value = "status")
+    private Status status;
+
+    /**
+     * 扩展
+     */
+    @TableField(value = "reserver")
+    private String reserver;
+
+    /**
+     * 备注
+     */
+    @TableField(value = "remark")
+    private String remark;
 
 }
 
