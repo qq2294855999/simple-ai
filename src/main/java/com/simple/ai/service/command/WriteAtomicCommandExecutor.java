@@ -61,8 +61,8 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
         // 参数校验：命令内容不能为空
         AssertUtils.notEmpty(request.getCommandContent(), "命令内容不能为空");
 
-        // 构建写入类安全响应，真实写入能力后续按白名单专用命令接入
-        return buildWriteResponse(request);
+        // 构建写入类阻断响应，避免未授权写入命令被误判为执行成功
+        return buildBlockedWriteResponse(request);
     }
 
     /**
@@ -86,16 +86,16 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
     }
 
     /**
-     * 构建写入类命令响应。
+     * 构建写入类命令阻断响应。
      *
      * @param request 原子命令调用请求
      * @return 原子命令调用响应
      */
-    private AtomicCommandInvokeResponse buildWriteResponse(AtomicCommandInvokeRequest request) {
+    private AtomicCommandInvokeResponse buildBlockedWriteResponse(AtomicCommandInvokeRequest request) {
         AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
-        response.setSuccess(Boolean.TRUE);
-        response.setResponseContent("写入类命令已识别，等待白名单专用写入能力接入：" + JsonUtils.toJsonStr(request));
-        response.setFailureReason("");
+        response.setSuccess(Boolean.FALSE);
+        response.setResponseContent(JsonUtils.toJsonStr(request));
+        response.setFailureReason("写入类命令已识别，但缺少白名单专用写入能力，已按安全策略阻断执行");
         return response;
     }
 }

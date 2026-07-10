@@ -56,8 +56,8 @@ public class ToolAtomicCommandExecutor implements AtomicCommandExecutor {
         // 参数校验：命令内容不能为空
         AssertUtils.notEmpty(request.getCommandContent(), "命令内容不能为空");
 
-        // 构建工具类安全响应，真实工具调用后续按白名单能力接入
-        return buildToolResponse(request);
+        // 构建工具类阻断响应，避免未授权工具命令被误判为执行成功
+        return buildBlockedToolResponse(request);
     }
 
     /**
@@ -80,16 +80,16 @@ public class ToolAtomicCommandExecutor implements AtomicCommandExecutor {
     }
 
     /**
-     * 构建工具类命令响应。
+     * 构建工具类命令阻断响应。
      *
      * @param request 原子命令调用请求
      * @return 原子命令调用响应
      */
-    private AtomicCommandInvokeResponse buildToolResponse(AtomicCommandInvokeRequest request) {
+    private AtomicCommandInvokeResponse buildBlockedToolResponse(AtomicCommandInvokeRequest request) {
         AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
-        response.setSuccess(Boolean.TRUE);
-        response.setResponseContent("工具类命令已识别，等待白名单专用工具能力接入：" + JsonUtils.toJsonStr(request));
-        response.setFailureReason("");
+        response.setSuccess(Boolean.FALSE);
+        response.setResponseContent(JsonUtils.toJsonStr(request));
+        response.setFailureReason("工具类命令已识别，但缺少白名单专用工具能力，已按安全策略阻断执行");
         return response;
     }
 

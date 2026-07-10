@@ -10,6 +10,8 @@ import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.command.CommandDispatchResponse;
+import com.simple.ai.common.dto.command.SubAgentDispatchContext;
+import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
@@ -21,6 +23,7 @@ import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.service.command.AtomicCommandExecutor;
 import com.simple.ai.common.service.command.CommandDispatchService;
+import com.simple.ai.common.service.command.SubAgentDispatchService;
 import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.task.TaskView;
@@ -41,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 /**
  * 默认智能体命令调度服务实现。
@@ -50,7 +54,7 @@ import java.util.function.Consumer;
 @Slf4j
 @Service
 @Transactional
-class DefaultCommandDispatchService implements CommandDispatchService {
+class DefaultCommandDispatchService implements CommandDispatchService, InternalCommandDispatchExecutor {
 
     /**
      * 子智能体递归最大深度
@@ -85,6 +89,12 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      */
     @Autowired
     private AtomicCommandExecutorRegistry atomicCommandExecutorRegistry;
+
+    /**
+     * 子智能体调度服务
+     */
+    @Autowired
+    private SubAgentDispatchService subAgentDispatchService;
 
     /**
      * 智能体会话服务
@@ -127,6 +137,14 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         return dispatchInternal(request, progressConsumer, "", 0);
     }
 
+    @Override
+    public CommandDispatchResponse dispatchInternal(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                                    String parentTaskId, int recursionDepth) {
+
+        // 通过内部执行器入口承接子智能体递归上下文
+        return executeDispatchInternal(request, progressConsumer, parentTaskId, recursionDepth);
+    }
+
     /**
      * 执行智能体命令内部调度。
      *
@@ -136,8 +154,8 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      * @param recursionDepth 当前递归深度
      * @return 命令调度响应
      */
-    private CommandDispatchResponse dispatchInternal(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer,
-                                                     String parentTaskId, int recursionDepth) {
+    private CommandDispatchResponse executeDispatchInternal(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                                            String parentTaskId, int recursionDepth) {
 
         // 参数校验：智能体ID不能为空
         AssertUtils.notEmpty(request.getAgentId(), "智能体ID不能为空");
@@ -177,13 +195,15 @@ class DefaultCommandDispatchService implements CommandDispatchService {
             publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
             return buildSuccessResponse(task, responseContent);
         } catch (Exception e) {
+            String failureReason = resolveFailureReason(e);
+
             // 保存失败任务详情，确保失败链路可追踪且不重复落库
-            saveFailedTaskDetailIfAbsent(task, request, e.getMessage());
+            saveFailedTaskDetailIfAbsent(task, request, failureReason);
 
             // 标记任务执行失败
-            markTaskFailed(task, e.getMessage());
-            publishProgress(progressConsumer, request, task, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, e.getMessage());
-            return buildFailedResponse(task, e.getMessage());
+            markTaskFailed(task, failureReason);
+            publishProgress(progressConsumer, request, task, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, failureReason);
+            return buildFailedResponse(task, failureReason);
         }
     }
 
@@ -207,6 +227,7 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         task.setReturnParams("");
         task.setExecStatus(AgentExecutionStatusProcess.RUNNING.getCode());
         task.setFailureReason("");
+        task.setStatus(Status.ON);
         task.setReserver("");
         task.setRemark("智能体命令调度任务");
         taskView.save(task);
@@ -232,13 +253,87 @@ class DefaultCommandDispatchService implements CommandDispatchService {
             return executeMemorySteps(task, request, context, memories, progressConsumer, recursionDepth);
         }
 
-        // 未命中记忆时调用 AI 生成探索响应并沉淀记忆
+        // 未命中记忆时调用 AI 生成探索响应
         String responseContent = executeAiExploration(task, request, context, progressConsumer);
+
+        // AI 探索目标未达成时抛出异常，防止任务被误标记为执行成功
+        AssertUtils.isTrue(isAiGoalAchieved(responseContent), "AI探索未达到目标达成标准");
+        return summarizeMemoryAfterGoalAchieved(task, request, progressConsumer, responseContent);
+    }
+
+    /**
+     * AI 目标达成后沉淀智能体记忆。
+     *
+     * @param task 任务主记录
+     * @param request 命令调度请求
+     * @param progressConsumer 进度事件消费者
+     * @param responseContent 响应内容
+     * @return 响应内容
+     */
+    private String summarizeMemoryAfterGoalAchieved(Task task, CommandDispatchRequest request,
+                                                    Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                                    String responseContent) {
+
+        // 目标达成后才执行记忆沉淀，避免低质量探索内容进入可复用步骤链
         publishProgress(progressConsumer, request, task, "MEMORY_SUMMARIZING", "正在沉淀智能体记忆", "", Boolean.FALSE, "");
         String memoryId = agentMemorySummarizer.summarize(request.getAgentId(), task.getId(), request.getCommandName());
-        task.setAgentMemoryId(memoryId);
+        persistTaskMemoryId(task, memoryId);
         publishProgress(progressConsumer, request, task, "MEMORY_SUMMARIZED", "智能体记忆沉淀完成", memoryId, Boolean.FALSE, "");
         return responseContent;
+    }
+
+    /**
+     * 持久化任务记忆主键。
+     *
+     * @param task 任务主记录
+     * @param memoryId 智能体记忆ID
+     */
+    private void persistTaskMemoryId(Task task, String memoryId) {
+
+        // 记忆沉淀未返回主键时保留任务原状态，由后续成功标记继续处理
+        if (memoryId == null || memoryId.isBlank()) {
+            return;
+        }
+        task.setAgentMemoryId(memoryId);
+        taskView.updateById(task);
+    }
+
+    /**
+     * 判断 AI 探索是否达到可沉淀目标。
+     *
+     * @param responseContent AI 响应内容
+     * @return 是否达到可沉淀目标
+     */
+    private boolean isAiGoalAchieved(String responseContent) {
+
+        // 响应内容为空时不能视为目标达成
+        if (responseContent == null || responseContent.isBlank()) {
+            return false;
+        }
+
+        // AI 明确声明失败或无法处理时不沉淀记忆
+        if (containsAnyText(responseContent, "无法完成", "未完成", "失败", "不能处理", "无法处理")) {
+            return false;
+        }
+        return containsAnyText(responseContent, "已完成", "完成", "成功", "执行结果", "处理结果", "方案", "步骤");
+    }
+
+    /**
+     * 判断文本是否包含任一关键词。
+     *
+     * @param text 文本内容
+     * @param keywords 关键词数组
+     * @return 是否包含任一关键词
+     */
+    private boolean containsAnyText(String text, String... keywords) {
+
+        // 遍历关键词，任一关键词命中即返回成功
+        for (String keyword : keywords) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -330,14 +425,21 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      * @return 起始步骤
      */
     private AgentMemoryDetail findStartDetail(List<AgentMemoryDetail> details) {
+        AgentMemoryDetail startDetail = null;
 
-        // 优先使用没有父步骤的详情作为入口
+        // 优先使用没有父步骤的详情作为入口，多个入口表示记忆链路不确定
         for (AgentMemoryDetail detail : details) {
             if (detail.getParentStepId() == null || detail.getParentStepId().isBlank()) {
-                return detail;
+                AssertUtils.isTrue(startDetail == null, "记忆步骤链存在多个入口步骤，无法确定执行起点");
+                startDetail = detail;
             }
         }
-        return details.get(0);
+
+        // 没有声明入口时沿用查询结果首条，保持历史数据兼容
+        if (startDetail == null) {
+            return details.get(0);
+        }
+        return startDetail;
     }
 
     /**
@@ -485,7 +587,9 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         if (currentDetail.getNextStepId() == null || currentDetail.getNextStepId().isBlank()) {
             return null;
         }
-        return detailMap.get(currentDetail.getNextStepId());
+        AgentMemoryDetail nextDetail = detailMap.get(currentDetail.getNextStepId());
+        AssertUtils.notEmpty(nextDetail, "记忆步骤[{}]引用的下一步骤[{}]不存在", currentDetail.getId(), currentDetail.getNextStepId());
+        return nextDetail;
     }
 
     /**
@@ -501,7 +605,9 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         if (routeId == null || routeId.isBlank()) {
             return null;
         }
-        return detailMap.get(routeId);
+        AgentMemoryDetail nextDetail = detailMap.get(routeId);
+        AssertUtils.notEmpty(nextDetail, "记忆步骤路由引用的目标步骤[{}]不存在", routeId);
+        return nextDetail;
     }
 
     /**
@@ -619,15 +725,40 @@ class DefaultCommandDispatchService implements CommandDispatchService {
     private String executeSubAgentStep(Task task, CommandDispatchRequest request, AgentContext context, AgentMemoryDetail detail,
                                        Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
         SubAgentRelation relation = findMatchedSubAgentRelation(context, detail);
-        CommandDispatchRequest subRequest = buildSubAgentRequest(request, relation, detail);
-        publishProgress(progressConsumer, request, task, "SUB_AGENT_STARTED", detail.getStepName(), subRequest.getCommandContent(), Boolean.FALSE, "");
-        CommandDispatchResponse subResponse = dispatchInternal(subRequest, progressConsumer, task.getId(), recursionDepth + 1);
+        SubAgentDispatchContext dispatchContext = buildSubAgentDispatchContext(task, request, relation, detail, progressConsumer, recursionDepth);
+        publishProgress(progressConsumer, request, task, "SUB_AGENT_STARTED", detail.getStepName(), detail.getExecContent(), Boolean.FALSE, "");
+        CommandDispatchResponse subResponse = subAgentDispatchService.dispatch(dispatchContext);
         linkParentTaskToSubTask(task, subResponse);
         AtomicCommandInvokeResponse recordResponse = buildSubAgentRecordResponse(subResponse);
-        saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(subRequest), recordResponse);
+        saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(dispatchContext), recordResponse);
         AssertUtils.isTrue(AgentExecutionStatusProcess.SUCCESS.getCode().equals(subResponse.getExecStatus()), subResponse.getFailureReason());
         publishProgress(progressConsumer, request, task, "SUB_AGENT_COMPLETED", detail.getStepName(), subResponse.getResponseContent(), Boolean.FALSE, "");
         return subResponse.getResponseContent();
+    }
+
+    /**
+     * 构建子智能体调度上下文。
+     *
+     * @param task 父任务主记录
+     * @param request 父命令调度请求
+     * @param relation 子智能体关系
+     * @param detail 记忆详情
+     * @param progressConsumer 进度事件消费者
+     * @param recursionDepth 当前递归深度
+     * @return 子智能体调度上下文
+     */
+    private SubAgentDispatchContext buildSubAgentDispatchContext(Task task, CommandDispatchRequest request, SubAgentRelation relation,
+                                                                 AgentMemoryDetail detail,
+                                                                 Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                                                 int recursionDepth) {
+        SubAgentDispatchContext context = new SubAgentDispatchContext();
+        context.setParentTask(task);
+        context.setParentRequest(request);
+        context.setRelation(relation);
+        context.setMemoryDetail(detail);
+        context.setProgressConsumer(progressConsumer);
+        context.setRecursionDepth(recursionDepth);
+        return context;
     }
 
     /**
@@ -664,24 +795,6 @@ class DefaultCommandDispatchService implements CommandDispatchService {
             return false;
         }
         return execContent.contains(subAgentId);
-    }
-
-    /**
-     * 构建子智能体命令调度请求。
-     *
-     * @param request 父命令调度请求
-     * @param relation 子智能体关系
-     * @param detail 记忆详情
-     * @return 子智能体命令调度请求
-     */
-    private CommandDispatchRequest buildSubAgentRequest(CommandDispatchRequest request, SubAgentRelation relation, AgentMemoryDetail detail) {
-        CommandDispatchRequest subRequest = new CommandDispatchRequest();
-        subRequest.setAgentId(relation.getSubAgentId());
-        subRequest.setCommandName(detail.getStepName());
-        subRequest.setCommandContent(detail.getExecContent());
-        subRequest.setSessionId(request.getSessionId());
-        subRequest.setRequestParams(request.getRequestParams());
-        return subRequest;
     }
 
     /**
@@ -847,16 +960,42 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      */
     private boolean isAtomicCommandMatched(String commandContent, AtomicCommand atomicCommand) {
 
-        // 原子命令名称命中时直接使用该命令定义
-        if (atomicCommand.getName() != null && commandContent.contains(atomicCommand.getName())) {
-            return true;
+        // 命令内容或原子命令定义为空时不允许模糊命中
+        if (commandContent == null || commandContent.isBlank() || atomicCommand == null) {
+            return false;
         }
 
-        // 原子命令正文命中时直接使用该命令定义
-        if (atomicCommand.getCommand() != null && commandContent.contains(atomicCommand.getCommand())) {
+        // 原子命令名称按完整词命中，避免短名称被长文本误包含
+        if (isAtomicCommandTokenMatched(commandContent, atomicCommand.getName())) {
             return true;
         }
-        return false;
+        return isAtomicCommandTokenMatched(commandContent, atomicCommand.getCommand());
+    }
+
+    /**
+     * 判断原子命令令牌是否完整命中。
+     *
+     * @param commandContent 命令内容
+     * @param atomicCommandText 原子命令名称或正文
+     * @return 是否完整命中
+     */
+    private boolean isAtomicCommandTokenMatched(String commandContent, String atomicCommandText) {
+
+        // 原子命令文本为空时不参与匹配
+        if (atomicCommandText == null || atomicCommandText.isBlank()) {
+            return false;
+        }
+        String trimmedCommandContent = commandContent.trim();
+        String trimmedAtomicCommandText = atomicCommandText.trim();
+
+        // 完全一致时优先视为准确命中
+        if (trimmedCommandContent.equals(trimmedAtomicCommandText)) {
+            return true;
+        }
+        Pattern tokenPattern = Pattern.compile("(^|[^\\p{IsAlphabetic}\\p{IsDigit}_])"
+                + Pattern.quote(trimmedAtomicCommandText)
+                + "($|[^\\p{IsAlphabetic}\\p{IsDigit}_])");
+        return tokenPattern.matcher(trimmedCommandContent).find();
     }
 
     /**
@@ -920,7 +1059,10 @@ class DefaultCommandDispatchService implements CommandDispatchService {
      */
     private AgentAiRequest buildAiRequest(CommandDispatchRequest request, AgentContext context) {
         AgentAiRequest aiRequest = new AgentAiRequest();
-        aiRequest.setModel(context.getAgentDefinition().getModel());
+
+        // 逐层获取智能体定义后提取模型，避免链式调用
+        AgentDefinition agentDefinition = context.getAgentDefinition();
+        aiRequest.setModel(agentDefinition.getModel());
         aiRequest.setPromptContent(context.getPromptContent());
         aiRequest.setCommandContent(request.getCommandContent());
         aiRequest.setSessionSummary(context.getSessionSummary());
@@ -963,6 +1105,7 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         taskDetail.setRequestParams(requestParams);
         taskDetail.setReturnParams(JsonUtils.toJsonStr(invokeResponse));
         taskDetail.setExecStatus(resolveDetailStatus(invokeResponse.getSuccess()));
+        taskDetail.setStatus(Status.ON);
         taskDetail.setReserver("");
         taskDetail.setRemark("智能体步骤执行详情");
         taskDetailView.save(taskDetail);
@@ -988,6 +1131,7 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         taskDetail.setRequestParams(JsonUtils.toJsonStr(aiRequest));
         taskDetail.setReturnParams(JsonUtils.toJsonStr(aiResponse));
         taskDetail.setExecStatus(resolveDetailStatus(aiResponse.getSuccess()));
+        taskDetail.setStatus(Status.ON);
         taskDetail.setReserver("");
         taskDetail.setRemark("AI探索执行详情");
         taskDetailView.save(taskDetail);
@@ -1042,6 +1186,7 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         taskDetail.setRequestParams(JsonUtils.toJsonStr(request));
         taskDetail.setReturnParams(failureReason == null ? "" : failureReason);
         taskDetail.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        taskDetail.setStatus(Status.ON);
         taskDetail.setReserver("");
         taskDetail.setRemark("智能体命令调度失败详情");
         taskDetailView.save(taskDetail);
@@ -1086,7 +1231,13 @@ class DefaultCommandDispatchService implements CommandDispatchService {
             return;
         }
         CommandDispatchProgressEvent event = buildProgressEvent(request, task, eventType, message, payload, completed, failureReason);
-        progressConsumer.accept(event);
+        try {
+            progressConsumer.accept(event);
+        } catch (RuntimeException e) {
+
+            // 进度通道异常不改变业务任务状态，避免客户端断开导致任务被误标记失败
+            log.warn("智能体命令调度进度事件发送失败，任务ID：{}，事件类型：{}", task.getId(), eventType, e);
+        }
     }
 
     /**
@@ -1259,8 +1410,35 @@ class DefaultCommandDispatchService implements CommandDispatchService {
         if (request.getSessionId() == null || request.getSessionId().isBlank()) {
             return;
         }
-        agentSessionService.saveSummary(request.getSessionId(), responseContent);
-        agentSessionService.appendMessage(request.getSessionId(), request.getCommandContent());
+        try {
+            agentSessionService.saveSummary(request.getSessionId(), responseContent);
+            agentSessionService.appendMessage(request.getSessionId(), request.getCommandContent());
+        } catch (RuntimeException e) {
+
+            // 会话摘要属于辅助上下文，写入失败不改变核心任务成功状态
+            log.warn("智能体命令调度会话摘要写入失败，会话ID：{}", request.getSessionId(), e);
+        }
+    }
+
+    /**
+     * 解析完整失败原因。
+     *
+     * @param exception 异常对象
+     * @return 完整失败原因
+     */
+    private String resolveFailureReason(Exception exception) {
+
+        // 异常对象为空时返回调度失败默认语义
+        if (exception == null) {
+            return "智能体命令调度失败，未捕获到具体异常对象";
+        }
+        String message = exception.getMessage();
+
+        // 异常消息存在时优先保留业务失败原因
+        if (message != null && !message.isBlank()) {
+            return message;
+        }
+        return "智能体命令调度失败，异常类型：" + exception.getClass().getSimpleName();
     }
 
     /**
