@@ -15,6 +15,8 @@ import com.simple.ai.common.dto.agentMemoryDetail.InfoAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentMemoryDetail.CreateAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.UpdateAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,19 @@ public class AgentMemoryDetailController {
     @HasAuthority("sys:agent-memory-detail:list")
     public R<IPage<PageAgentMemoryDetailResponse>> list(@ParameterObject PageAgentMemoryDetailRequest request) {
         return R.ok(agentMemoryDetailService.findAll(request));
+    }
+
+    /**
+     * 聚合分页查询智能体记忆详情。
+     *
+     * @param request 聚合分页请求
+     * @return 聚合分页数据
+     */
+    @GetMapping("aggregate-list")
+    @Operation(summary = "聚合分页查询智能体记忆详情")
+    @HasAuthority("sys:agent-memory-detail:aggregate-list")
+    public R<IPage<PageAggregateAgentMemoryDetailResponse>> aggregateList(@ParameterObject PageAggregateAgentMemoryDetailRequest request) {
+        return R.ok(agentMemoryDetailService.findAggregateAll(request));
     }
 
     @GetMapping("find/{id}")

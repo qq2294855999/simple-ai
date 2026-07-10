@@ -15,6 +15,8 @@ import com.simple.ai.common.dto.atomicCommand.InfoAtomicCommandResponse;
 import com.simple.ai.common.dto.atomicCommand.CreateAtomicCommandRequest;
 import com.simple.ai.common.dto.atomicCommand.UpdateAtomicCommandRequest;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,19 @@ public class AtomicCommandController {
     @HasAuthority("sys:atomic-command:list")
     public R<IPage<PageAtomicCommandResponse>> list(@ParameterObject PageAtomicCommandRequest request) {
         return R.ok(atomicCommandService.findAll(request));
+    }
+
+    /**
+     * 聚合分页查询原子命令。
+     *
+     * @param request 聚合分页请求
+     * @return 聚合分页数据
+     */
+    @GetMapping("aggregate-list")
+    @Operation(summary = "聚合分页查询原子命令")
+    @HasAuthority("sys:atomic-command:aggregate-list")
+    public R<IPage<PageAggregateAtomicCommandResponse>> aggregateList(@ParameterObject PageAggregateAtomicCommandRequest request) {
+        return R.ok(atomicCommandService.findAggregateAll(request));
     }
 
     @GetMapping("find/{id}")

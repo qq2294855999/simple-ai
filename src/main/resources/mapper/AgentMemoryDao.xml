@@ -10,5 +10,110 @@
             #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
+    <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryResponse">
+        select
+            am.id,
+            am.agent_id as agentId,
+            ad.name as agentName,
+            am.memory_name as memoryName,
+            am.step_name as stepName,
+            am.trigger_condition as triggerCondition,
+            am.trigger_action as triggerAction,
+            coalesce(step_stat.step_count, 0) as stepCount,
+            coalesce(task_stat.task_count, 0) as taskCount,
+            latest_task.exec_status as latestTaskStatus,
+            case latest_task.exec_status
+                when 'WAITING' then '等待执行'
+                when 'RUNNING' then '执行中'
+                when 'SUCCESS' then '执行成功'
+                when 'FAILED' then '执行失败'
+                else null
+            end as latestTaskStatusLabel,
+            am.create_time as createTime,
+            am.update_time as updateTime,
+            am.status,
+            am.remark
+        from agent_memory am
+        inner join agent_definition ad on ad.id = am.agent_id
+        left join (
+            select agent_memory_id, count(1) as step_count
+            from agent_memory_detail
+            group by agent_memory_id
+        ) step_stat on step_stat.agent_memory_id = am.id
+        left join (
+            select agent_memory_id, count(1) as task_count
+            from task
+            group by agent_memory_id
+        ) task_stat on task_stat.agent_memory_id = am.id
+        left join lateral (
+            select t.exec_status
+            from task t
+            where t.agent_memory_id = am.id
+            order by t.update_time desc nulls last, t.create_time desc nulls last
+            limit 1
+        ) latest_task on true
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (am.memory_name like concat('%', #{pageRequest.keyword}, '%') or am.step_name like concat('%', #{pageRequest.keyword}, '%') or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and am.agent_id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and am.status = #{pageRequest.status}
+            </if>
+        </where>
+        order by am.update_time desc nulls last, am.create_time desc nulls last
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectAggregateCount" resultType="java.lang.Long">
+        select count(1)
+        from agent_memory am
+        inner join agent_definition ad on ad.id = am.agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (am.memory_name like concat('%', #{pageRequest.keyword}, '%') or am.step_name like concat('%', #{pageRequest.keyword}, '%') or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and am.agent_id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and am.status = #{pageRequest.status}
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteTaskDetailsByMemoryIds">
+        delete from task_detail
+        where task_id in (
+            select id from task where agent_memory_id in
+            <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
+                #{memoryId}
+            </foreach>
+        )
+    </delete>
+
+    <delete id="deleteTasksByMemoryIds">
+        delete from task
+        where agent_memory_id in
+        <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
+            #{memoryId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteMemoryDetailsByMemoryIds">
+        delete from agent_memory_detail
+        where agent_memory_id in
+        <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
+            #{memoryId}
+        </foreach>
+    </delete>
 </mapper>
 

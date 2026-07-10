@@ -1,15 +1,15 @@
 package com.simple.ai.common.service.agentRule;
 
-import java.util.Date;
-import java.util.List;
-
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.InfoAgentRuleResponse;
 import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.InfoAgentRuleResponse;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
+import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
+import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
+
+import java.util.List;
 
 /**
  * 智能体规则(agent_rule)接口
@@ -25,6 +25,14 @@ public interface AgentRuleService {
      * @return 分页数据
      */
     IPage<PageAgentRuleResponse> findAll(PageAgentRuleRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 请求参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentRuleResponse> findAggregateAll(PageAggregateAgentRuleRequest pageRequest);
 
     /**
      * 获取单条数据

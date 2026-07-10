@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.dto.task.PageTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
 import com.simple.ai.common.dto.task.FindOneTaskRequest;
 import com.simple.ai.common.dto.task.FindAllTaskRequest;
 import com.simple.ai.common.dto.task.DeleteTaskRequest;
@@ -26,6 +28,14 @@ public interface TaskView {
      * @return 分页数据
      */
     IPage<Task> findAll(PageTaskRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 聚合分页请求
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateTaskResponse> findAggregateAll(PageAggregateTaskRequest pageRequest);
 
     /**
      * 获取所有数据

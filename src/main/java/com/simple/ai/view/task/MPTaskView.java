@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.dto.task.PageTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
 import com.simple.ai.common.dto.task.FindOneTaskRequest;
 import com.simple.ai.common.dto.task.FindAllTaskRequest;
 import com.simple.ai.common.dto.task.DeleteTaskRequest;
@@ -54,6 +56,22 @@ class MPTaskView implements TaskView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), Task::getReserver, pageRequest.getReserver())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), Task::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(Task.class), queryWrapper);
+    }
+
+    @Override
+    public IPage<PageAggregateTaskResponse> findAggregateAll(PageAggregateTaskRequest pageRequest) {
+
+        // 构建分页边界
+        Page<Task> page = pageRequest.getPage(Task.class);
+        Long offset = (page.getCurrent() - 1) * page.getSize();
+
+        // 查询聚合记录与总数
+        List<PageAggregateTaskResponse> records = repository.selectAggregatePage(pageRequest, offset, page.getSize());
+        Long total = repository.selectAggregateCount(pageRequest);
+
+        Page<PageAggregateTaskResponse> result = new Page<>(page.getCurrent(), page.getSize(), total);
+        result.setRecords(records);
+        return result;
     }
 
     @Override

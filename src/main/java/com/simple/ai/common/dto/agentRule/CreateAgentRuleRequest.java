@@ -1,18 +1,15 @@
 package com.simple.ai.common.dto.agentRule;
 
-import java.util.Date;
-
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
-import java.util.Map;
-
+/**
+ * 智能体规则(agent_rule)创建请求参数。
+ *
+ * @author qty
+ */
 @Data
-@Accessors(chain = true)
 @Schema(title = "智能体规则(agent_rule)创建请求参数")
 public class CreateAgentRuleRequest {
 
@@ -31,10 +28,6 @@ public class CreateAgentRuleRequest {
     @Schema(description = "触发动作")
     @NotEmpty(message = "触发动作不能为空")
     private String triggerAction;
-
-    @Schema(description = "扩展")
-    @NotEmpty(message = "扩展不能为空")
-    private String reserver;
 
     @Schema(description = "备注")
     private String remark;

@@ -1,66 +1,55 @@
 package com.simple.ai.common.dto.agentMemoryDetail;
 
-import java.util.Date;
-
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import java.util.Map;
-
+/**
+ * Agent memory detail create request.
+ *
+ * @author qty
+ */
 @Data
 @Accessors(chain = true)
-@Schema(title = "智能体记忆详情(agent_memory_detail)创建请求参数")
+@Schema(title = "Agent memory detail create request")
 public class CreateAgentMemoryDetailRequest {
 
-    @Schema(description = "智能体记忆ID")
-    @NotEmpty(message = "智能体记忆ID不能为空")
+    @Schema(description = "Agent memory id")
+    @NotEmpty(message = "Agent memory id cannot be empty")
     private String agentMemoryId;
 
-    @Schema(description = "步骤名称")
-    @NotEmpty(message = "步骤名称不能为空")
+    @Schema(description = "Step name")
+    @NotEmpty(message = "Step name cannot be empty")
     private String stepName;
 
-    @Schema(description = "步骤类型：智能体记忆步骤类型")
-    @NotEmpty(message = "步骤类型：智能体记忆步骤类型不能为空")
+    @Schema(description = "Step type")
+    @NotEmpty(message = "Step type cannot be empty")
     private String stepType;
 
-    @Schema(description = "执行内容")
-    @NotEmpty(message = "执行内容不能为空")
+    @Schema(description = "Execution content")
+    @NotEmpty(message = "Execution content cannot be empty")
     private String execContent;
 
-    @Schema(description = "返回的数据格式")
-    @NotEmpty(message = "返回的数据格式不能为空")
+    @Schema(description = "Return data format")
+    @NotEmpty(message = "Return data format cannot be empty")
     private String returnDataFormat;
 
-    @Schema(description = "父步骤ID")
-    @NotEmpty(message = "父步骤ID不能为空")
+    @Schema(description = "Parent step id")
     private String parentStepId;
 
-    @Schema(description = "下一个步骤ID")
-    @NotEmpty(message = "下一个步骤ID不能为空")
+    @Schema(description = "Next step id")
     private String nextStepId;
 
-    @Schema(description = "分支条件")
-    @NotEmpty(message = "分支条件不能为空")
+    @Schema(description = "Branch condition")
     private String branchCondition;
 
-    @Schema(description = "分支路由")
-    @NotEmpty(message = "分支路由不能为空")
+    @Schema(description = "Branch route")
     private String branchRoute;
 
-    @Schema(description = "模型")
-    @NotEmpty(message = "模型不能为空")
+    @Schema(description = "Model")
     private String model;
 
-    @Schema(description = "扩展")
-    @NotEmpty(message = "扩展不能为空")
-    private String reserver;
-
-    @Schema(description = "备注")
+    @Schema(description = "Remark")
     private String remark;
 }
-

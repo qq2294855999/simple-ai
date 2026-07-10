@@ -6,6 +6,8 @@ import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationRequest;
+import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationResponse;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.dto.subAgentRelation.PageSubAgentRelationRequest;
 import com.simple.ai.common.dto.subAgentRelation.FindOneSubAgentRelationRequest;
@@ -26,6 +28,14 @@ public interface SubAgentRelationView {
      * @return 分页数据
      */
     IPage<SubAgentRelation> findAll(PageSubAgentRelationRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 分页参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateSubAgentRelationResponse> findAggregateAll(PageAggregateSubAgentRelationRequest pageRequest);
 
     /**
      * 获取所有数据

@@ -10,5 +10,80 @@
             #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
+
+    <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse">
+        select
+            ask.id,
+            ask.agent_id as agentId,
+            ad.name as agentName,
+            ask.definition_desc as definitionDesc,
+            ask.exec_content as execContent,
+            ask.return_data_format as returnDataFormat,
+            coalesce(command_stat.command_count, 0) as commandCount,
+            ask.update_time as updateTime,
+            ask.status,
+            ask.remark
+        from agent_skill ask
+        inner join agent_definition ad on ad.id = ask.agent_id
+        left join (
+            select skill_id, count(1) as command_count
+            from atomic_command
+            where skill_id is not null
+            group by skill_id
+        ) command_stat on command_stat.skill_id = ask.id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (ask.definition_desc like concat('%', #{pageRequest.keyword}, '%')
+                    or ask.exec_content like concat('%', #{pageRequest.keyword}, '%')
+                    or ask.return_data_format like concat('%', #{pageRequest.keyword}, '%')
+                    or ask.remark like concat('%', #{pageRequest.keyword}, '%')
+                    or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and ask.agent_id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and ask.status = #{pageRequest.status}
+            </if>
+        </where>
+        order by ask.update_time desc nulls last, ask.create_time desc nulls last
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectAggregateCount" resultType="java.lang.Long">
+        select count(1)
+        from agent_skill ask
+        inner join agent_definition ad on ad.id = ask.agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (ask.definition_desc like concat('%', #{pageRequest.keyword}, '%')
+                    or ask.exec_content like concat('%', #{pageRequest.keyword}, '%')
+                    or ask.return_data_format like concat('%', #{pageRequest.keyword}, '%')
+                    or ask.remark like concat('%', #{pageRequest.keyword}, '%')
+                    or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and ask.agent_id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and ask.status = #{pageRequest.status}
+            </if>
+        </where>
+    </select>
+
+    <update id="unlinkAtomicCommandBySkillIds">
+        update atomic_command
+        set skill_id = null
+        where skill_id in
+        <foreach collection="skillIds" item="skillId" open="(" separator="," close=")">
+            #{skillId}
+        </foreach>
+    </update>
 </mapper>
 

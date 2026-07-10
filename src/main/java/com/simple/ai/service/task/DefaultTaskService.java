@@ -11,13 +11,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.simple.ai.common.service.task.TaskService;
 import com.simple.ai.common.entity.task.Task;
+import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.view.task.TaskView;
+import com.simple.ai.view.task.TaskRepository;
+import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.ai.common.dto.task.PageTaskResponse;
 import com.simple.ai.common.dto.task.InfoTaskResponse;
 import com.simple.ai.common.dto.task.CreateTaskRequest;
 import com.simple.ai.common.dto.task.UpdateTaskRequest;
 import com.simple.ai.common.dto.task.PageTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
 import com.simple.ai.common.copy.task.TaskCopyMapper;
+import com.simple.common.mp.common.enums.Status;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +41,12 @@ class DefaultTaskService implements TaskService {
     private TaskView taskView;
 
     @Autowired
+    private TaskRepository taskRepository;
+
+    @Autowired
+    private AgentMemoryView agentMemoryView;
+
+    @Autowired
     private TaskCopyMapper copy;
 
     @Autowired
@@ -47,6 +59,13 @@ class DefaultTaskService implements TaskService {
     }
 
     @Override
+    public IPage<PageAggregateTaskResponse> findAggregateAll(PageAggregateTaskRequest pageRequest) {
+
+        // 查询任务聚合分页数据
+        return taskView.findAggregateAll(pageRequest);
+    }
+
+    @Override
     public InfoTaskResponse findById(String id) {
         var task = taskView.findById(id);
         AssertUtils.notEmpty(task, "主键为[{}]的数据为空", id);
@@ -55,7 +74,15 @@ class DefaultTaskService implements TaskService {
 
     @Override
     public String save(CreateTaskRequest createRequest) {
+
+        // 校验记忆存在
+        AgentMemory memory = agentMemoryView.findById(createRequest.getAgentMemoryId());
+        AssertUtils.notEmpty(memory, "记忆[{}]不存在", createRequest.getAgentMemoryId());
+
+        // 构建并保存任务，系统字段由服务端填充
         var entity = copy.toEntity(createRequest);
+        entity.setStatus(Status.ON);
+        entity.setExecStatus("WAITING");
         taskView.save(entity);
         return entity.getId();
     }
@@ -72,6 +99,11 @@ class DefaultTaskService implements TaskService {
 
     @Override
     public void deleteByIds(List<String> ids) {
+
+        // 先清除关联的任务详情，避免孤儿数据
+        taskRepository.deleteTaskDetailsByTaskIds(ids);
+
+        // 再删除任务主表
         taskView.deleteByIds(ids);
     }
 }

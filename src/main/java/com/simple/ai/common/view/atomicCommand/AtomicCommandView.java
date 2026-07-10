@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandResponse;
 import com.simple.ai.common.dto.atomicCommand.FindOneAtomicCommandRequest;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
 import com.simple.ai.common.dto.atomicCommand.DeleteAtomicCommandRequest;
@@ -26,6 +28,14 @@ public interface AtomicCommandView {
      * @return 分页数据
      */
     IPage<AtomicCommand> findAll(PageAtomicCommandRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 聚合分页请求
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAtomicCommandResponse> findAggregateAll(PageAggregateAtomicCommandRequest pageRequest);
 
     /**
      * 获取所有数据

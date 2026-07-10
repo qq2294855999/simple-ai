@@ -1,11 +1,11 @@
 package com.simple.ai.view.subAgentRelation;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationRequest;
+import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationResponse;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
-import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -25,5 +25,24 @@ public interface SubAgentRelationRepository extends BaseMapper<SubAgentRelation>
      */
     int insertBatch(@Param("entities") List<SubAgentRelation> entities);
 
+    /**
+     * 查询聚合分页列表。
+     *
+     * @param pageRequest 分页请求
+     * @param offset 偏移量
+     * @param size 每页数量
+     * @return 聚合分页列表
+     */
+    List<PageAggregateSubAgentRelationResponse> selectAggregatePage(@Param("pageRequest") PageAggregateSubAgentRelationRequest pageRequest,
+                                                                    @Param("offset") Long offset,
+                                                                    @Param("size") Long size);
+
+    /**
+     * 查询聚合分页总数。
+     *
+     * @param pageRequest 分页请求
+     * @return 总数
+     */
+    Long selectAggregateCount(@Param("pageRequest") PageAggregateSubAgentRelationRequest pageRequest);
 }
 

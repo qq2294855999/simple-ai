@@ -1,18 +1,15 @@
 package com.simple.ai.common.dto.agentDefinition;
 
-import java.util.Date;
-
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
-import java.util.Map;
-
+/**
+ * 智能体定义(agent_definition)创建请求参数。
+ *
+ * @author qty
+ */
 @Data
-@Accessors(chain = true)
 @Schema(title = "智能体定义(agent_definition)创建请求参数")
 public class CreateAgentDefinitionRequest {
 
@@ -39,18 +36,6 @@ public class CreateAgentDefinitionRequest {
     @Schema(description = "模型")
     @NotEmpty(message = "模型不能为空")
     private String model;
-
-    @Schema(description = "创建人")
-    @NotEmpty(message = "创建人不能为空")
-    private String createBy;
-
-    @Schema(description = "修改人")
-    @NotEmpty(message = "修改人不能为空")
-    private String updateBy;
-
-    @Schema(description = "扩展")
-    @NotEmpty(message = "扩展不能为空")
-    private String reserver;
 
     @Schema(description = "备注")
     private String remark;

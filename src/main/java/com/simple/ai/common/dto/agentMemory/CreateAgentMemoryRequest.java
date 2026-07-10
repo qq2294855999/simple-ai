@@ -1,46 +1,40 @@
 package com.simple.ai.common.dto.agentMemory;
 
-import java.util.Date;
-
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import java.util.Map;
-
+/**
+ * Agent memory create request.
+ *
+ * @author qty
+ */
 @Data
 @Accessors(chain = true)
-@Schema(title = "智能体记忆(agent_memory)创建请求参数")
+@Schema(title = "Agent memory create request")
 public class CreateAgentMemoryRequest {
 
-    @Schema(description = "智能体ID")
-    @NotEmpty(message = "智能体ID不能为空")
+    @Schema(description = "Agent id")
+    @NotEmpty(message = "Agent id cannot be empty")
     private String agentId;
 
-    @Schema(description = "记忆名称")
-    @NotEmpty(message = "记忆名称不能为空")
+    @Schema(description = "Memory name")
+    @NotEmpty(message = "Memory name cannot be empty")
     private String memoryName;
 
-    @Schema(description = "步骤名称")
-    @NotEmpty(message = "步骤名称不能为空")
+    @Schema(description = "Step name")
+    @NotEmpty(message = "Step name cannot be empty")
     private String stepName;
 
-    @Schema(description = "触发条件")
-    @NotEmpty(message = "触发条件不能为空")
+    @Schema(description = "Trigger condition")
+    @NotEmpty(message = "Trigger condition cannot be empty")
     private String triggerCondition;
 
-    @Schema(description = "触发动作")
-    @NotEmpty(message = "触发动作不能为空")
+    @Schema(description = "Trigger action")
+    @NotEmpty(message = "Trigger action cannot be empty")
     private String triggerAction;
 
-    @Schema(description = "扩展")
-    @NotEmpty(message = "扩展不能为空")
-    private String reserver;
-
-    @Schema(description = "备注")
+    @Schema(description = "Remark")
     private String remark;
 }
-

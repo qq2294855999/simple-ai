@@ -15,6 +15,8 @@ import com.simple.ai.common.dto.task.InfoTaskResponse;
 import com.simple.ai.common.dto.task.CreateTaskRequest;
 import com.simple.ai.common.dto.task.UpdateTaskRequest;
 import com.simple.ai.common.dto.task.PageTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,19 @@ public class TaskController {
     @HasAuthority("sys:task:list")
     public R<IPage<PageTaskResponse>> list(@ParameterObject PageTaskRequest request) {
         return R.ok(taskService.findAll(request));
+    }
+
+    /**
+     * 聚合分页查询任务。
+     *
+     * @param request 聚合分页请求
+     * @return 聚合分页数据
+     */
+    @GetMapping("aggregate-list")
+    @Operation(summary = "聚合分页查询任务")
+    @HasAuthority("sys:task:aggregate-list")
+    public R<IPage<PageAggregateTaskResponse>> aggregateList(@ParameterObject PageAggregateTaskRequest request) {
+        return R.ok(taskService.findAggregateAll(request));
     }
 
     @GetMapping("find/{id}")

@@ -10,5 +10,64 @@
             #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
+
+    <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse">
+        select
+            ar.id,
+            ar.agent_id as agentId,
+            ad.name as agentName,
+            ar.definition_desc as definitionDesc,
+            ar.trigger_condition as triggerCondition,
+            ar.trigger_action as triggerAction,
+            ar.update_time as updateTime,
+            ar.status,
+            ar.remark
+        from agent_rule ar
+        inner join agent_definition ad on ad.id = ar.agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (ar.definition_desc like concat('%', #{pageRequest.keyword}, '%')
+                    or ar.trigger_condition like concat('%', #{pageRequest.keyword}, '%')
+                    or ar.trigger_action like concat('%', #{pageRequest.keyword}, '%')
+                    or ar.remark like concat('%', #{pageRequest.keyword}, '%')
+                    or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and ar.agent_id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and ar.status = #{pageRequest.status}
+            </if>
+        </where>
+        order by ar.update_time desc nulls last, ar.create_time desc nulls last
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectAggregateCount" resultType="java.lang.Long">
+        select count(1)
+        from agent_rule ar
+        inner join agent_definition ad on ad.id = ar.agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (ar.definition_desc like concat('%', #{pageRequest.keyword}, '%')
+                    or ar.trigger_condition like concat('%', #{pageRequest.keyword}, '%')
+                    or ar.trigger_action like concat('%', #{pageRequest.keyword}, '%')
+                    or ar.remark like concat('%', #{pageRequest.keyword}, '%')
+                    or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and ar.agent_id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and ar.status = #{pageRequest.status}
+            </if>
+        </where>
+    </select>
 </mapper>
 

@@ -6,6 +6,8 @@ import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleRequest;
 import com.simple.ai.common.dto.agentRule.FindOneAgentRuleRequest;
@@ -26,6 +28,14 @@ public interface AgentRuleView {
      * @return 分页数据
      */
     IPage<AgentRule> findAll(PageAgentRuleRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 分页参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentRuleResponse> findAggregateAll(PageAggregateAgentRuleRequest pageRequest);
 
     /**
      * 获取所有数据

@@ -12,5 +12,108 @@
             #{entity.remark})
         </foreach>
     </insert>
+
+    <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.task.PageAggregateTaskResponse">
+        select
+            t.id,
+            t.agent_memory_id as agentMemoryId,
+            am.memory_name as memoryName,
+            ad.id as agentId,
+            ad.name as agentName,
+            t.task_name as taskName,
+            t.parent_task_id as parentTaskId,
+            parent_task.task_name as parentTaskName,
+            t.next_task_id as nextTaskId,
+            next_task.task_name as nextTaskName,
+            t.step_type as stepType,
+            case t.step_type
+                when 'JUDGE' then '判断'
+                when 'ATOMIC_COMMAND' then '原子命令'
+                when 'LOOP_START' then '循环开始'
+                when 'LOOP_END' then '循环结束'
+                else t.step_type
+            end as stepTypeLabel,
+            t.exec_status as execStatus,
+            case t.exec_status
+                when 'WAITING' then '等待执行'
+                when 'RUNNING' then '执行中'
+                when 'SUCCESS' then '执行成功'
+                when 'FAILED' then '执行失败'
+                else t.exec_status
+            end as execStatusLabel,
+            t.failure_reason as failureReason,
+            t.create_time as createTime,
+            t.update_time as updateTime,
+            t.status,
+            t.remark
+        from task t
+        inner join agent_memory am on am.id = t.agent_memory_id
+        inner join agent_definition ad on ad.id = am.agent_id
+        left join task parent_task on parent_task.id = t.parent_task_id
+        left join task next_task on next_task.id = t.next_task_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (t.task_name like concat('%', #{pageRequest.keyword}, '%') or am.memory_name like concat('%', #{pageRequest.keyword}, '%') or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and ad.id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.memoryId != null and pageRequest.memoryId != ''">
+                and am.id = #{pageRequest.memoryId}
+            </if>
+            <if test="pageRequest.memoryName != null and pageRequest.memoryName != ''">
+                and am.memory_name like concat('%', #{pageRequest.memoryName}, '%')
+            </if>
+            <if test="pageRequest.stepType != null and pageRequest.stepType != ''">
+                and t.step_type = #{pageRequest.stepType}
+            </if>
+            <if test="pageRequest.execStatus != null and pageRequest.execStatus != ''">
+                and t.exec_status = #{pageRequest.execStatus}
+            </if>
+        </where>
+        order by t.update_time desc nulls last, t.create_time desc nulls last
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectAggregateCount" resultType="java.lang.Long">
+        select count(1)
+        from task t
+        inner join agent_memory am on am.id = t.agent_memory_id
+        inner join agent_definition ad on ad.id = am.agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (t.task_name like concat('%', #{pageRequest.keyword}, '%') or am.memory_name like concat('%', #{pageRequest.keyword}, '%') or ad.name like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.agentId != null and pageRequest.agentId != ''">
+                and ad.id = #{pageRequest.agentId}
+            </if>
+            <if test="pageRequest.agentName != null and pageRequest.agentName != ''">
+                and ad.name like concat('%', #{pageRequest.agentName}, '%')
+            </if>
+            <if test="pageRequest.memoryId != null and pageRequest.memoryId != ''">
+                and am.id = #{pageRequest.memoryId}
+            </if>
+            <if test="pageRequest.memoryName != null and pageRequest.memoryName != ''">
+                and am.memory_name like concat('%', #{pageRequest.memoryName}, '%')
+            </if>
+            <if test="pageRequest.stepType != null and pageRequest.stepType != ''">
+                and t.step_type = #{pageRequest.stepType}
+            </if>
+            <if test="pageRequest.execStatus != null and pageRequest.execStatus != ''">
+                and t.exec_status = #{pageRequest.execStatus}
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteTaskDetailsByTaskIds">
+        delete from task_detail
+        where task_id in
+        <foreach collection="taskIds" item="taskId" open="(" separator="," close=")">
+            #{taskId}
+        </foreach>
+    </delete>
 </mapper>
 

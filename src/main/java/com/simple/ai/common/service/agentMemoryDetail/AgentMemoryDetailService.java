@@ -10,6 +10,8 @@ import com.simple.ai.common.dto.agentMemoryDetail.InfoAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentMemoryDetail.CreateAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.UpdateAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailResponse;
 
 /**
  * 智能体记忆详情(agent_memory_detail)接口
@@ -25,6 +27,14 @@ public interface AgentMemoryDetailService {
      * @return 分页数据
      */
     IPage<PageAgentMemoryDetailResponse> findAll(PageAgentMemoryDetailRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 请求参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentMemoryDetailResponse> findAggregateAll(PageAggregateAgentMemoryDetailRequest pageRequest);
 
     /**
      * 获取单条数据

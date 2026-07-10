@@ -10,5 +10,315 @@
             #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
-</mapper>
 
+    <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse">
+        select
+            ad.id,
+            ad.name,
+            ad.definition_desc as definitionDesc,
+            ad.model,
+            ad.status,
+            coalesce(skill_stat.skill_count, 0) as skillCount,
+            coalesce(rule_stat.rule_count, 0) as ruleCount,
+            coalesce(memory_stat.memory_count, 0) as memoryCount,
+            coalesce(sub_agent_stat.sub_agent_count, 0) as subAgentCount,
+            recent_task.exec_status as recentTaskStatus,
+            case recent_task.exec_status
+                when 'WAITING' then '等待执行'
+                when 'RUNNING' then '执行中'
+                when 'SUCCESS' then '执行成功'
+                when 'FAILED' then '执行失败'
+                else null
+            end as recentTaskStatusLabel,
+            recent_task.update_time as latestTaskTime,
+            ad.create_time as createTime,
+            ad.update_time as updateTime,
+            ad.remark
+        from agent_definition ad
+        left join (
+            select agent_id, count(1) as skill_count
+            from agent_skill
+            group by agent_id
+        ) skill_stat on skill_stat.agent_id = ad.id
+        left join (
+            select agent_id, count(1) as rule_count
+            from agent_rule
+            group by agent_id
+        ) rule_stat on rule_stat.agent_id = ad.id
+        left join (
+            select agent_id, count(1) as memory_count
+            from agent_memory
+            group by agent_id
+        ) memory_stat on memory_stat.agent_id = ad.id
+        left join (
+            select main_agent_id, count(1) as sub_agent_count
+            from sub_agent_relation
+            group by main_agent_id
+        ) sub_agent_stat on sub_agent_stat.main_agent_id = ad.id
+        left join lateral (
+            select t.exec_status, t.update_time
+            from task t
+            inner join agent_memory am on am.id = t.agent_memory_id
+            where am.agent_id = ad.id
+            order by t.update_time desc nulls last, t.create_time desc nulls last
+            limit 1
+        ) recent_task on true
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (ad.name like concat('%', #{pageRequest.keyword}, '%') or ad.definition_desc like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.model != null and pageRequest.model != ''">
+                and ad.model = #{pageRequest.model}
+            </if>
+            <if test="pageRequest.status != null">
+                and ad.status = #{pageRequest.status}
+            </if>
+        </where>
+        order by ad.update_time desc nulls last, ad.create_time desc nulls last
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectAggregateCount" resultType="java.lang.Long">
+        select count(1)
+        from agent_definition ad
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (ad.name like concat('%', #{pageRequest.keyword}, '%') or ad.definition_desc like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.model != null and pageRequest.model != ''">
+                and ad.model = #{pageRequest.model}
+            </if>
+            <if test="pageRequest.status != null">
+                and ad.status = #{pageRequest.status}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectAggregateById" resultType="com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResponse">
+        select
+            ad.id,
+            ad.name,
+            ad.definition_desc as definitionDesc,
+            ad.first_principle as firstPrinciple,
+            ad.second_rule as secondRule,
+            ad.third_skill as thirdSkill,
+            ad.model,
+            ad.status,
+            ad.create_time as createTime,
+            ad.update_time as updateTime,
+            ad.remark
+        from agent_definition ad
+        where ad.id = #{id}
+    </select>
+
+    <select id="selectSkillsByAgentId" resultType="com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse">
+        select
+            ask.id,
+            ask.agent_id as agentId,
+            ask.definition_desc as definitionDesc,
+            ask.exec_content as execContent,
+            ask.return_data_format as returnDataFormat,
+            ask.create_time as createTime,
+            ask.update_time as updateTime,
+            ask.status,
+            ask.reserver,
+            ask.remark
+        from agent_skill ask
+        where ask.agent_id = #{agentId}
+        order by ask.update_time desc nulls last, ask.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="selectRulesByAgentId" resultType="com.simple.ai.common.dto.agentRule.PageAgentRuleResponse">
+        select
+            ar.id,
+            ar.agent_id as agentId,
+            ar.definition_desc as definitionDesc,
+            ar.trigger_condition as triggerCondition,
+            ar.trigger_action as triggerAction,
+            ar.create_time as createTime,
+            ar.update_time as updateTime,
+            ar.status,
+            ar.reserver,
+            ar.remark
+        from agent_rule ar
+        where ar.agent_id = #{agentId}
+        order by ar.update_time desc nulls last, ar.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="selectSubAgentRelationsByAgentId" resultType="com.simple.ai.common.dto.subAgentRelation.PageSubAgentRelationResponse">
+        select
+            sar.id,
+            sar.main_agent_id as mainAgentId,
+            sar.sub_agent_id as subAgentId,
+            sar.create_time as createTime,
+            sar.update_time as updateTime,
+            sar.status,
+            sar.reserver,
+            sar.remark
+        from sub_agent_relation sar
+        where sar.main_agent_id = #{agentId} or sar.sub_agent_id = #{agentId}
+        order by sar.update_time desc nulls last, sar.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="selectMemoriesByAgentId" resultType="com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse">
+        select
+            am.id,
+            am.agent_id as agentId,
+            am.memory_name as memoryName,
+            am.step_name as stepName,
+            am.trigger_condition as triggerCondition,
+            am.trigger_action as triggerAction,
+            am.create_time as createTime,
+            am.update_time as updateTime,
+            am.status,
+            am.reserver,
+            am.remark
+        from agent_memory am
+        where am.agent_id = #{agentId}
+        order by am.update_time desc nulls last, am.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="selectMemoryDetailsByAgentId" resultType="com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse">
+        select
+            amd.id,
+            amd.agent_memory_id as agentMemoryId,
+            amd.step_name as stepName,
+            amd.step_type as stepType,
+            amd.exec_content as execContent,
+            amd.return_data_format as returnDataFormat,
+            amd.parent_step_id as parentStepId,
+            amd.next_step_id as nextStepId,
+            amd.branch_condition as branchCondition,
+            amd.branch_route as branchRoute,
+            amd.model,
+            amd.create_time as createTime,
+            amd.update_time as updateTime,
+            amd.status,
+            amd.reserver,
+            amd.remark
+        from agent_memory_detail amd
+        inner join agent_memory am on am.id = amd.agent_memory_id
+        where am.agent_id = #{agentId}
+        order by amd.update_time desc nulls last, amd.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="selectTasksByAgentId" resultType="com.simple.ai.common.dto.task.PageTaskResponse">
+        select
+            t.id,
+            t.agent_memory_id as agentMemoryId,
+            t.task_name as taskName,
+            t.parent_task_id as parentTaskId,
+            t.next_task_id as nextTaskId,
+            t.step_type as stepType,
+            t.branch_condition as branchCondition,
+            t.branch_route as branchRoute,
+            t.request_params as requestParams,
+            t.return_params as returnParams,
+            t.exec_status as execStatus,
+            t.failure_reason as failureReason,
+            t.create_time as createTime,
+            t.update_time as updateTime,
+            t.status,
+            t.reserver,
+            t.remark
+        from task t
+        inner join agent_memory am on am.id = t.agent_memory_id
+        where am.agent_id = #{agentId}
+        order by t.update_time desc nulls last, t.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="selectAtomicCommandsByAgentId" resultType="com.simple.ai.common.dto.atomicCommand.PageAtomicCommandResponse">
+        select
+            ac.id,
+            ac.name,
+            ac.command,
+            ac.role,
+            ac.skill_id as skillId,
+            ask.definition_desc as skillName,
+            ac.create_time as createTime,
+            ac.update_time as updateTime,
+            ac.status,
+            ac.reserver,
+            ac.remark
+        from atomic_command ac
+        inner join agent_skill ask on ask.id = ac.skill_id
+        where ask.agent_id = #{agentId}
+        order by ac.update_time desc nulls last, ac.create_time desc nulls last
+        limit 1000
+    </select>
+
+    <select id="countCascadeByIds" resultType="com.simple.ai.common.dto.agentDefinition.DeleteCascadeAgentDefinitionResponse">
+        select
+            (select count(1) from agent_definition where id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as agentCount,
+            (select count(1) from agent_skill where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as skillCount,
+            (select count(1) from agent_rule where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as ruleCount,
+            (select count(1) from sub_agent_relation where main_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach> or sub_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as subAgentRelationCount,
+            (select count(1) from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as memoryCount,
+            (select count(1) from agent_memory_detail where agent_memory_id in (select id from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as memoryDetailCount,
+            (select count(1) from task where agent_memory_id in (select id from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskCount,
+            (select count(1) from task_detail where task_id in (select t.id from task t inner join agent_memory am on am.id = t.agent_memory_id where am.agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskDetailCount,
+            (select count(1) from atomic_command where skill_id in (select id from agent_skill where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as atomicCommandUnlinkCount
+    </select>
+
+    <update id="unlinkAtomicCommandSkillByAgentIds">
+        update atomic_command
+        set skill_id = null
+        where skill_id in (
+            select id from agent_skill
+            where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        )
+    </update>
+
+    <delete id="deleteTaskDetailByAgentIds">
+        delete from task_detail
+        where task_id in (
+            select t.id
+            from task t
+            inner join agent_memory am on am.id = t.agent_memory_id
+            where am.agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        )
+    </delete>
+
+    <delete id="deleteTaskByAgentIds">
+        delete from task
+        where agent_memory_id in (
+            select id from agent_memory
+            where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        )
+    </delete>
+
+    <delete id="deleteMemoryDetailByAgentIds">
+        delete from agent_memory_detail
+        where agent_memory_id in (
+            select id from agent_memory
+            where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        )
+    </delete>
+
+    <delete id="deleteMemoryByAgentIds">
+        delete from agent_memory
+        where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <delete id="deleteSubAgentRelationByAgentIds">
+        delete from sub_agent_relation
+        where main_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+           or sub_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <delete id="deleteRuleByAgentIds">
+        delete from agent_rule
+        where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <delete id="deleteSkillByAgentIds">
+        delete from agent_skill
+        where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+</mapper>

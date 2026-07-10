@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentMemoryDetail.FindOneAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.FindAllAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.DeleteAgentMemoryDetailRequest;
@@ -26,6 +28,14 @@ public interface AgentMemoryDetailView {
      * @return 分页数据
      */
     IPage<AgentMemoryDetail> findAll(PageAgentMemoryDetailRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 聚合分页请求
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentMemoryDetailResponse> findAggregateAll(PageAggregateAgentMemoryDetailRequest pageRequest);
 
     /**
      * 获取所有数据

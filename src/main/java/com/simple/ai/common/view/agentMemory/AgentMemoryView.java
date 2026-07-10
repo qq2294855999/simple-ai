@@ -1,137 +1,143 @@
 package com.simple.ai.common.view.agentMemory;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.entity.agentMemory.AgentMemory;
-import com.simple.ai.common.dto.agentMemory.PageAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.FindOneAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
 import com.simple.ai.common.dto.agentMemory.DeleteAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.FindOneAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.PageAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryResponse;
+import com.simple.ai.common.entity.agentMemory.AgentMemory;
+
+import java.util.List;
 
 /**
- * 智能体记忆(agent_memory)数据库视图接口
+ * Agent memory view interface.
  *
  * @author qty
  */
 public interface AgentMemoryView {
 
     /**
-     * 分页列表
+     * Page list.
      *
-     * @param pageRequest 分页参数
-     * @return 分页数据
+     * @param pageRequest page request
+     * @return page data
      */
     IPage<AgentMemory> findAll(PageAgentMemoryRequest pageRequest);
 
     /**
-     * 获取所有数据
+     * Aggregate page list.
      *
-     * @param findAllRequest 查询条件
-     * @param neRequest      排除条件
-     * @return AgentMemory 原始表数据
+     * @param pageRequest page request
+     * @return aggregate page data
+     */
+    IPage<PageAggregateAgentMemoryResponse> findAggregateAll(PageAggregateAgentMemoryRequest pageRequest);
+
+    /**
+     * Find list.
+     *
+     * @param findAllRequest query request
+     * @param neRequest exclude request
+     * @return entity list
      */
     List<AgentMemory> findAll(FindAllAgentMemoryRequest findAllRequest, FindAllAgentMemoryRequest neRequest);
 
     /**
-     * 获取单条数据
+     * Find by id.
      *
-     * @param id 主键
-     * @return AgentMemory 原始表数据
+     * @param id primary key
+     * @return entity data
      */
     AgentMemory findById(String id);
 
     /**
-     * 获取单条数据
+     * Find one.
      *
-     * @param findOneRequest 查询条件
-     * @param neRequest      排除条件
-     * @return AgentMemory 原始表数据
+     * @param findOneRequest query request
+     * @param neRequest exclude request
+     * @return entity data
      */
     AgentMemory findOne(FindOneAgentMemoryRequest findOneRequest, FindOneAgentMemoryRequest neRequest);
 
     /**
-     * count
+     * Count.
      *
-     * @param findOneRequest 查询条件
-     * @return Long 数据count和
+     * @param findOneRequest query request
+     * @param neRequest exclude request
+     * @return count
      */
     Long findCount(FindOneAgentMemoryRequest findOneRequest, FindOneAgentMemoryRequest neRequest);
 
     /**
-     * 新增
+     * Save entity.
      *
-     * @param agentMemory 智能体记忆对象
+     * @param agentMemory entity
      */
     void save(AgentMemory agentMemory);
 
     /**
-     * 根据id修改
+     * Update by id.
      *
-     * @param agentMemory 智能体记忆对象
+     * @param agentMemory entity
      */
     void updateById(AgentMemory agentMemory);
 
     /**
-     * 根据id批量修改
+     * Batch update by id.
      *
-     * @param list 对象
+     * @param list entity list
      */
     void updateById(List<AgentMemory> list);
 
     /**
-     * 批量新增
+     * Batch save.
      *
-     * @param list 对象
+     * @param list entity list
      */
     void saves(List<AgentMemory> list);
 
     /**
-     * 删除
+     * Delete by ids.
      *
-     * @param ids 主键
+     * @param ids primary keys
      */
     void deleteByIds(List<String> ids);
 
     /**
-     * 删除
+     * Delete by condition.
      *
-     * @param request 条件
+     * @param request condition
      */
     void delete(DeleteAgentMemoryRequest request);
 
     /**
-     * 获取单条数据
+     * Find one.
      *
-     * @param findOneRequest 查询条件
-     * @return AgentMemory 原始表数据
+     * @param findOneRequest query request
+     * @return entity data
      */
     default AgentMemory findOne(FindOneAgentMemoryRequest findOneRequest) {
         return findOne(findOneRequest, new FindOneAgentMemoryRequest());
     }
 
     /**
-     * 获取所有数据
+     * Find list.
      *
-     * @param findAllRequest 查询条件
-     * @return AgentMemory 原始表数据
+     * @param findAllRequest query request
+     * @return entity list
      */
     default List<AgentMemory> findAll(FindAllAgentMemoryRequest findAllRequest) {
         return findAll(findAllRequest, new FindAllAgentMemoryRequest());
     }
 
     /**
-     * count
+     * Count.
      *
-     * @param findOneRequest 查询条件
-     * @return Long 数据count和
+     * @param findOneRequest query request
+     * @return count
      */
     default Long findCount(FindOneAgentMemoryRequest findOneRequest) {
         return findCount(findOneRequest, new FindOneAgentMemoryRequest());
     }
-
 }
-

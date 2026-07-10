@@ -5,11 +5,13 @@ import java.util.List;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemory.InfoAgentMemoryResponse;
 import com.simple.ai.common.dto.agentMemory.CreateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.UpdateAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.InfoAgentMemoryResponse;
 import com.simple.ai.common.dto.agentMemory.PageAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
+import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryResponse;
+import com.simple.ai.common.dto.agentMemory.UpdateAgentMemoryRequest;
 
 /**
  * 智能体记忆(agent_memory)接口
@@ -25,6 +27,14 @@ public interface AgentMemoryService {
      * @return 分页数据
      */
     IPage<PageAgentMemoryResponse> findAll(PageAgentMemoryRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 请求参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentMemoryResponse> findAggregateAll(PageAggregateAgentMemoryRequest pageRequest);
 
     /**
      * 获取单条数据

@@ -1,15 +1,15 @@
 package com.simple.ai.common.service.subAgentRelation;
 
-import java.util.Date;
-import java.util.List;
-
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.subAgentRelation.PageSubAgentRelationResponse;
-import com.simple.ai.common.dto.subAgentRelation.InfoSubAgentRelationResponse;
 import com.simple.ai.common.dto.subAgentRelation.CreateSubAgentRelationRequest;
-import com.simple.ai.common.dto.subAgentRelation.UpdateSubAgentRelationRequest;
+import com.simple.ai.common.dto.subAgentRelation.InfoSubAgentRelationResponse;
+import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationRequest;
+import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationResponse;
 import com.simple.ai.common.dto.subAgentRelation.PageSubAgentRelationRequest;
+import com.simple.ai.common.dto.subAgentRelation.PageSubAgentRelationResponse;
+import com.simple.ai.common.dto.subAgentRelation.UpdateSubAgentRelationRequest;
+
+import java.util.List;
 
 /**
  * 子智能体关联(sub_agent_relation)接口
@@ -25,6 +25,14 @@ public interface SubAgentRelationService {
      * @return 分页数据
      */
     IPage<PageSubAgentRelationResponse> findAll(PageSubAgentRelationRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 请求参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateSubAgentRelationResponse> findAggregateAll(PageAggregateSubAgentRelationRequest pageRequest);
 
     /**
      * 获取单条数据

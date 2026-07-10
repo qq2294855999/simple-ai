@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import com.simple.ai.common.view.agentMemoryDetail.AgentMemoryDetailView;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentMemoryDetail.FindOneAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.FindAllAgentMemoryDetailRequest;
 import com.simple.ai.common.dto.agentMemoryDetail.DeleteAgentMemoryDetailRequest;
@@ -54,6 +56,22 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentMemoryDetail::getReserver, pageRequest.getReserver())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentMemoryDetail::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentMemoryDetail.class), queryWrapper);
+    }
+
+    @Override
+    public IPage<PageAggregateAgentMemoryDetailResponse> findAggregateAll(PageAggregateAgentMemoryDetailRequest pageRequest) {
+
+        // 构建分页边界
+        Page<AgentMemoryDetail> page = pageRequest.getPage(AgentMemoryDetail.class);
+        Long offset = (page.getCurrent() - 1) * page.getSize();
+
+        // 查询聚合记录与总数
+        List<PageAggregateAgentMemoryDetailResponse> records = repository.selectAggregatePage(pageRequest, offset, page.getSize());
+        Long total = repository.selectAggregateCount(pageRequest);
+
+        Page<PageAggregateAgentMemoryDetailResponse> result = new Page<>(page.getCurrent(), page.getSize(), total);
+        result.setRecords(records);
+        return result;
     }
 
     @Override

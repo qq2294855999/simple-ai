@@ -1,15 +1,15 @@
 package com.simple.ai.common.service.agentSkill;
 
-import java.util.Date;
-import java.util.List;
-
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.InfoAgentSkillResponse;
 import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.UpdateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.InfoAgentSkillResponse;
 import com.simple.ai.common.dto.agentSkill.PageAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
+import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse;
+import com.simple.ai.common.dto.agentSkill.UpdateAgentSkillRequest;
+
+import java.util.List;
 
 /**
  * 智能体技能(agent_skill)接口
@@ -25,6 +25,14 @@ public interface AgentSkillService {
      * @return 分页数据
      */
     IPage<PageAgentSkillResponse> findAll(PageAgentSkillRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 请求参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentSkillResponse> findAggregateAll(PageAggregateAgentSkillRequest pageRequest);
 
     /**
      * 获取单条数据

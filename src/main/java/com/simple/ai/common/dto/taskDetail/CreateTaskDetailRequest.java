@@ -11,6 +11,11 @@ import lombok.experimental.Accessors;
 
 import java.util.Map;
 
+/**
+ * 任务详情创建请求，前端仅提交用户填写字段，系统字段由服务端处理。
+ *
+ * @author qty
+ */
 @Data
 @Accessors(chain = true)
 @Schema(title = "任务详情(task_detail)创建请求参数")
@@ -25,11 +30,9 @@ public class CreateTaskDetailRequest {
     private String taskName;
 
     @Schema(description = "父任务ID")
-    @NotEmpty(message = "父任务ID不能为空")
     private String parentTaskId;
 
     @Schema(description = "下一个任务ID")
-    @NotEmpty(message = "下一个任务ID不能为空")
     private String nextTaskId;
 
     @Schema(description = "步骤类型：智能体步骤类型")
@@ -37,28 +40,10 @@ public class CreateTaskDetailRequest {
     private String stepType;
 
     @Schema(description = "分支条件")
-    @NotEmpty(message = "分支条件不能为空")
     private String branchCondition;
 
     @Schema(description = "分支路由")
-    @NotEmpty(message = "分支路由不能为空")
     private String branchRoute;
-
-    @Schema(description = "请求参数")
-    @NotEmpty(message = "请求参数不能为空")
-    private String requestParams;
-
-    @Schema(description = "返回参数")
-    @NotEmpty(message = "返回参数不能为空")
-    private String returnParams;
-
-    @Schema(description = "执行状态")
-    @NotEmpty(message = "执行状态不能为空")
-    private String execStatus;
-
-    @Schema(description = "扩展")
-    @NotEmpty(message = "扩展不能为空")
-    private String reserver;
 
     @Schema(description = "备注")
     private String remark;

@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandResponse;
 import com.simple.ai.common.dto.atomicCommand.FindOneAtomicCommandRequest;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
 import com.simple.ai.common.dto.atomicCommand.DeleteAtomicCommandRequest;
@@ -47,6 +49,22 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AtomicCommand::getReserver, pageRequest.getReserver())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AtomicCommand::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AtomicCommand.class), queryWrapper);
+    }
+
+    @Override
+    public IPage<PageAggregateAtomicCommandResponse> findAggregateAll(PageAggregateAtomicCommandRequest pageRequest) {
+
+        // 构建分页边界
+        Page<AtomicCommand> page = pageRequest.getPage(AtomicCommand.class);
+        Long offset = (page.getCurrent() - 1) * page.getSize();
+
+        // 查询聚合记录与总数
+        List<PageAggregateAtomicCommandResponse> records = repository.selectAggregatePage(pageRequest, offset, page.getSize());
+        Long total = repository.selectAggregateCount(pageRequest);
+
+        Page<PageAggregateAtomicCommandResponse> result = new Page<>(page.getCurrent(), page.getSize(), total);
+        result.setRecords(records);
+        return result;
     }
 
     @Override

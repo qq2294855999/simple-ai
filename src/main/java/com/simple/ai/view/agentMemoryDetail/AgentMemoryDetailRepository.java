@@ -4,6 +4,8 @@ import java.util.Date;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailRequest;
+import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailResponse;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -24,6 +26,26 @@ public interface AgentMemoryDetailRepository extends BaseMapper<AgentMemoryDetai
      * @return 影响行数
      */
     int insertBatch(@Param("entities") List<AgentMemoryDetail> entities);
+
+    /**
+     * 查询聚合分页列表。
+     *
+     * @param pageRequest 分页请求
+     * @param offset 偏移量
+     * @param size 每页数量
+     * @return 聚合分页列表
+     */
+    List<PageAggregateAgentMemoryDetailResponse> selectAggregatePage(@Param("pageRequest") PageAggregateAgentMemoryDetailRequest pageRequest,
+                                                                      @Param("offset") Long offset,
+                                                                      @Param("size") Long size);
+
+    /**
+     * 查询聚合分页总数。
+     *
+     * @param pageRequest 分页请求
+     * @return 总数
+     */
+    Long selectAggregateCount(@Param("pageRequest") PageAggregateAgentMemoryDetailRequest pageRequest);
 
 }
 

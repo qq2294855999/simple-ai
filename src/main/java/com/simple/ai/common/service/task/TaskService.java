@@ -10,6 +10,8 @@ import com.simple.ai.common.dto.task.InfoTaskResponse;
 import com.simple.ai.common.dto.task.CreateTaskRequest;
 import com.simple.ai.common.dto.task.UpdateTaskRequest;
 import com.simple.ai.common.dto.task.PageTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
+import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
 
 /**
  * 任务(task)接口
@@ -25,6 +27,14 @@ public interface TaskService {
      * @return 分页数据
      */
     IPage<PageTaskResponse> findAll(PageTaskRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 请求参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateTaskResponse> findAggregateAll(PageAggregateTaskRequest pageRequest);
 
     /**
      * 获取单条数据

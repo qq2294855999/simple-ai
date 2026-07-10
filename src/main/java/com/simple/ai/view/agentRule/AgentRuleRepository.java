@@ -1,11 +1,11 @@
 package com.simple.ai.view.agentRule;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
 import com.simple.ai.common.entity.agentRule.AgentRule;
-import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -25,5 +25,24 @@ public interface AgentRuleRepository extends BaseMapper<AgentRule> {
      */
     int insertBatch(@Param("entities") List<AgentRule> entities);
 
+    /**
+     * 查询聚合分页列表。
+     *
+     * @param pageRequest 分页请求
+     * @param offset 偏移量
+     * @param size 每页数量
+     * @return 聚合分页列表
+     */
+    List<PageAggregateAgentRuleResponse> selectAggregatePage(@Param("pageRequest") PageAggregateAgentRuleRequest pageRequest,
+                                                             @Param("offset") Long offset,
+                                                             @Param("size") Long size);
+
+    /**
+     * 查询聚合分页总数。
+     *
+     * @param pageRequest 分页请求
+     * @return 总数
+     */
+    Long selectAggregateCount(@Param("pageRequest") PageAggregateAgentRuleRequest pageRequest);
 }
 

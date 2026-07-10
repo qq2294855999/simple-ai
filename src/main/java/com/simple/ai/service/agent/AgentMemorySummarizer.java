@@ -15,64 +15,55 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 智能体记忆摘要器。
+ * Agent memory summarizer.
  *
  * @author qty
  */
 @Component
 public class AgentMemorySummarizer {
 
-    /**
-     * 任务详情视图
-     */
     @Autowired
     private TaskDetailView taskDetailView;
 
-    /**
-     * 智能体记忆服务
-     */
     @Autowired
     private AgentMemoryService agentMemoryService;
 
-    /**
-     * 智能体记忆详情服务
-     */
     @Autowired
     private AgentMemoryDetailService agentMemoryDetailService;
 
     /**
-     * 按任务详情沉淀智能体记忆。
+     * Summarize task details to agent memory.
      *
-     * @param agentId 智能体ID
-     * @param taskId 任务ID
-     * @param memoryName 记忆名称
-     * @return 智能体记忆ID
+     * @param agentId agent id
+     * @param taskId task id
+     * @param memoryName memory name
+     * @return agent memory id
      */
     public String summarize(String agentId, String taskId, String memoryName) {
 
-        // 参数校验：智能体ID不能为空
-        AssertUtils.notEmpty(agentId, "智能体ID不能为空");
+        // Validate agent id
+        AssertUtils.notEmpty(agentId, "agent id cannot be empty");
 
-        // 参数校验：任务ID不能为空
-        AssertUtils.notEmpty(taskId, "任务ID不能为空");
+        // Validate task id
+        AssertUtils.notEmpty(taskId, "task id cannot be empty");
 
-        // 查询任务详情链路
+        // Load task details
         List<TaskDetail> taskDetails = loadTaskDetails(taskId);
 
-        // 创建智能体记忆主记录
+        // Save memory root
         String memoryId = saveMemory(agentId, memoryName, taskDetails);
 
-        // 创建智能体记忆详情链路
+        // Save memory detail chain
         saveMemoryDetails(memoryId, taskDetails);
 
         return memoryId;
     }
 
     /**
-     * 查询任务详情链路。
+     * Load task details.
      *
-     * @param taskId 任务ID
-     * @return 任务详情列表
+     * @param taskId task id
+     * @return task details
      */
     private List<TaskDetail> loadTaskDetails(String taskId) {
         FindAllTaskDetailRequest request = new FindAllTaskDetailRequest();
@@ -81,12 +72,12 @@ public class AgentMemorySummarizer {
     }
 
     /**
-     * 创建智能体记忆主记录。
+     * Save memory root.
      *
-     * @param agentId 智能体ID
-     * @param memoryName 记忆名称
-     * @param taskDetails 任务详情列表
-     * @return 智能体记忆ID
+     * @param agentId agent id
+     * @param memoryName memory name
+     * @param taskDetails task details
+     * @return memory id
      */
     private String saveMemory(String agentId, String memoryName, List<TaskDetail> taskDetails) {
         CreateAgentMemoryRequest request = new CreateAgentMemoryRequest();
@@ -95,35 +86,34 @@ public class AgentMemorySummarizer {
         request.setStepName(findFirstStepName(taskDetails));
         request.setTriggerCondition(memoryName);
         request.setTriggerAction(findFirstReturnParams(taskDetails));
-        request.setReserver("");
-        request.setRemark("智能体命令调度自动沉淀记忆");
+        request.setRemark("auto memory from task");
         return agentMemoryService.save(request);
     }
 
     /**
-     * 创建智能体记忆详情链路。
+     * Save memory details.
      *
-     * @param memoryId 智能体记忆ID
-     * @param taskDetails 任务详情列表
+     * @param memoryId memory id
+     * @param taskDetails task details
      */
     private void saveMemoryDetails(String memoryId, List<TaskDetail> taskDetails) {
         List<CreateAgentMemoryDetailRequest> requests = buildMemoryDetailRequests(memoryId, taskDetails);
 
-        // 批量保存记忆详情，避免任务详情较多时产生逐条写入
+        // Batch save memory details
         agentMemoryDetailService.saves(requests);
     }
 
     /**
-     * 构建记忆详情创建请求列表。
+     * Build memory detail requests.
      *
-     * @param memoryId 智能体记忆ID
-     * @param taskDetails 任务详情列表
-     * @return 记忆详情创建请求列表
+     * @param memoryId memory id
+     * @param taskDetails task details
+     * @return detail requests
      */
     private List<CreateAgentMemoryDetailRequest> buildMemoryDetailRequests(String memoryId, List<TaskDetail> taskDetails) {
         List<CreateAgentMemoryDetailRequest> requests = new ArrayList<>();
 
-        // 遍历任务详情链路，转换为记忆详情创建请求
+        // Convert task details to memory detail requests
         for (TaskDetail taskDetail : taskDetails) {
             CreateAgentMemoryDetailRequest request = buildMemoryDetailRequest(memoryId, taskDetail);
             requests.add(request);
@@ -132,11 +122,11 @@ public class AgentMemorySummarizer {
     }
 
     /**
-     * 构建单条智能体记忆详情创建请求。
+     * Build memory detail request.
      *
-     * @param memoryId 智能体记忆ID
-     * @param taskDetail 任务详情
-     * @return 记忆详情创建请求
+     * @param memoryId memory id
+     * @param taskDetail task detail
+     * @return memory detail request
      */
     private CreateAgentMemoryDetailRequest buildMemoryDetailRequest(String memoryId, TaskDetail taskDetail) {
         CreateAgentMemoryDetailRequest request = new CreateAgentMemoryDetailRequest();
@@ -150,41 +140,39 @@ public class AgentMemorySummarizer {
         request.setBranchCondition(taskDetail.getBranchCondition());
         request.setBranchRoute(taskDetail.getBranchRoute());
         request.setModel("");
-        request.setReserver("");
-        request.setRemark("任务详情自动沉淀为记忆详情");
+        request.setRemark("auto memory detail from task detail");
         return request;
     }
 
     /**
-     * 查询首个步骤名称。
+     * Find first step name.
      *
-     * @param taskDetails 任务详情列表
-     * @return 首个步骤名称
+     * @param taskDetails task details
+     * @return first step name
      */
     private String findFirstStepName(List<TaskDetail> taskDetails) {
 
-        // 任务详情为空时使用默认步骤名称
+        // Use default step name when task detail is empty
         if (taskDetails.isEmpty()) {
-            return "命令执行";
+            return "command execution";
         }
         TaskDetail first = taskDetails.get(0);
         return first.getTaskName();
     }
 
     /**
-     * 查询首个返回参数。
+     * Find first return params.
      *
-     * @param taskDetails 任务详情列表
-     * @return 首个返回参数
+     * @param taskDetails task details
+     * @return return params
      */
     private String findFirstReturnParams(List<TaskDetail> taskDetails) {
 
-        // 任务详情为空时使用空结果
+        // Use empty result when task detail is empty
         if (taskDetails.isEmpty()) {
             return "";
         }
         TaskDetail first = taskDetails.get(0);
         return first.getReturnParams();
     }
-
 }

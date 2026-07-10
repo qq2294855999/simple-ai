@@ -198,6 +198,7 @@ CREATE TABLE atomic_command (
     name VARCHAR(255) NOT NULL DEFAULT '',
     command TEXT NOT NULL,
     role TEXT NOT NULL,
+    skill_id VARCHAR(255) NOT NULL DEFAULT '',
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     status SMALLINT NOT NULL DEFAULT 1,
@@ -209,6 +210,7 @@ COMMENT ON COLUMN atomic_command.id IS '主键';
 COMMENT ON COLUMN atomic_command.name IS '名称';
 COMMENT ON COLUMN atomic_command.command IS '命令';
 COMMENT ON COLUMN atomic_command.role IS '作用';
+COMMENT ON COLUMN atomic_command.skill_id IS '智能体技能ID';
 COMMENT ON COLUMN atomic_command.create_time IS '创建时间';
 COMMENT ON COLUMN atomic_command.update_time IS '修改时间';
 COMMENT ON COLUMN atomic_command.status IS '状态';

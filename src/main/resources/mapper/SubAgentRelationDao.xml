@@ -9,5 +9,61 @@
             (#{entity.id}, #{entity.mainAgentId}, #{entity.subAgentId}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
+
+    <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationResponse">
+        select
+            sar.id,
+            sar.main_agent_id as mainAgentId,
+            main_ad.name as mainAgentName,
+            sar.sub_agent_id as subAgentId,
+            sub_ad.name as subAgentName,
+            sar.update_time as updateTime,
+            sar.status,
+            sar.remark
+        from sub_agent_relation sar
+        inner join agent_definition main_ad on main_ad.id = sar.main_agent_id
+        inner join agent_definition sub_ad on sub_ad.id = sar.sub_agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (main_ad.name like concat('%', #{pageRequest.keyword}, '%')
+                    or sub_ad.name like concat('%', #{pageRequest.keyword}, '%')
+                    or sar.remark like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.mainAgentName != null and pageRequest.mainAgentName != ''">
+                and main_ad.name like concat('%', #{pageRequest.mainAgentName}, '%')
+            </if>
+            <if test="pageRequest.subAgentName != null and pageRequest.subAgentName != ''">
+                and sub_ad.name like concat('%', #{pageRequest.subAgentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and sar.status = #{pageRequest.status}
+            </if>
+        </where>
+        order by sar.update_time desc nulls last, sar.create_time desc nulls last
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectAggregateCount" resultType="java.lang.Long">
+        select count(1)
+        from sub_agent_relation sar
+        inner join agent_definition main_ad on main_ad.id = sar.main_agent_id
+        inner join agent_definition sub_ad on sub_ad.id = sar.sub_agent_id
+        <where>
+            <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
+                and (main_ad.name like concat('%', #{pageRequest.keyword}, '%')
+                    or sub_ad.name like concat('%', #{pageRequest.keyword}, '%')
+                    or sar.remark like concat('%', #{pageRequest.keyword}, '%'))
+            </if>
+            <if test="pageRequest.mainAgentName != null and pageRequest.mainAgentName != ''">
+                and main_ad.name like concat('%', #{pageRequest.mainAgentName}, '%')
+            </if>
+            <if test="pageRequest.subAgentName != null and pageRequest.subAgentName != ''">
+                and sub_ad.name like concat('%', #{pageRequest.subAgentName}, '%')
+            </if>
+            <if test="pageRequest.status != null">
+                and sar.status = #{pageRequest.status}
+            </if>
+        </where>
+    </select>
 </mapper>
 

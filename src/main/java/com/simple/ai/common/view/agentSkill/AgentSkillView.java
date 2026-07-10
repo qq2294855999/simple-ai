@@ -6,6 +6,8 @@ import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.dto.agentSkill.PageAgentSkillRequest;
 import com.simple.ai.common.dto.agentSkill.FindOneAgentSkillRequest;
@@ -26,6 +28,14 @@ public interface AgentSkillView {
      * @return 分页数据
      */
     IPage<AgentSkill> findAll(PageAgentSkillRequest pageRequest);
+
+    /**
+     * 聚合分页列表。
+     *
+     * @param pageRequest 分页参数
+     * @return 聚合分页数据
+     */
+    IPage<PageAggregateAgentSkillResponse> findAggregateAll(PageAggregateAgentSkillRequest pageRequest);
 
     /**
      * 获取所有数据
