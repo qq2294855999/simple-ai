@@ -28,6 +28,9 @@ public class CreateAtomicCommandRequest {
     @NotEmpty(message = "作用不能为空")
     private String role;
 
+    @Schema(description = "智能体技能ID")
+    private String skillId;
+
     @Schema(description = "扩展")
     @NotEmpty(message = "扩展不能为空")
     private String reserver;

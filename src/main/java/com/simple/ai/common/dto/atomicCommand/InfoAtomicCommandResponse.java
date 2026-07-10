@@ -30,6 +30,12 @@ public class InfoAtomicCommandResponse {
     @Schema(description = "作用")
     private String role;
 
+    @Schema(description = "智能体技能ID")
+    private String skillId;
+
+    @Schema(description = "智能体技能名称")
+    private String skillName;
+
     @Schema(description = "创建时间")
     private Date createTime;
 

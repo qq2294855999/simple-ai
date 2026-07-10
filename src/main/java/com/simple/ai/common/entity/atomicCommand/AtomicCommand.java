@@ -60,6 +60,12 @@ public class AtomicCommand {
     private String role;
 
     /**
+     * 智能体技能ID
+     */
+    @TableField(value = "skill_id")
+    private String skillId;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

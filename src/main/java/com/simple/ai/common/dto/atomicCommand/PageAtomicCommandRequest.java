@@ -23,6 +23,9 @@ public class PageAtomicCommandRequest extends PageBase {
     @Schema(description = "作用")
     private String role;
 
+    @Schema(description = "智能体技能ID")
+    private String skillId;
+
     @Schema(description = "状态")
     private Status status;
 

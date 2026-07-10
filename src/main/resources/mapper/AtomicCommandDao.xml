@@ -3,10 +3,10 @@
 <mapper namespace="com.simple.ai.view.atomicCommand.AtomicCommandRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into atomic_command(id, name, command, role, create_time, update_time, status, reserver, remark)
+        insert into atomic_command(id, name, command, role, skill_id, create_time, update_time, status, reserver, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.name}, #{entity.command}, #{entity.role}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
+            (#{entity.id}, #{entity.name}, #{entity.command}, #{entity.role}, #{entity.skillId}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
 </mapper>

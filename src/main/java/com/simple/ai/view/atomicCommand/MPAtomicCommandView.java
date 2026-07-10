@@ -42,6 +42,7 @@ class MPAtomicCommandView implements AtomicCommandView {
         queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getName()), AtomicCommand::getName, pageRequest.getName())
                     .like(ObjUtil.isNotEmpty(pageRequest.getCommand()), AtomicCommand::getCommand, pageRequest.getCommand())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRole()), AtomicCommand::getRole, pageRequest.getRole())
+                    .eq(ObjUtil.isNotEmpty(pageRequest.getSkillId()), AtomicCommand::getSkillId, pageRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AtomicCommand::getStatus, pageRequest.getStatus())
                     .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AtomicCommand::getReserver, pageRequest.getReserver())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AtomicCommand::getRemark, pageRequest.getRemark());
@@ -55,6 +56,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getName()), AtomicCommand::getName, findAllRequest.getName())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getCommand()), AtomicCommand::getCommand, findAllRequest.getCommand())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRole()), AtomicCommand::getRole, findAllRequest.getRole())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getSkillId()), AtomicCommand::getSkillId, findAllRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AtomicCommand::getStatus, findAllRequest.getStatus())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AtomicCommand::getReserver, findAllRequest.getReserver())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AtomicCommand::getRemark, findAllRequest.getRemark())
@@ -62,6 +64,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AtomicCommand::getName, neRequest.getName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getCommand()), AtomicCommand::getCommand, neRequest.getCommand())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRole()), AtomicCommand::getRole, neRequest.getRole())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getSkillId()), AtomicCommand::getSkillId, neRequest.getSkillId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AtomicCommand::getStatus, neRequest.getStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AtomicCommand::getReserver, neRequest.getReserver())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AtomicCommand::getRemark, neRequest.getRemark());
@@ -76,6 +79,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getName()), AtomicCommand::getName, findOneRequest.getName())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getCommand()), AtomicCommand::getCommand, findOneRequest.getCommand())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRole()), AtomicCommand::getRole, findOneRequest.getRole())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getSkillId()), AtomicCommand::getSkillId, findOneRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AtomicCommand::getStatus, findOneRequest.getStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AtomicCommand::getReserver, findOneRequest.getReserver())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AtomicCommand::getRemark, findOneRequest.getRemark())
@@ -83,6 +87,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AtomicCommand::getName, neRequest.getName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getCommand()), AtomicCommand::getCommand, neRequest.getCommand())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRole()), AtomicCommand::getRole, neRequest.getRole())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getSkillId()), AtomicCommand::getSkillId, neRequest.getSkillId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AtomicCommand::getStatus, neRequest.getStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AtomicCommand::getReserver, neRequest.getReserver())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AtomicCommand::getRemark, neRequest.getRemark());
@@ -103,6 +108,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getName()), AtomicCommand::getName, findOneRequest.getName())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getCommand()), AtomicCommand::getCommand, findOneRequest.getCommand())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRole()), AtomicCommand::getRole, findOneRequest.getRole())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getSkillId()), AtomicCommand::getSkillId, findOneRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AtomicCommand::getStatus, findOneRequest.getStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AtomicCommand::getReserver, findOneRequest.getReserver())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AtomicCommand::getRemark, findOneRequest.getRemark())
@@ -110,6 +116,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AtomicCommand::getName, neRequest.getName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getCommand()), AtomicCommand::getCommand, neRequest.getCommand())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRole()), AtomicCommand::getRole, neRequest.getRole())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getSkillId()), AtomicCommand::getSkillId, neRequest.getSkillId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AtomicCommand::getStatus, neRequest.getStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AtomicCommand::getReserver, neRequest.getReserver())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AtomicCommand::getRemark, neRequest.getRemark());

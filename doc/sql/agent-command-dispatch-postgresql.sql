@@ -1,7 +1,16 @@
 -- ============================================================
 -- simple-ai 智能体命令调度运行辅助 PostgreSQL 脚本
--- 说明：本脚本不修改核心表结构，仅补充调度链路常用索引与安全占位原子命令样例。
+-- 说明：补充调度链路常用索引、安全占位原子命令样例，
+--        以及 atomic_command 新增 skill_id 字段的结构变更。
 -- ============================================================
+
+-- ============================================================
+-- 原子命令表结构变更：新增 skill_id 字段
+-- ============================================================
+ALTER TABLE atomic_command
+    ADD COLUMN IF NOT EXISTS skill_id VARCHAR(255) NOT NULL DEFAULT '';
+
+COMMENT ON COLUMN atomic_command.skill_id IS '智能体技能ID';
 
 -- ============================================================
 -- 智能体直属配置查询索引
@@ -33,6 +42,9 @@ CREATE INDEX IF NOT EXISTS idx_agent_memory_detail_parent_step
 -- ============================================================
 -- 原子命令匹配与任务追踪索引
 -- ============================================================
+CREATE INDEX IF NOT EXISTS idx_atomic_command_skill_status
+    ON atomic_command (skill_id, status);
+
 CREATE INDEX IF NOT EXISTS idx_atomic_command_status
     ON atomic_command (status);
 
@@ -52,13 +64,14 @@ CREATE INDEX IF NOT EXISTS idx_task_detail_parent_next
     ON task_detail (parent_task_id, next_task_id);
 
 -- ============================================================
--- 安全占位原子命令样例
+-- 安全占位原子命令样例（skill_id 置空，表示全局通用命令）
 -- ============================================================
 INSERT INTO atomic_command (
     id,
     name,
     command,
     role,
+    skill_id,
     create_time,
     update_time,
     status,
@@ -70,6 +83,7 @@ SELECT
     '只读信息查询',
     'READ_ONLY_INFO',
     'READ',
+    '',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     1,
@@ -86,6 +100,7 @@ INSERT INTO atomic_command (
     name,
     command,
     role,
+    skill_id,
     create_time,
     update_time,
     status,
@@ -97,6 +112,7 @@ SELECT
     '子智能体调度',
     'SUB_AGENT_DISPATCH',
     'SUB_AGENT',
+    '',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     1,
@@ -113,6 +129,7 @@ INSERT INTO atomic_command (
     name,
     command,
     role,
+    skill_id,
     create_time,
     update_time,
     status,
@@ -124,6 +141,7 @@ SELECT
     '写入类安全占位',
     'WRITE_SAFE_PLACEHOLDER',
     'WRITE',
+    '',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     1,
@@ -140,6 +158,7 @@ INSERT INTO atomic_command (
     name,
     command,
     role,
+    skill_id,
     create_time,
     update_time,
     status,
@@ -151,6 +170,7 @@ SELECT
     '工具类安全占位',
     'TOOL_SAFE_PLACEHOLDER',
     'TOOL',
+    '',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     1,

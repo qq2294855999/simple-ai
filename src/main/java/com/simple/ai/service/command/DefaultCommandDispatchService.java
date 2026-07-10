@@ -14,6 +14,7 @@ import com.simple.ai.common.dto.command.SubAgentDispatchContext;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
+import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.entity.task.Task;
@@ -366,8 +367,8 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         // 查找步骤链入口，优先使用没有父步骤的记忆详情
         AgentMemoryDetail currentDetail = findStartDetail(details);
 
-        // 预加载启用状态的原子命令列表，避免步骤循环中重复访问数据库
-        List<AtomicCommand> atomicCommands = loadEnabledAtomicCommands();
+        // 预加载当前智能体技能对应的原子命令列表，避免步骤循环中重复访问数据库
+        List<AtomicCommand> atomicCommands = loadEnabledAtomicCommands(context);
 
         // 记录循环步骤执行次数，防止循环配置错误导致重复回跳
         Map<String, Integer> loopExecuteCountMap = new HashMap<>();
@@ -938,17 +939,58 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     }
 
     /**
-     * 加载所有启用状态的原子命令列表。
+     * 加载当前智能体技能对应的启用原子命令列表。
      *
      * <p>在记忆步骤链执行前调用一次，后续所有步骤复用此列表，
      * 避免每个步骤都重复查询数据库。</p>
      *
-     * @return 启用状态的原子命令列表
+     * <p>优先按技能筛选，同时纳入 skill_id 为空的全局通用命令，
+     * 实现"智能体 → 技能 → 原子命令"三级关联。</p>
+     *
+     * @param context 智能体上下文
+     * @return 该智能体技能对应的启用原子命令列表
      */
-    private List<AtomicCommand> loadEnabledAtomicCommands() {
-        FindAllAtomicCommandRequest request = new FindAllAtomicCommandRequest();
-        request.setStatus(Status.ON);
-        return atomicCommandView.findAll(request);
+    private List<AtomicCommand> loadEnabledAtomicCommands(AgentContext context) {
+        List<String> skillIds = extractSkillIds(context);
+        List<AtomicCommand> result = new ArrayList<>();
+
+        // 遍历上下文中所有技能ID，按技能分次查询原子命令
+        for (String skillId : skillIds) {
+            FindAllAtomicCommandRequest request = new FindAllAtomicCommandRequest();
+            request.setSkillId(skillId);
+            request.setStatus(Status.ON);
+            result.addAll(atomicCommandView.findAll(request));
+        }
+
+        // 追加 skill_id 为空的全局通用命令，确保基础执行器始终可用
+        FindAllAtomicCommandRequest globalRequest = new FindAllAtomicCommandRequest();
+        globalRequest.setSkillId("");
+        globalRequest.setStatus(Status.ON);
+        result.addAll(atomicCommandView.findAll(globalRequest));
+        return result;
+    }
+
+    /**
+     * 从智能体上下文中提取技能ID列表。
+     *
+     * @param context 智能体上下文
+     * @return 技能ID列表
+     */
+    private List<String> extractSkillIds(AgentContext context) {
+        List<String> skillIds = new ArrayList<>();
+
+        // 上下文中无技能时不筛选，后续仅加载全局命令
+        if (context.getSkills() == null || context.getSkills().isEmpty()) {
+            return skillIds;
+        }
+
+        // 遍历技能列表收集ID
+        for (AgentSkill skill : context.getSkills()) {
+            if (skill.getId() != null && !skill.getId().isBlank()) {
+                skillIds.add(skill.getId());
+            }
+        }
+        return skillIds;
     }
 
     /**
