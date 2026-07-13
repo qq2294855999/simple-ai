@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.agentChatSession.AgentChatSessionRepository">
+    <select id="selectByIdForUpdate" resultType="com.simple.ai.common.entity.agentChatSession.AgentChatSession">
+        select id, agent_id as agentId, session_name as sessionName, last_message_at as lastMessageAt,
+               create_time as createTime, update_time as updateTime, status, reserver, remark
+        from agent_chat_session
+        where id = #{id}
+        for update
+    </select>
+
+    <select id="selectAllByAgentId" resultType="com.simple.ai.common.entity.agentChatSession.AgentChatSession">
+        select id, agent_id as agentId, session_name as sessionName, last_message_at as lastMessageAt,
+               create_time as createTime, update_time as updateTime, status, reserver, remark
+        from agent_chat_session
+        where agent_id = #{agentId}
+        order by last_message_at desc
+        limit 100
+    </select>
+</mapper>

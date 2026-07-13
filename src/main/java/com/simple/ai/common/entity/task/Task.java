@@ -48,6 +48,14 @@ public class Task {
     private String agentMemoryId;
 
     /**
+     * 智能体主键。
+     *
+     * <p>由任务创建服务根据调度请求或所属记忆写入，前端不得传递。</p>
+     */
+    @TableField(value = "agent_id")
+    private String agentId;
+
+    /**
      * 任务名称
      */
     @TableField(value = "task_name")
@@ -106,6 +114,22 @@ public class Task {
      */
     @TableField(value = "failure_reason")
     private String failureReason;
+
+    /** 运行供应商主键快照 */
+    @TableField(value = "provider_id")
+    private String providerId;
+
+    /** 运行供应商名称快照 */
+    @TableField(value = "provider_name")
+    private String providerName;
+
+    /** 运行模型主键快照 */
+    @TableField(value = "model_id")
+    private String modelId;
+
+    /** 运行模型编码快照 */
+    @TableField(value = "model_code")
+    private String modelCode;
 
     /**
      * 创建时间

@@ -3,10 +3,10 @@
 <mapper namespace="com.simple.ai.view.agentDefinition.AgentDefinitionRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, model, create_by, update_by, create_time, update_time, status, reserver, remark)
+        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, model, default_model_id, create_by, update_by, create_time, update_time, status, reserver, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstPrinciple}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.model}, #{entity.createBy}, #{entity.updateBy},
+            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstPrinciple}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.model}, #{entity.defaultModelId}, #{entity.createBy}, #{entity.updateBy},
             #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
         </foreach>
     </insert>
@@ -17,6 +17,7 @@
             ad.name,
             ad.definition_desc as definitionDesc,
             ad.model,
+            ad.default_model_id as defaultModelId,
             ad.status,
             coalesce(skill_stat.skill_count, 0) as skillCount,
             coalesce(rule_stat.rule_count, 0) as ruleCount,
@@ -58,8 +59,7 @@
         left join lateral (
             select t.exec_status, t.update_time
             from task t
-            inner join agent_memory am on am.id = t.agent_memory_id
-            where am.agent_id = ad.id
+            where t.agent_id = ad.id
             order by t.update_time desc nulls last, t.create_time desc nulls last
             limit 1
         ) recent_task on true
@@ -103,6 +103,7 @@
             ad.second_rule as secondRule,
             ad.third_skill as thirdSkill,
             ad.model,
+            ad.default_model_id as defaultModelId,
             ad.status,
             ad.create_time as createTime,
             ad.update_time as updateTime,
@@ -227,8 +228,7 @@
             t.reserver,
             t.remark
         from task t
-        inner join agent_memory am on am.id = t.agent_memory_id
-        where am.agent_id = #{agentId}
+        where t.agent_id = #{agentId}
         order by t.update_time desc nulls last, t.create_time desc nulls last
         limit 1000
     </select>
@@ -261,8 +261,8 @@
             (select count(1) from sub_agent_relation where main_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach> or sub_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as subAgentRelationCount,
             (select count(1) from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as memoryCount,
             (select count(1) from agent_memory_detail where agent_memory_id in (select id from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as memoryDetailCount,
-            (select count(1) from task where agent_memory_id in (select id from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskCount,
-            (select count(1) from task_detail where task_id in (select t.id from task t inner join agent_memory am on am.id = t.agent_memory_id where am.agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskDetailCount,
+            (select count(1) from task where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as taskCount,
+            (select count(1) from task_detail where task_id in (select id from task where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskDetailCount,
             (select count(1) from atomic_command where skill_id in (select id from agent_skill where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as atomicCommandUnlinkCount
     </select>
 
@@ -278,19 +278,14 @@
     <delete id="deleteTaskDetailByAgentIds">
         delete from task_detail
         where task_id in (
-            select t.id
-            from task t
-            inner join agent_memory am on am.id = t.agent_memory_id
-            where am.agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+            select id from task
+            where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
         )
     </delete>
 
     <delete id="deleteTaskByAgentIds">
         delete from task
-        where agent_memory_id in (
-            select id from agent_memory
-            where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
-        )
+        where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
     </delete>
 
     <delete id="deleteMemoryDetailByAgentIds">
@@ -319,6 +314,19 @@
 
     <delete id="deleteSkillByAgentIds">
         delete from agent_skill
+        where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+
+    <delete id="deleteChatMessageByAgentIds">
+        delete from agent_chat_message
+        where session_id in (
+            select id from agent_chat_session
+            where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        )
+    </delete>
+
+    <delete id="deleteChatSessionByAgentIds">
+        delete from agent_chat_session
         where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
     </delete>
 </mapper>

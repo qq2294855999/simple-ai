@@ -43,6 +43,12 @@ public class CommandDispatchRequest {
     private String sessionId;
 
     /**
+     * 显式模型主键。
+     */
+    @Schema(description = "显式模型主键")
+    private String modelId;
+
+    /**
      * 请求参数
      */
     @Schema(description = "请求参数")

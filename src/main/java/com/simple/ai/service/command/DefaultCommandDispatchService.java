@@ -38,6 +38,7 @@ import com.simple.common.mp.common.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -128,17 +129,20 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private TaskDetailView taskDetailView;
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommandDispatchResponse dispatch(CommandDispatchRequest request) {
         return dispatchStream(request, progressEvent -> {
         });
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommandDispatchResponse dispatchStream(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer) {
         return dispatchInternal(request, progressConsumer, "", 0);
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommandDispatchResponse dispatchInternal(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer,
                                                     String parentTaskId, int recursionDepth) {
 
@@ -178,7 +182,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             // 组装智能体上下文
             publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
             AgentContext context = agentContextAssembler.assemble(request);
-            publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLED", "智能体上下文装配完成", context.getPromptContent(), Boolean.FALSE, "");
+            publishContextTraceProgress(progressConsumer, request, task, context);
 
             // 匹配候选记忆
             publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
@@ -218,6 +222,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private Task createRunningTask(CommandDispatchRequest request, String parentTaskId) {
         Task task = new Task();
         task.setAgentMemoryId("");
+        task.setAgentId(request.getAgentId());
         task.setTaskName(request.getCommandName());
         task.setParentTaskId(parentTaskId == null ? "" : parentTaskId);
         task.setNextTaskId("");
@@ -855,6 +860,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         publishProgress(progressConsumer, request, task, "AI_STARTED", "AI 开始生成探索方案", request.getCommandContent(), Boolean.FALSE, "");
         AgentAiRequest aiRequest = buildAiRequest(request, context);
         AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, token -> publishAiTokenProgress(progressConsumer, request, task, token));
+
+        // 持久化当前 AI 调用的不可变供应商和模型快照
+        persistRuntimeSnapshot(task, aiResponse);
         saveAiTaskDetail(task, request, aiRequest, aiResponse);
         AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
         publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
@@ -1102,9 +1110,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private AgentAiRequest buildAiRequest(CommandDispatchRequest request, AgentContext context) {
         AgentAiRequest aiRequest = new AgentAiRequest();
 
-        // 逐层获取智能体定义后提取模型，避免链式调用
-        AgentDefinition agentDefinition = context.getAgentDefinition();
-        aiRequest.setModel(agentDefinition.getModel());
+        // 透传智能体与显式模型选择，由运行时路由服务解析实际模型
+        aiRequest.setAgentId(request.getAgentId());
+        aiRequest.setModelId(request.getModelId());
         aiRequest.setPromptContent(context.getPromptContent());
         aiRequest.setCommandContent(request.getCommandContent());
         aiRequest.setSessionSummary(context.getSessionSummary());
@@ -1173,10 +1181,28 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         taskDetail.setRequestParams(JsonUtils.toJsonStr(aiRequest));
         taskDetail.setReturnParams(JsonUtils.toJsonStr(aiResponse));
         taskDetail.setExecStatus(resolveDetailStatus(aiResponse.getSuccess()));
+        taskDetail.setProviderId(aiResponse.getProviderId());
+        taskDetail.setProviderName(aiResponse.getProviderName());
+        taskDetail.setModelId(aiResponse.getModelId());
+        taskDetail.setModelCode(aiResponse.getModelCode());
         taskDetail.setStatus(Status.ON);
         taskDetail.setReserver("");
         taskDetail.setRemark("AI探索执行详情");
         taskDetailView.save(taskDetail);
+    }
+
+    /**
+     * 持久化 AI 调用的运行时模型快照。
+     *
+     * @param task 当前任务
+     * @param aiResponse AI 调用响应
+     */
+    private void persistRuntimeSnapshot(Task task, AgentAiResponse aiResponse) {
+        task.setProviderId(aiResponse.getProviderId());
+        task.setProviderName(aiResponse.getProviderName());
+        task.setModelId(aiResponse.getModelId());
+        task.setModelCode(aiResponse.getModelCode());
+        taskView.updateById(task);
     }
 
     /**
@@ -1250,7 +1276,58 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             publishProgress(progressConsumer, request, task, "MEMORY_MISSED", "未命中候选记忆，转入 AI 探索", "", Boolean.FALSE, "");
             return;
         }
-        publishProgress(progressConsumer, request, task, "MEMORY_MATCHED", "已命中候选记忆", JsonUtils.toJsonStr(memories), Boolean.FALSE, "");
+        publishProgress(progressConsumer, request, task, "MEMORY_MATCHED", "已命中候选记忆", buildCountPayload("memory", memories.size()), Boolean.FALSE, "");
+    }
+
+    /**
+     * 发布上下文装配安全摘要。
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request 命令调度请求
+     * @param task 调度任务
+     * @param context 智能体上下文
+     */
+    private void publishContextTraceProgress(Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                             CommandDispatchRequest request, Task task, AgentContext context) {
+        publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLED", "智能体定义已装配",
+                buildContextPayload(context), Boolean.FALSE, "");
+        publishProgress(progressConsumer, request, task, "RULE_LOADED", "智能体规则已装配",
+                buildCountPayload("rule", context.getRules().size()), Boolean.FALSE, "");
+        publishProgress(progressConsumer, request, task, "SKILL_LOADED", "智能体技能已装配",
+                buildCountPayload("skill", context.getSkills().size()), Boolean.FALSE, "");
+        publishProgress(progressConsumer, request, task, "SUB_AGENT_LOADED", "子智能体关系已装配",
+                buildCountPayload("subAgent", context.getSubAgentRelations().size()), Boolean.FALSE, "");
+    }
+
+    /**
+     * 构建上下文安全摘要。
+     *
+     * @param context 智能体上下文
+     * @return JSON 摘要
+     */
+    private String buildContextPayload(AgentContext context) {
+        Map<String, Object> payload = new HashMap<>();
+        AgentDefinition definition = context.getAgentDefinition();
+        payload.put("agentName", definition.getName());
+        payload.put("ruleCount", context.getRules().size());
+        payload.put("skillCount", context.getSkills().size());
+        payload.put("memoryCount", context.getMemories().size());
+        payload.put("subAgentCount", context.getSubAgentRelations().size());
+        return JsonUtils.toJsonStr(payload);
+    }
+
+    /**
+     * 构建资源数量安全摘要。
+     *
+     * @param resourceType 资源类型
+     * @param count 资源数量
+     * @return JSON 摘要
+     */
+    private String buildCountPayload(String resourceType, int count) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("resourceType", resourceType);
+        payload.put("count", count);
+        return JsonUtils.toJsonStr(payload);
     }
 
     /**
@@ -1300,13 +1377,41 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         event.setTaskId(task.getId());
         event.setSessionId(request.getSessionId());
         event.setEventType(eventType);
+        event.setStepId("");
         event.setStepName(message);
         event.setExecStatus(task.getExecStatus());
         event.setMessage(message);
-        event.setPayload(payload);
+        event.setPayload(resolveSafeProgressPayload(eventType, payload));
         event.setCompleted(completed);
         event.setFailureReason(failureReason);
+
+        // 传递运行时模型快照供前端展示
+        event.setProviderName(task.getProviderName());
+        event.setModelCode(task.getModelCode());
         return event;
+    }
+
+    /**
+     * 收敛执行轨迹事件载荷。
+     *
+     * @param eventType 事件类型
+     * @param payload 原始事件载荷
+     * @return 可公开展示的事件载荷
+     */
+    private String resolveSafeProgressPayload(String eventType, String payload) {
+
+        // AI token 仅作为聊天消息流临时内容，不进入执行轨迹
+        if ("AI_TOKEN".equals(eventType)) {
+            return payload;
+        }
+
+        // 已结构化生成的资源统计摘要可直接用于时间线展示
+        if ("CONTEXT_ASSEMBLED".equals(eventType) || "RULE_LOADED".equals(eventType)
+                || "SKILL_LOADED".equals(eventType) || "SUB_AGENT_LOADED".equals(eventType)
+                || "MEMORY_MATCHED".equals(eventType) || "MEMORY_SUMMARIZED".equals(eventType)) {
+            return payload;
+        }
+        return "";
     }
 
     /**
@@ -1496,6 +1601,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         response.setExecStatus(AgentExecutionStatusProcess.SUCCESS.getCode());
         response.setResponseContent(responseContent);
         response.setFailureReason("");
+        fillResponseRuntimeSnapshot(response, task);
         return response;
     }
 
@@ -1512,6 +1618,20 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         response.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
         response.setResponseContent("");
         response.setFailureReason(failureReason);
+        fillResponseRuntimeSnapshot(response, task);
         return response;
+    }
+
+    /**
+     * 填充调度响应的运行时模型快照。
+     *
+     * @param response 调度响应
+     * @param task 调度任务
+     */
+    private void fillResponseRuntimeSnapshot(CommandDispatchResponse response, Task task) {
+        response.setProviderId(task.getProviderId());
+        response.setProviderName(task.getProviderName());
+        response.setModelId(task.getModelId());
+        response.setModelCode(task.getModelCode());
     }
 }

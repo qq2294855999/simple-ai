@@ -30,4 +30,16 @@ public class AgentAiResponse {
     @Schema(description = "失败原因")
     private String failureReason;
 
+    /** 运行供应商主键快照 */
+    private String providerId;
+
+    /** 运行供应商名称快照 */
+    private String providerName;
+
+    /** 运行模型主键快照 */
+    private String modelId;
+
+    /** 运行模型编码快照 */
+    private String modelCode;
+
 }

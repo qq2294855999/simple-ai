@@ -78,6 +78,14 @@ public class AgentDefinition {
     private String model;
 
     /**
+     * 默认模型主键。
+     *
+     * <p>运行时仅使用此字段作为智能体级模型选择，不使用历史 model 字段回退。</p>
+     */
+    @TableField(value = "default_model_id")
+    private String defaultModelId;
+
+    /**
      * 创建人
      */
     @TableField(value = "create_by")

@@ -1,0 +1,29 @@
+package com.simple.ai.common.dto.agentChat;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotEmpty;
+import lombok.Data;
+
+/**
+ * 发送智能体聊天消息请求。
+ *
+ * @author qty
+ */
+@Data
+@Schema(title = "发送智能体聊天消息请求")
+public class SendAgentChatMessageRequest {
+
+    /** 会话主键 */
+    @NotEmpty(message = "会话主键不能为空")
+    @Schema(description = "会话主键")
+    private String sessionId;
+
+    /** 用户消息 */
+    @NotEmpty(message = "用户消息不能为空")
+    @Schema(description = "用户消息")
+    private String content;
+
+    /** 显式模型主键 */
+    @Schema(description = "显式模型主键")
+    private String modelId;
+}

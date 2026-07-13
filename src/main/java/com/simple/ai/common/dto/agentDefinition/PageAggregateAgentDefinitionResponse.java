@@ -29,6 +29,9 @@ public class PageAggregateAgentDefinitionResponse {
     @Schema(description = "模型")
     private String model;
 
+    @Schema(description = "默认模型主键")
+    private String defaultModelId;
+
     @Schema(description = "状态")
     private Status status;
 

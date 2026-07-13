@@ -35,6 +35,9 @@ public class FindOneAgentDefinitionRequest {
     @Schema(description = "模型")
     private String model;
 
+    @Schema(description = "默认模型主键")
+    private String defaultModelId;
+
     @Schema(description = "创建人")
     private String createBy;
 

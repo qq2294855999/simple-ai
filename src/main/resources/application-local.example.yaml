@@ -1,0 +1,41 @@
+# 可提交的本地运行配置样例：敏感值必须由操作系统环境变量或部署平台 Secret 注入。
+# 复制本文件仅用于了解 Spring Boot local profile 的绑定规则，不要把真实值写回仓库。
+server:
+  port: ${SERVER_PORT:8000}
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:30000}
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:20}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:2}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
+      database: ${SPRING_DATA_REDIS_DATABASE:1}
+  ai:
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY}
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${SPRING_AI_OPENAI_CHAT_MODEL}
+  rabbitmq:
+    addresses: ${SPRING_RABBITMQ_ADDRESSES}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
+
+simple:
+  annex:
+    server-url: ${SIMPLE_ANNEX_SERVER_URL}
+    access-key: ${SIMPLE_ANNEX_ACCESS_KEY}
+    access-secret: ${SIMPLE_ANNEX_ACCESS_SECRET}
+  auth:
+    hs-key: ${SIMPLE_AUTH_HS_KEY}
+    project-code: ${SIMPLE_AUTH_PROJECT_CODE:simple-ai}

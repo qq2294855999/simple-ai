@@ -170,6 +170,16 @@ class MPAgentDefinitionView implements AgentDefinitionView {
     }
 
     @Override
+    public int deleteChatMessageByAgentIds(List<String> ids) {
+        return repository.deleteChatMessageByAgentIds(ids);
+    }
+
+    @Override
+    public int deleteChatSessionByAgentIds(List<String> ids) {
+        return repository.deleteChatSessionByAgentIds(ids);
+    }
+
+    @Override
     public AgentDefinition findOne(FindOneAgentDefinitionRequest findOneRequest, FindOneAgentDefinitionRequest neRequest) {
         LambdaQueryWrapper<AgentDefinition> queryWrapper = buildFindOneWrapper(findOneRequest, neRequest);
         List<AgentDefinition> list = repository.selectList(queryWrapper);
@@ -255,6 +265,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getSecondRule()), AgentDefinition::getSecondRule, findAllRequest.getSecondRule())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getThirdSkill()), AgentDefinition::getThirdSkill, findAllRequest.getThirdSkill())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getModel()), AgentDefinition::getModel, findAllRequest.getModel())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getDefaultModelId()), AgentDefinition::getDefaultModelId, findAllRequest.getDefaultModelId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getCreateBy()), AgentDefinition::getCreateBy, findAllRequest.getCreateBy())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getUpdateBy()), AgentDefinition::getUpdateBy, findAllRequest.getUpdateBy())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentDefinition::getStatus, findAllRequest.getStatus())
@@ -286,6 +297,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
         LambdaQueryWrapper<AgentDefinition> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentDefinition::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getName()), AgentDefinition::getName, findOneRequest.getName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getDefaultModelId()), AgentDefinition::getDefaultModelId, findOneRequest.getDefaultModelId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getDefinitionDesc()), AgentDefinition::getDefinitionDesc, findOneRequest.getDefinitionDesc())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getFirstPrinciple()), AgentDefinition::getFirstPrinciple, findOneRequest.getFirstPrinciple())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getSecondRule()), AgentDefinition::getSecondRule, findOneRequest.getSecondRule())

@@ -1,51 +1,50 @@
 server:
-  port: 8000
+  port: ${SERVER_PORT:8000}
 spring:
   web:
     resources:
       add-mappings: false
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://develop.dev.joyswon.com:5432/simple-${spring.application.name}?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&serverTimezone=GMT%2B8
-    username: postgres
-    password: 123456
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
-      auto-commit: true # 自动提交
-      connection-timeout: 30000 # 等待连接池分配连接的最大时长（毫秒），超过这个时长还没可用的连接则发生SQLException， 缺省:30秒
-      idle-timeout: 30000 # 一个连接idle状态的最大时长（毫秒），超时则被释放（retired），缺省:10分钟
-      maxLifeTime: 600000 # 一个连接的生命时长（毫秒），超时而且没被使用则被释放（retired），缺省:30分钟，建议设置比数据库超时时长少30秒
-      maximum-pool-size: 100 # 连接池中允许的最大连接数。缺省值：10
-      minimum-idle: 10 # 最小连接数
+      auto-commit: true
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:30000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:600000}
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:20}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:2}
   data:
     redis:
-      database: 1
-      host: develop.dev.joyswon.com
-      port: 6379
-      password: 12345678
-      timeout: 3000 # 连接超时时间（毫秒），缺省值：3000
-      lettuce.pool:
-        max-idle: 10 # 连接池中的最大空闲连接
-        min-idle: 10 # 连接池中的最小空闲连接
-        max-active: 100 # 连接池的最大数据库连接数。设为0表示无限制。一般设置为并发量
-        max-wait: 3000 # 从连接池中获取连接的最大等待时间（毫秒）
+      database: ${SPRING_DATA_REDIS_DATABASE:1}
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:3000}
+      lettuce:
+        pool:
+          max-idle: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_IDLE:10}
+          min-idle: ${SPRING_DATA_REDIS_LETTUCE_POOL_MIN_IDLE:2}
+          max-active: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_ACTIVE:20}
+          max-wait: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_WAIT:3000}
   rabbitmq:
-    addresses: develop.dev.joyswon.com:5672
-    username: admin
-    password: Abc$123456789
+    addresses: ${SPRING_RABBITMQ_ADDRESSES}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
     listener:
       simple:
-        acknowledge-mode: MANUAL # 确认模式：MANUAL-手动ack，AUTO-自动ack，失败需要手动抛出异常，NONE-没有ack
-        prefetch: 1 # 未确认消息的最大数量，也叫作分发模式：0-轮训，每台服务器一次循环，1-公平分发，是服务器压力进行分发，> 1：预取数据的数量-适当增大可以提升消费速度
-        default-requeue-rejected: false # 消费失败的q是否重新放回队列重新消费
-        # concurrency: 1 # 消费线程数
-        # max-concurrency: 10 # 消费线程最大数量
+        acknowledge-mode: MANUAL
+        prefetch: 1
+        default-requeue-rejected: false
   ai:
     openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      api-key: ${SPRING_AI_OPENAI_API_KEY}
       base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}
       chat:
         options:
-          model: ${SPRING_AI_OPENAI_CHAT_MODEL:gpt-4o-mini}
+          model: ${SPRING_AI_OPENAI_CHAT_MODEL}
 # doc文档配置
 springdoc:
   swagger-ui:
@@ -62,21 +61,21 @@ springdoc:
         - com.simple.common.auth.client.controller
         - com.simple.${spring.application.name}.controller
 
-# 项目配置
 simple:
   websocket:
     command:
-      type: agent-command
-      cli-key: default
+      type: ${SIMPLE_WEBSOCKET_COMMAND_TYPE:agent-command}
+      cli-key: ${SIMPLE_WEBSOCKET_COMMAND_CLI_KEY:default}
   annex:
-    # 附件上传配置
-    server-url: http://minio.dev.joyswon.com
-    access-key: admin
-    access-secret: rXd5BErpRk
+    server-url: ${SIMPLE_ANNEX_SERVER_URL}
+    access-key: ${SIMPLE_ANNEX_ACCESS_KEY}
+    access-secret: ${SIMPLE_ANNEX_ACCESS_SECRET}
   event:
-    type: mq # 事件实现方式
-    concurrency: 1 # 事件消费并发数
+    type: ${SIMPLE_EVENT_TYPE:mq}
+    concurrency: ${SIMPLE_EVENT_CONCURRENCY:1}
   auth:
-    hs-key: sInFHs4zRGIfrVTWVDdGJuKZRc0DfVBF # JWT密钥
-    project-code: simple-ai # 项目编码
+    hs-key: ${SIMPLE_AUTH_HS_KEY}
+    project-code: ${SIMPLE_AUTH_PROJECT_CODE:simple-ai}
+  ai:
+    model-encryption-key: ${SIMPLE_AI_MODEL_ENCRYPTION_KEY}
 

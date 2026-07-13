@@ -37,6 +37,9 @@ public class CreateAgentDefinitionRequest {
     @NotEmpty(message = "模型不能为空")
     private String model;
 
+    @Schema(description = "默认模型主键")
+    private String defaultModelId;
+
     @Schema(description = "备注")
     private String remark;
 }

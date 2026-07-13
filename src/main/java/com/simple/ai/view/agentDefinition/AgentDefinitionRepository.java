@@ -189,4 +189,20 @@ public interface AgentDefinitionRepository extends BaseMapper<AgentDefinition> {
      * @return 影响行数
      */
     int deleteSkillByAgentIds(@Param("ids") List<String> ids);
+
+    /**
+     * 删除智能体聊天消息。
+     *
+     * @param ids 智能体主键列表
+     * @return 影响行数
+     */
+    int deleteChatMessageByAgentIds(@Param("ids") List<String> ids);
+
+    /**
+     * 删除智能体聊天会话。
+     *
+     * @param ids 智能体主键列表
+     * @return 影响行数
+     */
+    int deleteChatSessionByAgentIds(@Param("ids") List<String> ids);
 }

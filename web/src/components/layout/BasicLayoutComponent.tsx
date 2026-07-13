@@ -1,4 +1,4 @@
-import { RobotOutlined, SendOutlined, SettingOutlined, ThunderboltOutlined, SafetyOutlined, ApartmentOutlined, DatabaseOutlined, CodeOutlined, OrderedListOutlined } from "@ant-design/icons";
+import { RobotOutlined, SendOutlined, SettingOutlined, ThunderboltOutlined, SafetyOutlined, ApartmentOutlined, DatabaseOutlined, CodeOutlined, OrderedListOutlined, MessageOutlined, CloudServerOutlined, ApiOutlined } from "@ant-design/icons";
 import { Layout, Menu, Space, Typography } from "antd";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -23,6 +23,7 @@ export function BasicLayoutComponent() {
             onClick={item => navigate(item.key)}
             items={[
               { key: "/workbench", icon: <RobotOutlined />, label: "智能体工作台" },
+              { key: "/agent-chat", icon: <MessageOutlined />, label: "人机对话" },
               { key: "/agent-design", icon: <SettingOutlined />, label: "智能体设计管理" },
               { key: "/command-dispatch", icon: <SendOutlined />, label: "命令调度" },
               { key: "/agent-skill", icon: <ThunderboltOutlined />, label: "技能管理" },
@@ -30,7 +31,9 @@ export function BasicLayoutComponent() {
               { key: "/sub-agent-relation", icon: <ApartmentOutlined />, label: "子智能体编排" },
               { key: "/agent-memory", icon: <DatabaseOutlined />, label: "记忆编排管理" },
               { key: "/atomic-command", icon: <CodeOutlined />, label: "原子命令管理" },
-              { key: "/task", icon: <OrderedListOutlined />, label: "任务执行记录" }
+              { key: "/task", icon: <OrderedListOutlined />, label: "任务执行记录" },
+              { key: "/ai-model-provider", icon: <CloudServerOutlined />, label: "模型供应商" },
+              { key: "/ai-model", icon: <ApiOutlined />, label: "模型管理" }
             ]}
           />
         </Sider>

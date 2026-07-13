@@ -31,6 +31,12 @@ public class CommandDispatchProgressEvent {
     private String eventType;
 
     /**
+     * 步骤主键。
+     */
+    @Schema(description = "步骤主键")
+    private String stepId;
+
+    /**
      * 步骤名称
      */
     @Schema(description = "步骤名称")
@@ -65,4 +71,16 @@ public class CommandDispatchProgressEvent {
      */
     @Schema(description = "失败原因")
     private String failureReason;
+
+    /**
+     * 模型供应商名称快照
+     */
+    @Schema(description = "模型供应商名称快照")
+    private String providerName;
+
+    /**
+     * 模型编码快照
+     */
+    @Schema(description = "模型编码快照")
+    private String modelCode;
 }

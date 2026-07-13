@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.agentDashboard.AgentDashboardRepository">
+
+    <select id="selectSummary" resultType="com.simple.ai.common.dto.agentDashboard.AgentDashboardSummaryResponse">
+        select
+            (select count(1) from agent_definition) as agentCount,
+            (select count(1) from agent_definition where status = 1) as enabledAgentCount,
+            (select count(1) from agent_skill) as skillCount,
+            (select count(1) from task where exec_status = 'RUNNING') as runningTaskCount,
+            (select count(1) from task where exec_status = 'FAILED') as failedTaskCount
+    </select>
+
+    <select id="selectRecentTasks" resultType="com.simple.ai.common.dto.agentDashboard.AgentDashboardRecentTaskResponse">
+        select
+            t.id,
+            ad.name as agentName,
+            t.task_name as taskName,
+            t.exec_status as execStatus,
+            case t.exec_status
+                when 'WAITING' then '等待执行'
+                when 'RUNNING' then '执行中'
+                when 'SUCCESS' then '执行成功'
+                when 'FAILED' then '执行失败'
+                else t.exec_status
+            end as execStatusLabel,
+            t.failure_reason as failureReason,
+            t.update_time as updateTime
+        from task t
+        inner join agent_definition ad on ad.id = t.agent_id
+        order by t.update_time desc nulls last, t.create_time desc nulls last
+        limit #{size}
+    </select>
+</mapper>

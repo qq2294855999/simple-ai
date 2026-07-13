@@ -14,10 +14,16 @@ import lombok.Data;
 public class AgentAiRequest {
 
     /**
-     * 模型名称
+     * 智能体主键。
      */
-    @Schema(description = "模型名称")
-    private String model;
+    @Schema(description = "智能体主键")
+    private String agentId;
+
+    /**
+     * 显式模型主键。
+     */
+    @Schema(description = "显式模型主键")
+    private String modelId;
 
     /**
      * 提示词内容

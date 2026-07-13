@@ -197,6 +197,22 @@ public interface AgentDefinitionView {
     int deleteSkillByAgentIds(List<String> ids);
 
     /**
+     * 删除智能体聊天消息。
+     *
+     * @param ids 智能体主键列表
+     * @return 影响行数
+     */
+    int deleteChatMessageByAgentIds(List<String> ids);
+
+    /**
+     * 删除智能体聊天会话。
+     *
+     * @param ids 智能体主键列表
+     * @return 影响行数
+     */
+    int deleteChatSessionByAgentIds(List<String> ids);
+
+    /**
      * 获取单条数据
      *
      * @param findOneRequest 查询条件

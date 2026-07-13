@@ -224,6 +224,7 @@ DROP TABLE IF EXISTS task;
 CREATE TABLE task (
     id VARCHAR(255) NOT NULL PRIMARY KEY,
     agent_memory_id VARCHAR(255) NOT NULL DEFAULT '',
+    agent_id VARCHAR(255) NOT NULL DEFAULT '',
     task_name VARCHAR(255) NOT NULL DEFAULT '',
     parent_task_id VARCHAR(255) NOT NULL DEFAULT '',
     next_task_id VARCHAR(255) NOT NULL DEFAULT '',
@@ -243,6 +244,7 @@ CREATE TABLE task (
 COMMENT ON TABLE task IS '任务';
 COMMENT ON COLUMN task.id IS '主键';
 COMMENT ON COLUMN task.agent_memory_id IS '智能体记忆主键';
+COMMENT ON COLUMN task.agent_id IS '智能体主键';
 COMMENT ON COLUMN task.task_name IS '任务名称';
 COMMENT ON COLUMN task.parent_task_id IS '父任务ID';
 COMMENT ON COLUMN task.next_task_id IS '下一个任务ID';
@@ -298,3 +300,124 @@ COMMENT ON COLUMN task_detail.update_time IS '修改时间';
 COMMENT ON COLUMN task_detail.status IS '状态';
 COMMENT ON COLUMN task_detail.reserver IS '扩展';
 COMMENT ON COLUMN task_detail.remark IS '备注';
+
+-- ============================================================
+-- 10. 智能体聊天会话
+-- ============================================================
+CREATE TABLE agent_chat_session (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    agent_id VARCHAR(255) NOT NULL DEFAULT '',
+    session_name VARCHAR(255) NOT NULL DEFAULT '',
+    last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status SMALLINT NOT NULL DEFAULT 1,
+    reserver TEXT,
+    remark VARCHAR(500) NOT NULL DEFAULT ''
+);
+COMMENT ON TABLE agent_chat_session IS '智能体聊天会话';
+COMMENT ON COLUMN agent_chat_session.id IS '主键';
+COMMENT ON COLUMN agent_chat_session.agent_id IS '绑定智能体主键';
+COMMENT ON COLUMN agent_chat_session.session_name IS '会话名称';
+COMMENT ON COLUMN agent_chat_session.last_message_at IS '最后消息时间';
+
+-- ============================================================
+-- 11. 智能体聊天消息
+-- ============================================================
+CREATE TABLE agent_chat_message (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL DEFAULT '',
+    task_id VARCHAR(255) NOT NULL DEFAULT '',
+    role VARCHAR(32) NOT NULL DEFAULT '',
+    content TEXT NOT NULL,
+    content_format VARCHAR(64) NOT NULL DEFAULT '',
+    sequence_no BIGINT NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status SMALLINT NOT NULL DEFAULT 1,
+    reserver TEXT,
+    remark VARCHAR(500) NOT NULL DEFAULT '',
+    CONSTRAINT uk_agent_chat_message_session_sequence UNIQUE (session_id, sequence_no)
+);
+COMMENT ON TABLE agent_chat_message IS '智能体聊天消息';
+COMMENT ON COLUMN agent_chat_message.session_id IS '聊天会话主键';
+COMMENT ON COLUMN agent_chat_message.task_id IS '关联调度任务主键';
+COMMENT ON COLUMN agent_chat_message.role IS '消息角色：USER、ASSISTANT、SYSTEM_ERROR';
+COMMENT ON COLUMN agent_chat_message.content IS '消息内容';
+COMMENT ON COLUMN agent_chat_message.content_format IS '内容格式：PLAIN_TEXT、RESTRICTED_MARKDOWN';
+-- ============================================================
+-- 12. 模型供应商配置
+-- ============================================================
+CREATE TABLE ai_model_provider (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    provider_code VARCHAR(128) NOT NULL,
+    provider_name VARCHAR(255) NOT NULL,
+    protocol_type VARCHAR(64) NOT NULL,
+    base_url VARCHAR(1000) NOT NULL,
+    api_key_ciphertext TEXT NOT NULL,
+    timeout_millis INTEGER NOT NULL DEFAULT 60000,
+    system_default SMALLINT NOT NULL DEFAULT 0,
+    create_by VARCHAR(255) NOT NULL DEFAULT '',
+    update_by VARCHAR(255) NOT NULL DEFAULT '',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status SMALLINT NOT NULL DEFAULT 1,
+    reserver TEXT,
+    remark VARCHAR(500) NOT NULL DEFAULT '',
+    CONSTRAINT uk_ai_model_provider_code UNIQUE (provider_code)
+);
+COMMENT ON TABLE ai_model_provider IS 'AI模型供应商运行配置，API Key仅保存AES-GCM密文';
+COMMENT ON COLUMN ai_model_provider.protocol_type IS '协议类型，首期仅支持OPENAI_COMPATIBLE';
+COMMENT ON COLUMN ai_model_provider.api_key_ciphertext IS 'API Key AES-GCM加密密文，禁止回显、日志与审计复制';
+COMMENT ON COLUMN ai_model_provider.system_default IS '是否系统默认供应商，仅辅助运维展示；实际默认由模型表确定';
+
+-- ============================================================
+-- 13. 模型配置
+-- ============================================================
+CREATE TABLE ai_model (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    provider_id VARCHAR(255) NOT NULL,
+    model_code VARCHAR(255) NOT NULL,
+    model_name VARCHAR(255) NOT NULL,
+    capability_config TEXT NOT NULL DEFAULT '',
+    context_window INTEGER,
+    provider_default SMALLINT NOT NULL DEFAULT 0,
+    system_default SMALLINT NOT NULL DEFAULT 0,
+    create_by VARCHAR(255) NOT NULL DEFAULT '',
+    update_by VARCHAR(255) NOT NULL DEFAULT '',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status SMALLINT NOT NULL DEFAULT 1,
+    reserver TEXT,
+    remark VARCHAR(500) NOT NULL DEFAULT '',
+    CONSTRAINT uk_ai_model_provider_code UNIQUE (provider_id, model_code)
+);
+COMMENT ON TABLE ai_model IS 'AI模型配置，关联供应商且不重复存储API Key';
+COMMENT ON COLUMN ai_model.capability_config IS '可扩展能力JSON文本，例如chat、vision、functionCalling';
+COMMENT ON COLUMN ai_model.provider_default IS '供应商默认模型';
+COMMENT ON COLUMN ai_model.system_default IS '系统默认模型，全局仅允许一个启用模型';
+
+-- ============================================================
+-- 14. 运行时模型选择与审计快照
+-- ============================================================
+ALTER TABLE agent_definition ADD COLUMN default_model_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task ADD COLUMN provider_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task ADD COLUMN provider_name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task ADD COLUMN model_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task ADD COLUMN model_code VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task_detail ADD COLUMN provider_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task_detail ADD COLUMN provider_name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task_detail ADD COLUMN model_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE task_detail ADD COLUMN model_code VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE agent_chat_message ADD COLUMN provider_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE agent_chat_message ADD COLUMN provider_name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE agent_chat_message ADD COLUMN model_id VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE agent_chat_message ADD COLUMN model_code VARCHAR(255) NOT NULL DEFAULT '';
+
+CREATE INDEX idx_ai_model_provider_status ON ai_model_provider (status, provider_name);
+CREATE INDEX idx_ai_model_provider_status_default ON ai_model (provider_id, status, provider_default);
+CREATE UNIQUE INDEX uk_ai_model_one_system_default ON ai_model (system_default) WHERE system_default = 1;
+CREATE INDEX idx_agent_definition_default_model ON agent_definition (default_model_id);
+CREATE INDEX idx_task_model_snapshot ON task (model_id, provider_id, create_time DESC);
+CREATE INDEX idx_task_detail_model_snapshot ON task_detail (model_id, provider_id, create_time DESC);
+CREATE INDEX idx_agent_chat_message_model_snapshot ON agent_chat_message (model_id, provider_id, create_time DESC);

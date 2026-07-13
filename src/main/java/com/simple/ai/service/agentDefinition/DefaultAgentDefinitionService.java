@@ -192,6 +192,10 @@ class DefaultAgentDefinitionService implements AgentDefinitionService {
      */
     private void executeCascadeDelete(List<String> ids) {
 
+        // 清理聊天消息和会话，避免删除智能体后遗留可读取的对话数据
+        agentDefinitionView.deleteChatMessageByAgentIds(ids);
+        agentDefinitionView.deleteChatSessionByAgentIds(ids);
+
         // 解除技能关联的原子命令，保留全局命令和命令本体
         agentDefinitionView.unlinkAtomicCommandSkillByAgentIds(ids);
 
