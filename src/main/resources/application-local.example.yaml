@@ -1,24 +1,43 @@
-# 可提交的本地运行配置样例：敏感值必须由操作系统环境变量或部署平台 Secret 注入。
-# 复制本文件仅用于了解 Spring Boot local profile 的绑定规则，不要把真实值写回仓库。
 server:
   port: ${SERVER_PORT:8000}
-
 spring:
+  web:
+    resources:
+      add-mappings: false
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
+      auto-commit: true
       connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:30000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:600000}
       maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:20}
       minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:2}
   data:
     redis:
+      database: ${SPRING_DATA_REDIS_DATABASE:1}
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD}
-      database: ${SPRING_DATA_REDIS_DATABASE:1}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:3000}
+      lettuce:
+        pool:
+          max-idle: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_IDLE:10}
+          min-idle: ${SPRING_DATA_REDIS_LETTUCE_POOL_MIN_IDLE:2}
+          max-active: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_ACTIVE:20}
+          max-wait: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_WAIT:3000}
+  rabbitmq:
+    addresses: ${SPRING_RABBITMQ_ADDRESSES}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
+    listener:
+      simple:
+        acknowledge-mode: MANUAL
+        prefetch: 1
+        default-requeue-rejected: false
   ai:
     openai:
       api-key: ${SPRING_AI_OPENAI_API_KEY}
@@ -26,16 +45,37 @@ spring:
       chat:
         options:
           model: ${SPRING_AI_OPENAI_CHAT_MODEL}
-  rabbitmq:
-    addresses: ${SPRING_RABBITMQ_ADDRESSES}
-    username: ${SPRING_RABBITMQ_USERNAME}
-    password: ${SPRING_RABBITMQ_PASSWORD}
+# doc文档配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+  group-configs:
+    - group: '基础服务'
+      paths-to-match: '/**'
+      packages-to-scan:
+        - com.simple.common.auth.client.controller
+        - com.simple.${spring.application.name}.controller
 
 simple:
+  websocket:
+    command:
+      type: ${SIMPLE_WEBSOCKET_COMMAND_TYPE:agent-command}
+      cli-key: ${SIMPLE_WEBSOCKET_COMMAND_CLI_KEY:default}
   annex:
     server-url: ${SIMPLE_ANNEX_SERVER_URL}
     access-key: ${SIMPLE_ANNEX_ACCESS_KEY}
     access-secret: ${SIMPLE_ANNEX_ACCESS_SECRET}
+  event:
+    type: ${SIMPLE_EVENT_TYPE:mq}
+    concurrency: ${SIMPLE_EVENT_CONCURRENCY:1}
   auth:
     hs-key: ${SIMPLE_AUTH_HS_KEY}
     project-code: ${SIMPLE_AUTH_PROJECT_CODE:simple-ai}
+  ai:
+    model-encryption-key: "rFPZRGHBTPexORdwm8oK6o0AZsiqO+LTSfW+G/1ECtg="
+
