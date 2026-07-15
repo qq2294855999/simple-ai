@@ -37,7 +37,7 @@ instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 instance.interceptors.response.use(
   <T>(response: AxiosResponse<R<T>>) => {
     const body = response.data;
-    if (body.code !== 200) {
+    if (body.code !== "200") {
       ToastUtil.error(body.message || "请求失败");
       return Promise.reject(new Error(body.message || "请求失败"));
     }

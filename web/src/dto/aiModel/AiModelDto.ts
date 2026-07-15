@@ -57,3 +57,11 @@ export interface AiModelResponseDto {
   /** 最后修改时间 */
   updateTime: string;
 }
+
+/** 供应商远程模型列表项 */
+export interface AiModelProviderModelDto {
+  /** 模型编码 */
+  modelCode: string;
+  /** 模型名称 */
+  modelName: string;
+}

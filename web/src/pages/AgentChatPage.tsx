@@ -6,7 +6,7 @@ import { AgentDefinitionApi } from "../api/agentDefinitionApi";
 import { AiModelApi } from "../api/aiModelApi";
 import { RestrictedMarkdownComponent } from "../components/agentChat/RestrictedMarkdownComponent";
 import type { AgentChatMessageDto, AgentChatProgressEventDto, AgentChatSessionDto, SendAgentChatMessageRequestDto } from "../dto/agentChat/AgentChatDto";
-import type { AgentDefinitionMiniDto } from "../dto/agentDefinition/AgentDefinitionMiniDto";
+import type { AgentDefinitionPageDto } from "../dto/agentDefinition/AgentDefinitionDto";
 import type { AiModelResponseDto } from "../dto/aiModel/AiModelDto";
 import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
 import { ToastUtil } from "../utils/ToastUtil";
@@ -20,7 +20,7 @@ const maxTimelineEventCount = 300;
  * @author qty
  */
 export function AgentChatPage() {
-  const [agents, setAgents] = useState<AgentDefinitionMiniDto[]>([]);
+  const [agents, setAgents] = useState<AgentDefinitionPageDto[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>();
   const [models, setModels] = useState<AiModelResponseDto[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>();

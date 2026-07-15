@@ -1,7 +1,10 @@
 package com.simple.ai.service.aiModel;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simple.ai.common.dto.agentDefinition.FindAllAgentDefinitionRequest;
+import com.simple.ai.common.dto.aiModel.AiModelProviderModelResponse;
 import com.simple.ai.common.dto.aiModel.AiModelResponse;
 import com.simple.ai.common.dto.aiModel.AiModelSaveRequest;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
@@ -14,6 +17,7 @@ import com.simple.ai.common.service.aiModel.AiModelService;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.aiModel.AiModelView;
 import com.simple.ai.common.view.aiModelProvider.AiModelProviderView;
+import com.simple.ai.service.aiModelProvider.AiModelProviderApiKeyCipher;
 import com.simple.ai.view.agentChatMessage.AgentChatMessageRepository;
 import com.simple.ai.view.task.TaskRepository;
 import com.simple.ai.view.taskDetail.TaskDetailRepository;
@@ -22,6 +26,7 @@ import com.simple.common.mp.common.enums.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,8 +39,9 @@ import java.util.Map;
  * @author qty
  */
 @Service
-@Transactional
 class DefaultAiModelService implements AiModelService {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
     private AiModelView aiModelView;
@@ -55,6 +61,9 @@ class DefaultAiModelService implements AiModelService {
     @Autowired
     private AgentChatMessageRepository agentChatMessageRepository;
 
+    @Autowired
+    private AiModelProviderApiKeyCipher apiKeyCipher;
+
     @Override
     public List<AiModelResponse> findAll() {
         List<AiModel> models = aiModelView.findAll();
@@ -71,6 +80,7 @@ class DefaultAiModelService implements AiModelService {
     }
 
     @Override
+    @Transactional
     public String save(AiModelSaveRequest request) {
         AssertUtils.notEmpty(request, "模型保存请求不能为空");
         validateContextWindow(request);
@@ -85,6 +95,27 @@ class DefaultAiModelService implements AiModelService {
     }
 
     @Override
+    public List<AiModelProviderModelResponse> fetchProviderModels(String providerId) {
+        AssertUtils.notEmpty(providerId, "供应商主键不能为空");
+        AiModelProvider provider = loadEnabledProvider(providerId);
+        String apiKey = apiKeyCipher.decrypt(provider.getApiKeyCiphertext());
+
+        // 通过供应商的 OpenAI 兼容接口拉取模型列表
+        RestClient restClient = RestClient.create();
+        String responseBody = restClient.get()
+                .uri(provider.getBaseUrl().replaceAll("/+$", "") + "/v1/models")
+                .header("Authorization", "Bearer " + apiKey)
+                .retrieve()
+                .body(String.class);
+
+        AssertUtils.notEmpty(responseBody, "供应商[%s]未返回模型列表", provider.getProviderName());
+
+        // 解析 OpenAI /v1/models 应答格式
+        return parseModelListResponse(responseBody);
+    }
+
+    @Override
+    @Transactional
     public void deleteById(String id) {
         AssertUtils.notEmpty(id, "模型主键不能为空");
         AiModel model = loadModel(id);
@@ -358,6 +389,36 @@ class DefaultAiModelService implements AiModelService {
             return false;
         }
         return provider != null && Status.ON.equals(provider.getStatus());
+    }
+
+    /**
+     * 解析供应商返回的模型列表 JSON。
+     *
+     * @param responseBody 供应商 API 原始应答
+     * @return 模型响应列表
+     */
+    private List<AiModelProviderModelResponse> parseModelListResponse(String responseBody) {
+        List<AiModelProviderModelResponse> models = new ArrayList<>();
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(responseBody);
+            JsonNode dataArray = root.get("data");
+            if (dataArray == null || !dataArray.isArray()) {
+                return models;
+            }
+
+            // 遍历 data 数组提取模型编码和名称
+            for (JsonNode item : dataArray) {
+                AiModelProviderModelResponse model = new AiModelProviderModelResponse();
+                model.setModelCode(item.has("id") ? item.get("id").asText() : "");
+                model.setModelName(item.has("id") ? item.get("id").asText() : "");
+                if (!model.getModelCode().isBlank()) {
+                    models.add(model);
+                }
+            }
+        } catch (Exception e) {
+            AssertUtils.error("解析供应商模型列表失败: " + e.getMessage());
+        }
+        return models;
     }
 
     /**

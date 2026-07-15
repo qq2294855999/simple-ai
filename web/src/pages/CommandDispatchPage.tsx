@@ -8,7 +8,7 @@ import { CommandDispatchApi } from "../api/commandDispatchApi";
 import type { AgentSkillPageResponseDto } from "../dto/agentSkill/AgentSkillPageResponseDto";
 import type { AiModelResponseDto } from "../dto/aiModel/AiModelDto";
 import type { CommandDispatchProgressEventDto, CommandDispatchRequestDto } from "../dto/command/CommandDispatchDto";
-import type { AgentDefinitionMiniDto } from "../dto/agentDefinition/AgentDefinitionMiniDto";
+import type { AgentDefinitionPageDto } from "../dto/agentDefinition/AgentDefinitionDto";
 import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
 import { ToastUtil } from "../utils/ToastUtil";
 
@@ -32,7 +32,7 @@ const maxProgressEventCount = 500;
 export function CommandDispatchPage() {
   const [form] = Form.useForm<CommandDispatchFormDto>();
   const selectedAgentId = Form.useWatch("agentId", form);
-  const [agents, setAgents] = useState<AgentDefinitionMiniDto[]>([]);
+  const [agents, setAgents] = useState<AgentDefinitionPageDto[]>([]);
   const [models, setModels] = useState<AiModelResponseDto[]>([]);
   const [skills, setSkills] = useState<AgentSkillPageResponseDto[]>([]);
   const [events, setEvents] = useState<CommandDispatchProgressEventDto[]>([]);

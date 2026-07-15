@@ -1,12 +1,12 @@
 server:
-  port: 8000
+  port: 8001
 spring:
   web:
     resources:
       add-mappings: false
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://develop.dev.joyswon.com:5432/simple-${spring.application.name}?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&serverTimezone=GMT%2B8
+    url: jdbc:postgresql://develop.dev.joyswon.com:5432/${spring.application.name}?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&serverTimezone=GMT%2B8
     username: postgres
     password: 123456
     hikari:
@@ -41,7 +41,7 @@ spring:
         # max-concurrency: 10 # 消费线程最大数量
   ai:
     openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:sk-74c65aa35b5f4a18972599336fdb8dc3}
       base-url: https://api.deepseek.com
       chat:
         options:

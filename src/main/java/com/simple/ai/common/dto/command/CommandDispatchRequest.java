@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.command;
 
+import com.simple.common.websocket.common.entity.WebSocketRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;

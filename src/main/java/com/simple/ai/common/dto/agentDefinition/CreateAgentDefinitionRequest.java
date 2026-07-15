@@ -21,21 +21,14 @@ public class CreateAgentDefinitionRequest {
     @NotEmpty(message = "定义描述不能为空")
     private String definitionDesc;
 
-    @Schema(description = "第一铁律")
-    @NotEmpty(message = "第一铁律不能为空")
+    @Schema(description = "第一铁律（系统级常量，运行时自动注入）")
     private String firstPrinciple;
 
-    @Schema(description = "第二规则")
-    @NotEmpty(message = "第二规则不能为空")
+    @Schema(description = "第二规则（系统级常量，运行时自动注入）")
     private String secondRule;
 
-    @Schema(description = "第三技能")
-    @NotEmpty(message = "第三技能不能为空")
+    @Schema(description = "第三技能（系统级常量，运行时自动注入）")
     private String thirdSkill;
-
-    @Schema(description = "模型")
-    @NotEmpty(message = "模型不能为空")
-    private String model;
 
     @Schema(description = "默认模型主键")
     private String defaultModelId;

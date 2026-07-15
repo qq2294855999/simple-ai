@@ -27,4 +27,8 @@ export const AgentRuleApi = {
   /** 批量删除 */
   deleteByIds: (ids: string[]) =>
     http.delete("/sys/agent-rule/deletes", { data: ids }),
+
+  /** 全量列表（用于下拉选择） */
+  listAll: () =>
+    http.get<PageResult<AgentRulePageResponseDto>>("/sys/agent-rule/aggregate-list", { params: { current: 1, size: 1000 } }),
 };

@@ -5,7 +5,7 @@ import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
 import { ToastUtil } from "../utils/ToastUtil";
 import { AiModelApi } from "../api/aiModelApi";
 import { AiModelProviderApi } from "../api/aiModelProviderApi";
-import type { AiModelResponseDto, AiModelSaveRequestDto } from "../dto/aiModel/AiModelDto";
+import type { AiModelProviderModelDto, AiModelResponseDto, AiModelSaveRequestDto } from "../dto/aiModel/AiModelDto";
 import type { AiModelProviderResponseDto } from "../dto/aiModelProvider/AiModelProviderDto";
 
 /**
@@ -37,6 +37,13 @@ export function AiModelManagementPage() {
   // 供应商下拉
   const [providers, setProviders] = useState<AiModelProviderResponseDto[]>([]);
 
+  // 远程模型列表
+  const [providerModels, setProviderModels] = useState<AiModelProviderModelDto[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
+
+  // 监听供应商变化
+  const watchedProviderId = Form.useWatch("providerId", form);
+
   // 加载供应商下拉
   const loadProviders = useCallback(async () => {
     try {
@@ -65,6 +72,34 @@ export function AiModelManagementPage() {
     loadData();
     loadProviders();
   }, [loadData, loadProviders]);
+
+  // 供应商切换时自动拉取远程模型列表
+  useEffect(() => {
+    if (!watchedProviderId) {
+      setProviderModels([]);
+      return;
+    }
+    let cancelled = false;
+    const fetchModels = async () => {
+      setFetchingModels(true);
+      try {
+        const models = await AiModelApi.fetchProviderModels(watchedProviderId);
+        if (!cancelled) {
+          setProviderModels(models || []);
+        }
+      } catch {
+        if (!cancelled) {
+          setProviderModels([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setFetchingModels(false);
+        }
+      }
+    };
+    fetchModels();
+    return () => { cancelled = true; };
+  }, [watchedProviderId, form]);
 
   // 打开创建弹窗
   const openCreateModal = useCallback(() => {
@@ -197,10 +232,23 @@ export function AiModelManagementPage() {
             <Form.Item
               label="模型编码"
               name="modelCode"
-              rules={[{ required: true, message: "请输入模型编码" }]}
+              rules={[{ required: true, message: "请选择或输入模型编码" }]}
               style={{ marginBottom: 16 }}
             >
-              <Input style={{ height: 36, fontSize: 14, padding: "0 12px" }} />
+              <Select
+                placeholder="选择供应商后自动获取，也可手动输入"
+                style={{ height: 36 }}
+                loading={fetchingModels}
+                showSearch
+                filterOption={(input, option) => (option?.label as string || "").includes(input)}
+                options={providerModels.map(m => ({ label: m.modelCode, value: m.modelCode }))}
+                onChange={(value: string) => {
+                  const selected = providerModels.find(m => m.modelCode === value);
+                  if (selected) {
+                    form.setFieldsValue({ modelName: selected.modelName });
+                  }
+                }}
+              />
             </Form.Item>
             <Form.Item
               label="模型名称"

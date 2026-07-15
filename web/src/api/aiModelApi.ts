@@ -1,5 +1,5 @@
 import { http } from "./http";
-import type { AiModelResponseDto, AiModelSaveRequestDto } from "../dto/aiModel/AiModelDto";
+import type { AiModelProviderModelDto, AiModelResponseDto, AiModelSaveRequestDto } from "../dto/aiModel/AiModelDto";
 
 /**
  * AI 模型管理 API 封装。
@@ -14,6 +14,10 @@ export const AiModelApi = {
   /** 查询智能体可用模型 */
   available: (agentId: string) =>
     http.get<AiModelResponseDto[]>(`/sys/ai-model/available/${agentId}`),
+
+  /** 从供应商远程拉取可用模型列表 */
+  fetchProviderModels: (providerId: string) =>
+    http.get<AiModelProviderModelDto[]>("/sys/ai-model/fetch-provider-models", { params: { providerId } }),
 
   /** 保存模型 */
   save: (data: AiModelSaveRequestDto) =>

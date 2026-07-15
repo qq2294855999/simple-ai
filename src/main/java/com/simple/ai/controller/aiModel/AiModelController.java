@@ -1,5 +1,6 @@
 package com.simple.ai.controller.aiModel;
 
+import com.simple.ai.common.dto.aiModel.AiModelProviderModelResponse;
 import com.simple.ai.common.dto.aiModel.AiModelResponse;
 import com.simple.ai.common.dto.aiModel.AiModelSaveRequest;
 import com.simple.ai.common.service.aiModel.AiModelService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -57,6 +59,20 @@ public class AiModelController {
     public R<List<AiModelResponse>> available(@PathVariable String agentId) {
         AssertUtils.notEmpty(agentId, "智能体主键不能为空");
         return R.ok(aiModelService.findAvailableByAgentId(agentId));
+    }
+
+    /**
+     * 从供应商远程拉取可用模型列表。
+     *
+     * @param providerId 供应商主键
+     * @return 远程模型列表
+     */
+    @GetMapping("fetch-provider-models")
+    @Operation(summary = "拉取供应商模型列表")
+    @HasAuthority("sys:ai-model:fetch-provider-models")
+    public R<List<AiModelProviderModelResponse>> fetchProviderModels(@RequestParam String providerId) {
+        AssertUtils.notEmpty(providerId, "供应商主键不能为空");
+        return R.ok(aiModelService.fetchProviderModels(providerId));
     }
 
     /**

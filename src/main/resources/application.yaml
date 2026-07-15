@@ -1,6 +1,6 @@
 spring:
   application:
-    name: ai
+    name: simple-ai
   profiles:
     active: @spring.active@
 

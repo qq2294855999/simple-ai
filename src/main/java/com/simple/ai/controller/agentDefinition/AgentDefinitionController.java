@@ -1,15 +1,7 @@
 package com.simple.ai.controller.agentDefinition;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.DeleteCascadeAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.InfoAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.UpdateAgentDefinitionRequest;
+import com.simple.ai.common.dto.agentDefinition.*;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
@@ -19,14 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -113,7 +98,7 @@ public class AgentDefinitionController {
     /**
      * 更新单个智能体定义。
      *
-     * @param id 主键
+     * @param id            主键
      * @param updateRequest 更新请求
      * @return 空响应
      */

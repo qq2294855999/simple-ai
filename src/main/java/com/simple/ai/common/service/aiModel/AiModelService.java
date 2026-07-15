@@ -1,5 +1,6 @@
 package com.simple.ai.common.service.aiModel;
 
+import com.simple.ai.common.dto.aiModel.AiModelProviderModelResponse;
 import com.simple.ai.common.dto.aiModel.AiModelResponse;
 import com.simple.ai.common.dto.aiModel.AiModelSaveRequest;
 
@@ -34,6 +35,14 @@ public interface AiModelService {
      * @return 模型主键
      */
     String save(AiModelSaveRequest request);
+
+    /**
+     * 从供应商远程拉取可用模型列表。
+     *
+     * @param providerId 供应商主键
+     * @return 远程可用模型列表
+     */
+    List<AiModelProviderModelResponse> fetchProviderModels(String providerId);
 
     /**
      * 删除模型。
