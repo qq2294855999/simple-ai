@@ -15,4 +15,28 @@
         from agent_chat_message
         where session_id = #{sessionId}
     </select>
+
+    <select id="selectAllBySessionIds" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
+        select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
+               sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserver, remark
+        from agent_chat_message
+        where session_id in
+        <foreach collection="sessionIds" item="sid" open="(" separator="," close=")">
+            #{sid}
+        </foreach>
+        order by session_id, sequence_no asc
+        limit 10000
+    </select>
+
+    <select id="selectPageBySessionId" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
+        <![CDATA[
+        select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
+               sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserver, remark
+        from agent_chat_message
+        where session_id = #{sessionId}
+          and sequence_no < #{beforeSequenceNo}
+        order by sequence_no desc
+        limit #{size}
+        ]]>
+    </select>
 </mapper>

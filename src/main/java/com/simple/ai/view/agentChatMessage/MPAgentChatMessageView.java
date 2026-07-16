@@ -33,4 +33,19 @@ class MPAgentChatMessageView implements AgentChatMessageView {
     public List<AgentChatMessage> findAllBySessionId(String sessionId) {
         return repository.selectAllBySessionId(sessionId);
     }
+
+    @Override
+    public List<AgentChatMessage> findAllBySessionIds(List<String> sessionIds) {
+        return repository.selectAllBySessionIds(sessionIds);
+    }
+
+    @Override
+    public void deleteByIds(List<String> ids) {
+        repository.deleteByIds(ids);
+    }
+
+    @Override
+    public List<AgentChatMessage> findPageBySessionId(String sessionId, long beforeSequenceNo, int size) {
+        return repository.selectPageBySessionId(sessionId, beforeSequenceNo, size);
+    }
 }

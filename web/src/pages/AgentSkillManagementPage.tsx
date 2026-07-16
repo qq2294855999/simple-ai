@@ -1,5 +1,7 @@
-import { Button, Form, Input, Modal, Select, Space, Table, Tooltip, Typography, Popconfirm } from "antd";
+import { Button, Dropdown, Form, Input, Modal, Select, Space, Table, Tooltip, Typography, Popconfirm, Tag } from "antd";
+import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { MoreOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
 import { ToastUtil } from "../utils/ToastUtil";
@@ -11,13 +13,13 @@ import type { CreateAgentSkillRequestDto, UpdateAgentSkillRequestDto } from "../
 /**
  * 获取状态中文标签。
  *
- * @param status 状态码
+ * @param status 状态码或状态名
  * @returns 状态中文
  */
-function getStatusLabel(status: string): string {
-  if (status === "ENABLE") return "启用";
-  if (status === "DISABLE") return "停用";
-  return status || "-";
+function getStatusLabel(status: number | string): string {
+  if (status === 1 || status === "ON") return "启用";
+  if (status === 2 || status === "OFF") return "停用";
+  return String(status) || "-";
 }
 
 /**
@@ -164,6 +166,20 @@ export function AgentSkillManagementPage() {
     loadDataRef.current?.();
   }, []);
 
+  // 启用
+  const handleEnable = useCallback(async (id: string) => {
+    await AgentSkillApi.enable(id);
+    ToastUtil.success("已启用");
+    loadDataRef.current?.();
+  }, []);
+
+  // 禁用
+  const handleDisable = useCallback(async (id: string) => {
+    await AgentSkillApi.disable(id);
+    ToastUtil.success("已禁用");
+    loadDataRef.current?.();
+  }, []);
+
   // 表格列定义
   const columns = useMemo<ColumnsType<AgentSkillPageResponseDto>>(() => [
     { title: "智能体名称", dataIndex: "agentName", width: 140 },
@@ -171,21 +187,32 @@ export function AgentSkillManagementPage() {
     { title: "执行内容", dataIndex: "execContent", width: 200, ellipsis: true, render: value => <Tooltip title={value}>{value}</Tooltip> },
     { title: "返回格式", dataIndex: "returnDataFormat", width: 120, ellipsis: true, render: value => <Tooltip title={value}>{value}</Tooltip> },
     { title: "命令数", dataIndex: "commandCount", width: 80 },
-    { title: "状态", dataIndex: "status", width: 80, render: (status: string) => <Tooltip title={getStatusLabel(status)}>{getStatusLabel(status)}</Tooltip> },
+    { title: "状态", dataIndex: "status", width: 80, render: (status: string) => <Tag color={getStatusLabel(status) === "启用" ? "green" : "red"}>{getStatusLabel(status)}</Tag> },
     { title: "备注", dataIndex: "remark", ellipsis: true, render: value => <Tooltip title={value}>{value || "-"}</Tooltip> },
     { title: "修改时间", dataIndex: "updateTime", width: 160 },
     {
       title: "操作", width: 150,
-      render: (_: unknown, record: AgentSkillPageResponseDto) => (
-        <Space>
-          <Button type="link" onClick={() => openEditModal(record.id)}>编辑</Button>
-          <Popconfirm title="确定删除该技能吗？" onConfirm={() => handleDelete(record.id)} okButtonProps={{ danger: true }}>
-            <Button type="link" danger>删除</Button>
-          </Popconfirm>
-        </Space>
-      )
+      render: (_: unknown, record: AgentSkillPageResponseDto) => {
+        const isEnabled = getStatusLabel(record.status) === "启用";
+        const menuItems: MenuProps["items"] = [
+          { key: "toggle", label: isEnabled ? "停用" : "启用" },
+          { key: "delete", label: "删除", danger: true }
+        ];
+        const handleMenuAction = (key: string) => {
+          if (key === "toggle") { if (isEnabled) { void handleDisable(record.id); } else { void handleEnable(record.id); } }
+          if (key === "delete") { void handleDelete(record.id); }
+        };
+        return (
+          <Space>
+            <Button type="link" size="small" onClick={() => openEditModal(record.id)}>编辑</Button>
+            <Dropdown menu={{ items: menuItems, onClick: ({ key }) => handleMenuAction(key) }}>
+              <Button type="link" size="small" icon={<MoreOutlined />}>更多</Button>
+            </Dropdown>
+          </Space>
+        );
+      }
     }
-  ], [openEditModal, handleDelete]);
+  ], [openEditModal, handleEnable, handleDisable, handleDelete]);
 
   return (
     <div>
@@ -215,7 +242,7 @@ export function AgentSkillManagementPage() {
             onChange={setFilterStatus}
             style={{ width: 120, height: 36 }}
             allowClear
-            options={[{ label: "启用", value: "ENABLE" }, { label: "停用", value: "DISABLE" }]}
+            options={[{ label: "启用", value: "ON" }, { label: "停用", value: "OFF" }]}
           />
           <Button type="primary" onClick={handleSearch}>搜索</Button>
           <Button onClick={handleReset}>重置</Button>
@@ -284,7 +311,7 @@ export function AgentSkillManagementPage() {
               rules={[{ required: true, message: "请输入定义描述" }]}
               style={{ marginBottom: 16 }}
             >
-              <Input style={{ height: 36, fontSize: 14, padding: "0 12px" }} />
+              <Input.TextArea rows={3} />
             </Form.Item>
             <Form.Item
               label="执行内容"
@@ -297,7 +324,6 @@ export function AgentSkillManagementPage() {
             <Form.Item
               label="返回格式"
               name="returnDataFormat"
-              rules={[{ required: true, message: "请输入返回数据格式" }]}
               style={{ marginBottom: 16 }}
             >
               <Input style={{ height: 36, fontSize: 14, padding: "0 12px" }} />

@@ -139,4 +139,34 @@ public class AgentDefinitionController {
         AssertUtils.notEmpty(ids, "主键不能为空");
         return R.ok(agentDefinitionService.deleteCascadeByIds(ids));
     }
+
+    /**
+     * 启用智能体定义。
+     *
+     * @param id 主键
+     * @return 空响应
+     */
+    @PutMapping("enable/{id}")
+    @Operation(summary = "启用智能体定义")
+    @HasAuthority("sys:agent-definition:enable")
+    public R<Object> enable(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentDefinitionService.enableStatus(id);
+        return R.ok();
+    }
+
+    /**
+     * 禁用智能体定义。
+     *
+     * @param id 主键
+     * @return 空响应
+     */
+    @PutMapping("disable/{id}")
+    @Operation(summary = "禁用智能体定义")
+    @HasAuthority("sys:agent-definition:disable")
+    public R<Object> disable(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentDefinitionService.disableStatus(id);
+        return R.ok();
+    }
 }

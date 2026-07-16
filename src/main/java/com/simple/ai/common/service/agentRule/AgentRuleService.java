@@ -62,5 +62,19 @@ public interface AgentRuleService {
      * @param ids 主键
      */
     void deleteByIds(List<String> ids);
+
+    /**
+     * 启用智能体规则。
+     *
+     * @param id 主键
+     */
+    void enableStatus(String id);
+
+    /**
+     * 禁用智能体规则。
+     *
+     * @param id 主键
+     */
+    void disableStatus(String id);
 }
 

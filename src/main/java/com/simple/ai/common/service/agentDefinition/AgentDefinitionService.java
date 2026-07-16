@@ -82,5 +82,19 @@ public interface AgentDefinitionService {
      * @return 删除影响统计
      */
     DeleteCascadeAgentDefinitionResponse deleteCascadeByIds(List<String> ids);
+
+    /**
+     * 启用智能体定义。
+     *
+     * @param id 主键
+     */
+    void enableStatus(String id);
+
+    /**
+     * 禁用智能体定义。
+     *
+     * @param id 主键
+     */
+    void disableStatus(String id);
 }
 

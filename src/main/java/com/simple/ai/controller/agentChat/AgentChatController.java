@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import com.simple.ai.common.entity.taskDetail.TaskDetail;
 
 import java.io.IOException;
 import java.util.List;
@@ -74,15 +77,23 @@ public class AgentChatController {
     }
 
     /**
-     * 查询会话历史消息。
+     * 查询会话历史消息（支持分页）。
      *
      * @param sessionId 会话主键
+     * @param size 分页大小（传此参数时启用分页，默认 50）
+     * @param beforeSeq 不包含此序号（首次传 Long.MAX_VALUE），传 0 或省略则全量加载
      * @return 消息列表
      */
     @GetMapping("message-list/{sessionId}")
-    @Operation(summary = "查询智能体聊天历史消息")
+    @Operation(summary = "查询智能体聊天历史消息（支持分页上滑加载）")
     @HasAuthority("sys:agent-chat:message-list")
-    public R<List<AgentChatMessageResponse>> findMessages(@PathVariable String sessionId) {
+    public R<List<AgentChatMessageResponse>> findMessages(@PathVariable String sessionId,
+                                                           @RequestParam(required = false) Integer size,
+                                                           @RequestParam(required = false) Long beforeSeq) {
+        if (size != null && size > 0) {
+            long beforeSequenceNo = (beforeSeq != null && beforeSeq > 0) ? beforeSeq : Long.MAX_VALUE;
+            return R.ok(agentChatService.findMessages(sessionId, size, beforeSequenceNo));
+        }
         return R.ok(agentChatService.findMessages(sessionId));
     }
 
@@ -127,6 +138,47 @@ public class AgentChatController {
             // 数据库或 AI 调用异常必须关闭 SSE，使客户端进入失败处理而非保持 loading
             emitter.completeWithError(e);
         }
+    }
+
+    /**
+     * 删除单个会话及其关联数据。
+     *
+     * @param sessionId 会话主键
+     * @return 空响应
+     */
+    @DeleteMapping("session/{sessionId}")
+    @Operation(summary = "删除智能体聊天会话")
+    @HasAuthority("sys:agent-chat:session-delete")
+    public R<Object> deleteSession(@PathVariable String sessionId) {
+        agentChatService.deleteSession(sessionId);
+        return R.ok();
+    }
+
+    /**
+     * 批量删除会话及其关联数据。
+     *
+     * @param sessionIds 会话主键列表
+     * @return 空响应
+     */
+    @DeleteMapping("sessions")
+    @Operation(summary = "批量删除智能体聊天会话")
+    @HasAuthority("sys:agent-chat:sessions-delete")
+    public R<Object> deleteSessions(@RequestBody List<String> sessionIds) {
+        agentChatService.deleteSessions(sessionIds);
+        return R.ok();
+    }
+
+    /**
+     * 查询会话的执行轨迹。
+     *
+     * @param sessionId 会话主键
+     * @return 任务详情列表
+     */
+    @GetMapping("trajectory/{sessionId}")
+    @Operation(summary = "查询智能体聊天执行轨迹")
+    @HasAuthority("sys:agent-chat:trajectory")
+    public R<List<TaskDetail>> findTrajectory(@PathVariable String sessionId) {
+        return R.ok(agentChatService.findTrajectory(sessionId));
     }
 
     /**

@@ -17,6 +17,7 @@ import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.agentRule.AgentRuleView;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.mp.common.enums.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,6 +90,36 @@ class DefaultAgentRuleService implements AgentRuleService {
     @Override
     public void deleteByIds(List<String> ids) {
         agentRuleView.deleteByIds(ids);
+    }
+
+    @Override
+    public void enableStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前规则
+        AgentRule entity = agentRuleView.findById(id);
+        AssertUtils.notEmpty(entity, "规则[{}]不存在", id);
+
+        // 设置为启用状态
+        entity.setStatus(Status.ON);
+
+        // 持久化更新
+        agentRuleView.updateById(entity);
+    }
+
+    @Override
+    public void disableStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前规则
+        AgentRule entity = agentRuleView.findById(id);
+        AssertUtils.notEmpty(entity, "规则[{}]不存在", id);
+
+        // 设置为禁用状态
+        entity.setStatus(Status.OFF);
+
+        // 持久化更新
+        agentRuleView.updateById(entity);
     }
 
     /**

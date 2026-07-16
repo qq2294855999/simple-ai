@@ -223,6 +223,11 @@ class MPTaskView implements TaskView {
     }
 
     @Override
+    public List<Task> findAllByIds(List<String> ids) {
+        return repository.selectBatchIds(ids);
+    }
+
+    @Override
     public void delete(DeleteTaskRequest request) {
         LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), Task::getId, request.getId())

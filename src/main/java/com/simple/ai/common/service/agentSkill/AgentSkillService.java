@@ -62,5 +62,19 @@ public interface AgentSkillService {
      * @param ids 主键
      */
     void deleteByIds(List<String> ids);
+
+    /**
+     * 启用智能体技能。
+     *
+     * @param id 主键
+     */
+    void enableStatus(String id);
+
+    /**
+     * 禁用智能体技能。
+     *
+     * @param id 主键
+     */
+    void disableStatus(String id);
 }
 

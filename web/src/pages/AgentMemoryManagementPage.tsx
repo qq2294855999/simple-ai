@@ -129,7 +129,7 @@ export function AgentMemoryManagementPage() {
     { title: "步骤数", dataIndex: "stepCount", width: 80 },
     { title: "任务数", dataIndex: "taskCount", width: 80 },
     { title: "最近任务", dataIndex: "latestTaskStatusLabel", width: 100, render: (v: string, r: AgentMemoryPageResponseDto) => <Tag color={getExecStatusColor(r.latestTaskStatus)}>{v || "-"}</Tag> },
-    { title: "状态", dataIndex: "status", width: 80, render: (s: string) => <Tooltip title={getStatusLabel(s)}>{getStatusLabel(s)}</Tooltip> },
+    { title: "状态", dataIndex: "status", width: 80, render: (s: string) => <Tag color={getStatusLabel(s) === "启用" ? "green" : "red"}>{getStatusLabel(s)}</Tag> },
     { title: "备注", dataIndex: "remark", ellipsis: true, render: v => <Tooltip title={v}>{v || "-"}</Tooltip> },
     { title: "更新时间", dataIndex: "updateTime", width: 160 },
     { title: "操作", width: 150,

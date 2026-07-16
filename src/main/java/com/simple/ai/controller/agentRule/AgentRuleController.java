@@ -128,6 +128,36 @@ public class AgentRuleController {
         agentRuleService.deleteByIds(ids);
         return R.ok();
     }
+
+    /**
+     * 启用智能体规则。
+     *
+     * @param id 主键
+     * @return 空响应
+     */
+    @PutMapping("enable/{id}")
+    @Operation(summary = "启用智能体规则")
+    @HasAuthority("sys:agent-rule:enable")
+    public R<Object> enable(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentRuleService.enableStatus(id);
+        return R.ok();
+    }
+
+    /**
+     * 禁用智能体规则。
+     *
+     * @param id 主键
+     * @return 空响应
+     */
+    @PutMapping("disable/{id}")
+    @Operation(summary = "禁用智能体规则")
+    @HasAuthority("sys:agent-rule:disable")
+    public R<Object> disable(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentRuleService.disableStatus(id);
+        return R.ok();
+    }
 }
 
 

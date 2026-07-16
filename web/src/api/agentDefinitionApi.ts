@@ -45,5 +45,13 @@ export const AgentDefinitionApi = {
 
   /** 级联删除 */
   cascadeDelete: (ids: string[]) =>
-    http.delete("/sys/agent-definition/cascade-deletes", { data: ids })
+    http.delete("/sys/agent-definition/cascade-deletes", { data: ids }),
+
+  /** 启用 */
+  enable: (id: string) =>
+    http.put(`/sys/agent-definition/enable/${id}`),
+
+  /** 禁用 */
+  disable: (id: string) =>
+    http.put(`/sys/agent-definition/disable/${id}`)
 };

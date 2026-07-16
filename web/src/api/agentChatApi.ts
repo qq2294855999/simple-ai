@@ -4,6 +4,7 @@ import type {
   AgentChatMessageDto,
   AgentChatProgressEventDto,
   AgentChatSessionDto,
+  AgentChatTrajectoryDto,
   CreateAgentChatSessionRequestDto,
   SendAgentChatMessageRequestDto
 } from "../dto/agentChat/AgentChatDto";
@@ -24,6 +25,10 @@ export const AgentChatApi = {
 
   findMessages: (sessionId: string) =>
     http.get<AgentChatMessageDto[]>(`/sys/agent-chat/message-list/${sessionId}`),
+
+  /** 分页查询消息（上滑加载更早的消息）。 */
+  findMessagesPage: (sessionId: string, size: number, beforeSeq: number) =>
+    http.get<AgentChatMessageDto[]>(`/sys/agent-chat/message-list/${sessionId}`, { params: { size, beforeSeq } }),
 
   sendStream: async (data: SendAgentChatMessageRequestDto, onProgress: (event: AgentChatProgressEventDto) => void,
                      signal?: AbortSignal) => {
@@ -63,5 +68,17 @@ export const AgentChatApi = {
       buffer = consumeAgentChatSseEvents(buffer, onProgress);
     }
     consumeAgentChatSseEvents(buffer, onProgress, true);
-  }
+  },
+
+  /** 删除单个会话及其关联消息。 */
+  deleteSession: (id: string) =>
+    http.delete(`/sys/agent-chat/session/${id}`),
+
+  /** 批量删除会话及其关联消息。 */
+  deleteSessions: (ids: string[]) =>
+    http.delete("/sys/agent-chat/sessions", { data: ids }),
+
+  /** 查询会话的历史执行轨迹。 */
+  findTrajectory: (sessionId: string) =>
+    http.get<AgentChatTrajectoryDto[]>(`/sys/agent-chat/trajectory/${sessionId}`)
 };

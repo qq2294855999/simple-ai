@@ -104,6 +104,21 @@ public interface TaskDetailView {
     void delete(DeleteTaskDetailRequest request);
 
     /**
+     * 根据任务ID列表批量查询任务详情。
+     *
+     * @param taskIds 任务ID列表
+     * @return 任务详情列表
+     */
+    List<TaskDetail> findAllByTaskIds(List<String> taskIds);
+
+    /**
+     * 根据任务ID列表批量删除任务详情。
+     *
+     * @param taskIds 任务ID列表
+     */
+    void deleteByTaskIds(List<String> taskIds);
+
+    /**
      * 获取单条数据
      *
      * @param findOneRequest 查询条件

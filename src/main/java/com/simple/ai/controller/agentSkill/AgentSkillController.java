@@ -128,6 +128,36 @@ public class AgentSkillController {
         agentSkillService.deleteByIds(ids);
         return R.ok();
     }
+
+    /**
+     * 启用智能体技能。
+     *
+     * @param id 主键
+     * @return 空响应
+     */
+    @PutMapping("enable/{id}")
+    @Operation(summary = "启用智能体技能")
+    @HasAuthority("sys:agent-skill:enable")
+    public R<Object> enable(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentSkillService.enableStatus(id);
+        return R.ok();
+    }
+
+    /**
+     * 禁用智能体技能。
+     *
+     * @param id 主键
+     * @return 空响应
+     */
+    @PutMapping("disable/{id}")
+    @Operation(summary = "禁用智能体技能")
+    @HasAuthority("sys:agent-skill:disable")
+    public R<Object> disable(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentSkillService.disableStatus(id);
+        return R.ok();
+    }
 }
 
 

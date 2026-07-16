@@ -114,6 +114,14 @@ public interface TaskView {
     void delete(DeleteTaskRequest request);
 
     /**
+     * 根据ID列表批量查询任务。
+     *
+     * @param ids 主键列表
+     * @return 任务列表
+     */
+    List<Task> findAllByIds(List<String> ids);
+
+    /**
      * 获取单条数据
      *
      * @param findOneRequest 查询条件

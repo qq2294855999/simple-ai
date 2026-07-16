@@ -18,6 +18,7 @@ import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.agentSkill.AgentSkillView;
 import com.simple.ai.view.agentSkill.AgentSkillRepository;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.mp.common.enums.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,6 +102,36 @@ class DefaultAgentSkillService implements AgentSkillService {
 
         // 删除技能主表
         agentSkillView.deleteByIds(ids);
+    }
+
+    @Override
+    public void enableStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前技能
+        AgentSkill entity = agentSkillView.findById(id);
+        AssertUtils.notEmpty(entity, "技能[{}]不存在", id);
+
+        // 设置为启用状态
+        entity.setStatus(Status.ON);
+
+        // 持久化更新
+        agentSkillView.updateById(entity);
+    }
+
+    @Override
+    public void disableStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前技能
+        AgentSkill entity = agentSkillView.findById(id);
+        AssertUtils.notEmpty(entity, "技能[{}]不存在", id);
+
+        // 设置为禁用状态
+        entity.setStatus(Status.OFF);
+
+        // 持久化更新
+        agentSkillView.updateById(entity);
     }
 
     /**

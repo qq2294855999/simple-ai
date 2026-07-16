@@ -31,7 +31,6 @@ import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
 import com.simple.ai.service.agent.AgentContextAssembler;
 import com.simple.ai.service.agent.AgentMemoryMatcher;
-import com.simple.ai.service.agent.AgentMemorySummarizer;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
@@ -103,12 +102,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      */
     @Autowired
     private AgentSessionService agentSessionService;
-
-    /**
-     * 智能体记忆摘要器
-     */
-    @Autowired
-    private AgentMemorySummarizer agentMemorySummarizer;
 
     /**
      * 原子命令视图
@@ -260,48 +253,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         }
 
         // 未命中记忆时调用 AI 生成探索响应
-        String responseContent = executeAiExploration(task, request, context, progressConsumer);
-
-        // AI 探索目标未达成时抛出异常，防止任务被误标记为执行成功
-        AssertUtils.isTrue(isAiGoalAchieved(responseContent), "AI探索未达到目标达成标准");
-        return summarizeMemoryAfterGoalAchieved(task, request, progressConsumer, responseContent);
-    }
-
-    /**
-     * AI 目标达成后沉淀智能体记忆。
-     *
-     * @param task 任务主记录
-     * @param request 命令调度请求
-     * @param progressConsumer 进度事件消费者
-     * @param responseContent 响应内容
-     * @return 响应内容
-     */
-    private String summarizeMemoryAfterGoalAchieved(Task task, CommandDispatchRequest request,
-                                                    Consumer<CommandDispatchProgressEvent> progressConsumer,
-                                                    String responseContent) {
-
-        // 目标达成后才执行记忆沉淀，避免低质量探索内容进入可复用步骤链
-        publishProgress(progressConsumer, request, task, "MEMORY_SUMMARIZING", "正在沉淀智能体记忆", "", Boolean.FALSE, "");
-        String memoryId = agentMemorySummarizer.summarize(request.getAgentId(), task.getId(), request.getCommandName());
-        persistTaskMemoryId(task, memoryId);
-        publishProgress(progressConsumer, request, task, "MEMORY_SUMMARIZED", "智能体记忆沉淀完成", memoryId, Boolean.FALSE, "");
-        return responseContent;
-    }
-
-    /**
-     * 持久化任务记忆主键。
-     *
-     * @param task 任务主记录
-     * @param memoryId 智能体记忆ID
-     */
-    private void persistTaskMemoryId(Task task, String memoryId) {
-
-        // 记忆沉淀未返回主键时保留任务原状态，由后续成功标记继续处理
-        if (memoryId == null || memoryId.isBlank()) {
-            return;
-        }
-        task.setAgentMemoryId(memoryId);
-        taskView.updateById(task);
+        return executeAiExploration(task, request, context, progressConsumer);
     }
 
     /**
@@ -310,6 +262,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param responseContent AI 响应内容
      * @return 是否达到可沉淀目标
      */
+    @Deprecated
     private boolean isAiGoalAchieved(String responseContent) {
 
         // 响应内容为空时不能视为目标达成

@@ -198,6 +198,23 @@ class MPTaskDetailView implements TaskDetailView {
     }
 
     @Override
+    public List<TaskDetail> findAllByTaskIds(List<String> taskIds) {
+        if (CollectionUtil.isEmpty(taskIds)) {
+            return new ArrayList<>();
+        }
+        return repository.selectList(
+                new LambdaQueryWrapper<TaskDetail>().in(TaskDetail::getTaskId, taskIds));
+    }
+
+    @Override
+    public void deleteByTaskIds(List<String> taskIds) {
+        if (CollectionUtil.isEmpty(taskIds)) {
+            return;
+        }
+        repository.delete(new LambdaQueryWrapper<TaskDetail>().in(TaskDetail::getTaskId, taskIds));
+    }
+
+    @Override
     public void delete(DeleteTaskDetailRequest request) {
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), TaskDetail::getId, request.getId())

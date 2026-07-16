@@ -31,4 +31,12 @@ export const AgentRuleApi = {
   /** 全量列表（用于下拉选择） */
   listAll: () =>
     http.get<PageResult<AgentRulePageResponseDto>>("/sys/agent-rule/aggregate-list", { params: { current: 1, size: 1000 } }),
+
+  /** 启用 */
+  enable: (id: string) =>
+    http.put(`/sys/agent-rule/enable/${id}`),
+
+  /** 禁用 */
+  disable: (id: string) =>
+    http.put(`/sys/agent-rule/disable/${id}`)
 };

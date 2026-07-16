@@ -38,4 +38,9 @@ class MPAgentChatSessionView implements AgentChatSessionView {
     public void updateById(AgentChatSession session) {
         repository.updateById(session);
     }
+
+    @Override
+    public void deleteByIds(List<String> ids) {
+        repository.deleteByIds(ids);
+    }
 }

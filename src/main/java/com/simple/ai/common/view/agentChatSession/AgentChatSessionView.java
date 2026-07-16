@@ -40,4 +40,11 @@ public interface AgentChatSessionView {
      * @param session 会话实体
      */
     void updateById(AgentChatSession session);
+
+    /**
+     * 批量删除会话。
+     *
+     * @param ids 会话主键列表
+     */
+    void deleteByIds(List<String> ids);
 }

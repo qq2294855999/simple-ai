@@ -43,3 +43,15 @@ export interface AgentChatProgressEventDto {
   completed: boolean;
   failureReason: string;
 }
+
+/** 会话历史执行轨迹（任务详情快照）。 */
+export interface AgentChatTrajectoryDto {
+  id: string;
+  taskId: string;
+  taskName: string;
+  stepType: string;
+  execStatus: string;
+  providerName: string;
+  modelCode: string;
+  createTime: string;
+}

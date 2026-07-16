@@ -33,4 +33,29 @@ public interface AgentChatMessageView {
      * @return 消息列表
      */
     List<AgentChatMessage> findAllBySessionId(String sessionId);
+
+    /**
+     * 分页查询会话消息（按序号倒序取最近 N 条，用于滚动加载更早的消息）。
+     *
+     * @param sessionId 会话主键
+     * @param beforeSequenceNo 不包含此序号之前的消息（首次传 Long.MAX_VALUE）
+     * @param size 每页数量
+     * @return 消息列表（按 sequenceNo 倒序）
+     */
+    List<AgentChatMessage> findPageBySessionId(String sessionId, long beforeSequenceNo, int size);
+
+    /**
+     * 批量查询多个会话的消息。
+     *
+     * @param sessionIds 会话主键列表
+     * @return 消息列表
+     */
+    List<AgentChatMessage> findAllBySessionIds(List<String> sessionIds);
+
+    /**
+     * 批量删除消息。
+     *
+     * @param ids 消息主键列表
+     */
+    void deleteByIds(List<String> ids);
 }
