@@ -31,4 +31,14 @@ public interface AgentSessionService {
      */
     void appendMessage(String sessionId, String message);
 
+    /**
+     * 根据会话ID删除对应的 Redis 缓存数据。
+     *
+     * <p>删除会话时需同步清理 Redis 中的摘要和消息缓存，
+     * 避免产生孤儿数据。</p>
+     *
+     * @param sessionId 会话ID
+     */
+    void deleteBySessionId(String sessionId);
+
 }

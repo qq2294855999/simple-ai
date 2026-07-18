@@ -57,7 +57,8 @@ springdoc:
 
   group-configs:
     - group: '基础服务'
-      paths-to-match: '/**'
+      paths-to-match:
+        - '/**'
       packages-to-scan:
         - com.simple.common.auth.client.controller
         - com.simple.${spring.application.name}.controller

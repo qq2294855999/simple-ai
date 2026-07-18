@@ -80,6 +80,21 @@ class RedisAgentSessionService implements AgentSessionService {
         stringRedisTemplate.expire(messageKey, SESSION_CACHE_TIME);
     }
 
+    @Override
+    public void deleteBySessionId(String sessionId) {
+
+        // 参数校验：会话ID不能为空
+        AssertUtils.notEmpty(sessionId, "会话ID不能为空");
+
+        // 删除 Redis 中的会话摘要缓存
+        String summaryKey = buildSummaryKey(sessionId);
+        stringRedisTemplate.delete(summaryKey);
+
+        // 删除 Redis 中的会话消息缓存
+        String messageKey = buildMessageKey(sessionId);
+        stringRedisTemplate.delete(messageKey);
+    }
+
     /**
      * 构建会话摘要缓存键。
      *

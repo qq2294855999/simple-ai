@@ -17,6 +17,7 @@ import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentChatMessageRoleProcess;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.ai.common.service.command.CommandDispatchService;
+import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
 import com.simple.ai.common.view.agentChatSession.AgentChatSessionView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
@@ -73,6 +74,10 @@ class DefaultAgentChatService implements AgentChatService {
     /** 命令调度服务 */
     @Autowired
     private CommandDispatchService commandDispatchService;
+
+    /** 智能体会话服务 */
+    @Autowired
+    private AgentSessionService agentSessionService;
 
     /** 事务模板 */
     @Autowired
@@ -219,6 +224,11 @@ class DefaultAgentChatService implements AgentChatService {
 
         // 删除会话
         agentChatSessionView.deleteByIds(sessionIds);
+
+        // 清理 Redis 中的会话缓存数据（摘要和消息历史）
+        for (String sessionId : sessionIds) {
+            agentSessionService.deleteBySessionId(sessionId);
+        }
     }
 
     /**
