@@ -65,21 +65,12 @@ springdoc:
 
 # 项目配置
 simple:
-  annex:
-    # 附件上传配置
-    server-url: http://minio.dev.joyswon.com
-    access-key: admin
-    access-secret: rXd5BErpRk
   event:
     type: mq # 事件实现方式
     concurrency: 1 # 事件消费并发数
   auth:
-    hs-key: sInFHs4zRGIfrVTWVDdGJuKZRc0DfVBF # JWT密钥
     project-code: simple-ai
-  websocket:
-    command:
-      type: agent-command
-      cli-key: default
+    server-url: http://localhost:8000 # 授权中心服务端地址
   ai:
     model-encryption-key: "rFPZRGHBTPexORdwm8oK6o0AZsiqO+LTSfW+G/1ECtg="
 

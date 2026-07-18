@@ -1,4 +1,4 @@
-import { API_BASE_URL, getBusinessAuthorizationHeader, http } from "./http";
+import { API_BASE_URL, clearAndRedirectToLogin, getBusinessAuthorizationHeader, http } from "./http";
 import { consumeAgentChatSseEvents } from "../utils/agentChatStreamUtil";
 import type {
   AgentChatMessageDto,
@@ -45,8 +45,27 @@ export const AgentChatApi = {
 
     // 响应失败时读取服务端文本，确保用户可见真实失败原因
     if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || "流式聊天请求失败");
+      const text = await response.text();
+
+      // 检测认证错误码（后端全局异常处理器将 DefaultException 映射为 HTTP 500 时携带）
+      let isAuthError = false;
+      try {
+        const errorBody = JSON.parse(text);
+        if (errorBody.code === "1000" || errorBody.code === "1001") {
+          isAuthError = true;
+        }
+      } catch {
+        // 非 JSON 响应或解析失败，忽略解析错误
+      }
+
+      // 认证失效直接触发登录跳转
+      if (isAuthError) {
+        clearAndRedirectToLogin();
+        // clearAndRedirectToLogin 内部抛出异常中断执行，此行不会到达
+        throw new Error("redirecting to login");
+      }
+
+      throw new Error(text || "流式聊天请求失败");
     }
 
     // SSE 必须提供可读取的响应流

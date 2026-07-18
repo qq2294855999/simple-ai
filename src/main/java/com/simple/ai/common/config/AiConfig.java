@@ -16,7 +16,7 @@ public class AiConfig extends AbsClientAuthConfig {
     @Override
     @SneakyThrows
     protected void configure(ClientAuthInfo clientAuthInfo) {
-        clientAuthInfo.anyClient();
+        clientAuthInfo.anyClient().openLogin().openAuthentication();
     }
 
 }

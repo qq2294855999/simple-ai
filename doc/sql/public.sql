@@ -667,3 +667,34 @@ CREATE INDEX "idx_task_detail_task_status" ON "public"."task_detail" USING btree
 -- Primary Key structure for table task_detail
 -- ----------------------------
 ALTER TABLE "public"."task_detail" ADD CONSTRAINT "task_detail_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Table structure for ai_user
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."ai_user";
+CREATE TABLE "public"."ai_user" (
+  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "nickname" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "avatar_url" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "daily_quota" int4 NOT NULL DEFAULT 100,
+  "used_quota" int4 NOT NULL DEFAULT 0,
+  "preferences" text COLLATE "pg_catalog"."default",
+  "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" int2 NOT NULL DEFAULT 1,
+  "reserver" text COLLATE "pg_catalog"."default",
+  "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
+)
+;
+COMMENT ON COLUMN "public"."ai_user"."id" IS '主键，与授权中心sys_user.id一致';
+COMMENT ON COLUMN "public"."ai_user"."nickname" IS '用户昵称（冗余，减少跨服务查询）';
+COMMENT ON COLUMN "public"."ai_user"."avatar_url" IS '头像URL（冗余，减少跨服务查询）';
+COMMENT ON COLUMN "public"."ai_user"."daily_quota" IS '每日AI调用次数上限';
+COMMENT ON COLUMN "public"."ai_user"."used_quota" IS '当日已使用调用次数';
+COMMENT ON COLUMN "public"."ai_user"."preferences" IS '用户偏好JSON（语言、主题等）';
+COMMENT ON TABLE "public"."ai_user" IS 'AI平台用户';
+
+-- ----------------------------
+-- Primary Key structure for table ai_user
+-- ----------------------------
+ALTER TABLE "public"."ai_user" ADD CONSTRAINT "ai_user_pkey" PRIMARY KEY ("id");
