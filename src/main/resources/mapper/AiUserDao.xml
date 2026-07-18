@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.aiUser.AiUserRepository">
+
+    <!-- AI 平台用户分页查询 -->
+    <select id="selectPage" resultType="com.simple.ai.common.dto.aiUser.PageAiUserResponse">
+        SELECT
+            u.id,
+            u.nickname,
+            u.avatar_url AS avatarUrl,
+            u.daily_quota AS dailyQuota,
+            u.used_quota AS usedQuota,
+            u.create_time AS createTime,
+            u.remark
+        FROM ai_user u
+        <where>
+            <if test="pageRequest.nickname != null and pageRequest.nickname != ''">
+                AND u.nickname LIKE CONCAT('%', #{pageRequest.nickname}, '%')
+            </if>
+            <if test="pageRequest.remark != null and pageRequest.remark != ''">
+                AND u.remark LIKE CONCAT('%', #{pageRequest.remark}, '%')
+            </if>
+        </where>
+        ORDER BY u.create_time DESC
+    </select>
+
+</mapper>
