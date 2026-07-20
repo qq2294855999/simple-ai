@@ -2,6 +2,7 @@ import { RobotOutlined, SendOutlined, SettingOutlined, MessageOutlined, CloudSer
 import { Layout, Menu } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { getOauthServerUrl, buildOauthLoginUrl } from "../../api/http";
 
 const { Header, Sider, Content } = Layout;
 
@@ -9,24 +10,6 @@ const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const NICKNAME_KEY = "nickname";
 const AVATAR_URL_KEY = "avatarUrl";
-
-/**
- * 构建 OAuth 登录页跳转 URL。
- */
-function buildOauthLoginUrl(): string {
-  const baseUrl = import.meta.env.VITE_OAUTH_LOGIN_URL || "http://localhost:8000/login";
-  const params = new URLSearchParams();
-  const title = import.meta.env.VITE_LOGIN_TITLE;
-  const subtitle = import.meta.env.VITE_LOGIN_SUBTITLE;
-  const footerTip = import.meta.env.VITE_LOGIN_FOOTER_TIP;
-  if (title) params.set("title", title);
-  if (subtitle) params.set("subtitle", subtitle);
-  if (footerTip) params.set("footerTip", footerTip);
-  // 登录成功后回跳地址
-  params.set("redirect_uri", window.location.origin);
-  const query = params.toString();
-  return query ? `${baseUrl}?${query}` : baseUrl;
-}
 
 /**
  * 根据昵称生成稳定的头像渐变色。
@@ -159,10 +142,7 @@ export function BasicLayoutComponent() {
     const accessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
     if (accessToken) {
       try {
-        const oauthServerUrl = import.meta.env.DEV
-          ? (import.meta.env.VITE_OAUTH_SERVER_URL || "http://localhost:8000")
-          : window.location.origin;
-        await fetch(`${oauthServerUrl}/auth/loginOut`, {
+        await fetch(`${getOauthServerUrl()}/auth/loginOut`, {
           method: "POST",
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -188,10 +168,7 @@ export function BasicLayoutComponent() {
     setPasswordLoading(true);
     try {
       const token = window.localStorage.getItem(ACCESS_TOKEN_KEY);
-      const oauthServerUrl = import.meta.env.DEV
-        ? (import.meta.env.VITE_OAUTH_SERVER_URL || "http://localhost:8000")
-        : window.location.origin;
-      const resp = await fetch(`${oauthServerUrl}/auth/api/change-password`, {
+      const resp = await fetch(`${getOauthServerUrl()}/auth/api/change-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ oldPassword, newPassword })

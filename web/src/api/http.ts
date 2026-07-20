@@ -17,28 +17,36 @@ interface RetryConfig extends InternalAxiosRequestConfig {
 /** 全局刷新锁，防止多个请求同时触发 token 刷新 */
 let isRefreshing = false;
 
-/** 等待刷新完成的请求队列 */
-let refreshSubscribers: ((token: string) => void)[] = [];
+/** 等待刷新完成的请求队列，存储 resolve/reject 对以支持成功和失败两种通知 */
+let refreshSubscribers: Array<{
+  resolve: (token: string) => void;
+  reject: (error: Error) => void;
+}> = [];
 
 /**
- * 通知所有等待中的请求 token 已刷新。
+ * 通知所有等待中的请求 token 刷新成功，让它们用新 token 重试。
+ *
+ * @param token 刷新后的新 access token
  */
-function notifySubscribers(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
+function resolveSubscribers(token: string) {
+  refreshSubscribers.forEach((s) => s.resolve(token));
   refreshSubscribers = [];
 }
 
 /**
- * 添加等待刷新完成的回调。
+ * 通知所有等待中的请求 token 刷新失败，让它们以错误状态结束。
+ *
+ * @param error 刷新失败的错误信息
  */
-function addRefreshSubscriber(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
+function rejectSubscribers(error: Error) {
+  refreshSubscribers.forEach((s) => s.reject(error));
+  refreshSubscribers = [];
 }
 
 /**
  * 构建 OAuth 登录页跳转 URL，携带客户端自定义文案参数。
  */
-function buildOauthLoginUrl(): string {
+export function buildOauthLoginUrl(): string {
   const baseUrl = import.meta.env.VITE_OAUTH_LOGIN_URL || "http://localhost:8000/login";
   const params = new URLSearchParams();
   const title = import.meta.env.VITE_LOGIN_TITLE;
@@ -56,6 +64,8 @@ function buildOauthLoginUrl(): string {
 /**
  * 清除本地存储的认证信息并跳转 OAuth 登录页。
  * 使用 location.replace 避免浏览器历史记录中残留当前页。
+ *
+ * @author qty
  */
 export function clearAndRedirectToLogin(): never {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -67,8 +77,11 @@ export function clearAndRedirectToLogin(): never {
 
 /**
  * 获取 OAuth 认证服务器基础 URL。
+ * 开发环境读取 VITE_OAUTH_SERVER_URL，生产环境使用当前页面同源地址。
+ *
+ * @author qty
  */
-function getOauthServerUrl(): string {
+export function getOauthServerUrl(): string {
   if (import.meta.env.DEV) {
     return import.meta.env.VITE_OAUTH_SERVER_URL || "http://localhost:8000";
   }
@@ -76,7 +89,42 @@ function getOauthServerUrl(): string {
 }
 
 /**
+ * 从环境变量读取客户端凭证并编码为 Basic Auth 头。
+ * VITE_CLIENT_ID 和 VITE_CLIENT_SECRET 必须与 OAuth 服务端 sys_project_client 表一致。
+ */
+function buildBasicAuth(): string {
+  const clientId = import.meta.env.VITE_CLIENT_ID || "oauth";
+  const clientSecret = import.meta.env.VITE_CLIENT_SECRET || "123456";
+  return btoa(`${clientId}:${clientSecret}`);
+}
+
+// ====================== OAuth 认证 axios 实例 ======================
+
+/** OAuth 认证服务器的 axios 实例，用于登录/刷新/退出等认证接口 */
+const oauthInstance = axios.create({
+  baseURL: getOauthServerUrl(),
+  timeout: 15000,
+});
+
+/**
+ * OAuth 请求拦截器：对认证接口自动附加 Basic Auth。
+ * 仿照 simple-common-oauth 前端的 authApi.ts 做法。
+ */
+oauthInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const url = config.url || "";
+
+  // 精确匹配：登录和刷新接口使用 Basic Auth（clientId:clientSecret）
+  if (url === "/auth/login" || url === "/auth/refresh") {
+    const basicAuth = buildBasicAuth();
+    config.headers.set("Authorization", `Basic ${basicAuth}`);
+  }
+
+  return config;
+});
+
+/**
  * 调用 OAuth 刷新 token 接口。
+ * 使用 oauthInstance，Basic Auth 由请求拦截器自动附加。
  */
 async function refreshAccessToken(): Promise<{ accessToken: string; refreshToken: string }> {
   const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -84,15 +132,9 @@ async function refreshAccessToken(): Promise<{ accessToken: string; refreshToken
     throw new Error("无刷新令牌");
   }
 
-  // 构建 Basic Auth 请求头（clientId:clientSecret）
-  const clientId = import.meta.env.VITE_CLIENT_ID || "simple-ai";
-  const clientSecret = import.meta.env.VITE_CLIENT_SECRET || "123456";
-  const basicAuth = btoa(`${clientId}:${clientSecret}`);
-
-  const response = await axios.post<R<{ accessToken: string; refreshToken: string }>>(
-    `${getOauthServerUrl()}/auth/refresh`,
-    { refresh: refreshToken },
-    { headers: { Authorization: `Basic ${basicAuth}` } }
+  const response = await oauthInstance.post<R<{ accessToken: string; refreshToken: string }>>(
+    "/auth/refresh",
+    { refresh: refreshToken }
   );
 
   const data = response.data.data;
@@ -102,6 +144,9 @@ async function refreshAccessToken(): Promise<{ accessToken: string; refreshToken
   return data;
 }
 
+// ====================== 业务 API axios 实例 ======================
+
+/** 业务 API 的 axios 实例，baseURL 为 /api */
 const instance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -109,6 +154,8 @@ const instance = axios.create({
 
 /**
  * 获取业务请求统一使用的 Authorization 请求头。
+ *
+ * @author qty
  */
 export function getBusinessAuthorizationHeader(): Record<string, string> {
   const accessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -118,7 +165,7 @@ export function getBusinessAuthorizationHeader(): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
-// 请求拦截器：自动附加 Bearer token
+// 业务请求拦截器：自动附加 Bearer token
 instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const authorizationHeader = getBusinessAuthorizationHeader();
   if (authorizationHeader.Authorization) {
@@ -127,7 +174,7 @@ instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// 响应拦截器：token 过期先刷新，刷新失败再跳转登录
+// 业务响应拦截器：token 过期先刷新，刷新失败再跳转登录
 instance.interceptors.response.use(
   <T>(response: AxiosResponse<R<T>>) => {
     const body = response.data;
@@ -166,8 +213,12 @@ instance.interceptors.response.use(
   }
 );
 
+// ====================== 认证错误处理 ======================
+
 /**
  * 处理认证错误：先尝试刷新 token，失败后跳转登录页。
+ *
+ * @param config 原始请求配置
  */
 function handleAuthError(config: RetryConfig): Promise<never> {
   const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -186,18 +237,26 @@ function handleAuthError(config: RetryConfig): Promise<never> {
 
   config._retry = true;
 
-  // 正在刷新中，加入等待队列
+  // 正在刷新中，将请求加入等待队列
   if (isRefreshing) {
     return new Promise((_resolve, _reject) => {
-      addRefreshSubscriber((newToken: string) => {
-        config.headers.set("Authorization", `Bearer ${newToken}`);
-        instance(config)
-          .then((res) => _resolve(res as never))
-          .catch((err) => _reject(err));
+      refreshSubscribers.push({
+        resolve: (newToken: string) => {
+          // 刷新成功后用新 token 重试
+          config.headers.set("Authorization", `Bearer ${newToken}`);
+          instance(config)
+            .then((res) => _resolve(res as never))
+            .catch((err) => _reject(err));
+        },
+        reject: (error: Error) => {
+          // 刷新失败，拒绝等待中的请求
+          _reject(error);
+        },
       });
     }) as Promise<never>;
   }
 
+  // 获取刷新锁
   isRefreshing = true;
 
   return refreshAccessToken()
@@ -206,28 +265,37 @@ function handleAuthError(config: RetryConfig): Promise<never> {
       window.localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
       window.localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
 
-      // 通知等待队列
-      notifySubscribers(result.accessToken);
+      // 通知等待队列中的所有请求刷新成功
+      resolveSubscribers(result.accessToken);
 
-      // 重试原始请求
+      // 释放刷新锁（必须在重试原始请求之前，避免竞态窗口）
+      isRefreshing = false;
+
+      // 用新 token 重试原始请求
       config.headers.set("Authorization", `Bearer ${result.accessToken}`);
       return instance(config) as Promise<never>;
     })
-    .catch(() => {
-      // 刷新失败，先拒绝所有等待中的请求，再清除存储跳转登录
-      refreshSubscribers.forEach((cb) => cb(""));
-      refreshSubscribers = [];
-      clearAndRedirectToLogin();
-      return Promise.reject(new Error("token 刷新失败"));
-    })
-    .finally(() => {
+    .catch((refreshError) => {
+      // 刷新失败，拒绝所有等待中的请求
+      const error = refreshError instanceof Error ? refreshError : new Error("token 刷新失败");
+      rejectSubscribers(error);
+
+      // 释放刷新锁
       isRefreshing = false;
+
+      // 清除存储并跳转登录页
+      clearAndRedirectToLogin();
+      return Promise.reject(error);
     });
 }
+
+// ====================== 导出 ======================
 
 /**
  * 封装后的 http 客户端，响应拦截器已解包 R 结构，
  * 所有方法直接返回业务数据类型 T。
+ *
+ * @author qty
  */
 export const http = {
   get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> =>
