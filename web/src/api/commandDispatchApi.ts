@@ -1,4 +1,4 @@
-import { http } from "./http";
+import { http, getAccessToken } from "./http";
 import type { CommandDispatchProgressEventDto, CommandDispatchRequestDto, CommandDispatchResponseDto } from "../dto/command/CommandDispatchDto";
 
 const dispatchStreamUrl = "/api/sys/agent-command/dispatch-stream";
@@ -15,12 +15,19 @@ export const CommandDispatchApi = {
 
   /** POST SSE 流式调度 */
   dispatchStream: async (data: CommandDispatchRequestDto, onProgress: (event: CommandDispatchProgressEventDto) => void) => {
+    // 构建请求头，附加 Bearer token 以通过后端认证
+    const headers: Record<string, string> = {
+      Accept: "text/event-stream",
+      "Content-Type": "application/json"
+    };
+    const token = getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const response = await fetch(dispatchStreamUrl, {
       method: "POST",
-      headers: {
-        Accept: "text/event-stream",
-        "Content-Type": "application/json"
-      },
+      headers,
       body: JSON.stringify(data)
     });
 

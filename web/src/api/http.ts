@@ -5,6 +5,8 @@ import { ToastUtil } from "../utils/ToastUtil";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const NICKNAME_KEY = "nickname";
+const AVATAR_URL_KEY = "avatarUrl";
 
 /** 前端 REST 与 SSE 统一 API 根路径。 */
 export const API_BASE_URL = "/api";
@@ -16,6 +18,20 @@ interface RetryConfig extends InternalAxiosRequestConfig {
 
 /** 全局刷新锁，防止多个请求同时触发 token 刷新 */
 let isRefreshing = false;
+
+/** 正在执行退出登录流程的标记，防止残留请求再次触发跳转 */
+let isLoggingOut = false;
+
+/**
+ * 设置退出登录标记，供外部模块在清除 token 前调用，
+ * 防止残留业务请求触发 handleAuthError → clearAndRedirectToLogin 连锁跳转。
+ *
+ * @param value true 表示正在退出登录
+ * @author qty
+ */
+export function setIsLoggingOut(value: boolean): void {
+  isLoggingOut = value;
+}
 
 /** 等待刷新完成的请求队列，存储 resolve/reject 对以支持成功和失败两种通知 */
 let refreshSubscribers: Array<{
@@ -44,35 +60,74 @@ function rejectSubscribers(error: Error) {
 }
 
 /**
- * 构建 OAuth 登录页跳转 URL，携带客户端自定义文案参数。
+ * 从 localStorage 获取当前 access token，供 SSE 等非 axios 请求使用。
+ *
+ * @return access token 字符串，不存在时返回 null
+ * @author qty
  */
-export function buildOauthLoginUrl(): string {
-  const baseUrl = import.meta.env.VITE_OAUTH_LOGIN_URL || "http://localhost:8000/login";
+export function getAccessToken(): string | null {
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+/**
+ * 构建 OAuth 登录页跳转 URL，携带客户端自定义文案参数。
+ *
+ * <p>OAuth 前端使用 HashRouter，登录页真实地址为 {@code http://host/#/login?...}，
+ * 因此本方法在 baseUrl 与查询参数之间插入 {@code #/login} 前缀，
+ * 确保浏览器跳转后 HashRouter 能正确匹配 {@code /login} 路由，
+ * 进而由 PublicRoute 读取 redirect_uri、title 等参数完成 SSO 回调或登录页渲染。</p>
+ *
+ * @param extraParams 可选的额外查询参数（如 logout=true 通知 OAuth 清除 session）
+ * @return 完整的 OAuth 登录页跳转 URL
+ * @author qty
+ */
+export function buildOauthLoginUrl(extraParams?: Record<string, string>): string {
+  // 读取 OAuth 前端基础地址，默认回退到本地 8000 端口（不含 /login，由 #/login 拼接）
+  const baseUrl = import.meta.env.VITE_OAUTH_LOGIN_URL || "http://localhost:8000";
   const params = new URLSearchParams();
+
+  // 携带客户端自定义文案，供 OAuth 登录页展示
   const title = import.meta.env.VITE_LOGIN_TITLE;
   const subtitle = import.meta.env.VITE_LOGIN_SUBTITLE;
   const footerTip = import.meta.env.VITE_LOGIN_FOOTER_TIP;
   if (title) params.set("title", title);
   if (subtitle) params.set("subtitle", subtitle);
   if (footerTip) params.set("footerTip", footerTip);
-  // 登录成功后回跳地址
+
+  // 登录成功后回跳地址，OAuth 登录成功后携带 token 回调到此地址
   params.set("redirect_uri", window.location.origin);
+
+  // 附加额外参数（如退出登录标记 logout=true、提示信息 message）
+  if (extraParams) {
+    Object.entries(extraParams).forEach(([key, value]) => {
+      params.set(key, value);
+    });
+  }
+
   const query = params.toString();
-  return query ? `${baseUrl}?${query}` : baseUrl;
+  // OAuth 前端为 HashRouter，需拼接 #/login 前缀使路由可匹配
+  return query ? `${baseUrl}#/login?${query}` : `${baseUrl}#/login`;
 }
 
 /**
- * 清除本地存储的认证信息并跳转 OAuth 登录页。
+ * 清除本地存储的全部认证信息并跳转 OAuth 登录页。
  * 使用 location.replace 避免浏览器历史记录中残留当前页。
+ * 不再使用 throw 阻断执行，调用方需自行 return Promise.reject 终止 Promise 链。
  *
+ * @param message 可选的提示信息，如"登录已过期，请重新登录"
  * @author qty
  */
-export function clearAndRedirectToLogin(): never {
+export function clearAndRedirectToLogin(message?: string): void {
+  // 设置退出标记，防止残留请求再次触发跳转
+  isLoggingOut = true;
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-  window.location.replace(buildOauthLoginUrl());
-  // 阻止后续代码执行，确保跳转不被异步操作中断
-  throw new Error("redirecting to login");
+  // 清除用户信息，避免残留过期数据
+  window.localStorage.removeItem(NICKNAME_KEY);
+  window.localStorage.removeItem(AVATAR_URL_KEY);
+  // 构建跳转 URL，携带提示信息
+  const extraParams = message ? { message } : undefined;
+  window.location.replace(buildOauthLoginUrl(extraParams));
 }
 
 /**
@@ -125,16 +180,19 @@ oauthInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 /**
  * 调用 OAuth 刷新 token 接口。
  * 使用 oauthInstance，Basic Auth 由请求拦截器自动附加。
+ *
+ * @return 新的 accessToken 和 refreshToken
+ * @author qty
  */
 async function refreshAccessToken(): Promise<{ accessToken: string; refreshToken: string }> {
-  const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) {
+  const currentRefreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!currentRefreshToken) {
     throw new Error("无刷新令牌");
   }
 
   const response = await oauthInstance.post<R<{ accessToken: string; refreshToken: string }>>(
     "/auth/refresh",
-    { refresh: refreshToken }
+    { refresh: currentRefreshToken }
   );
 
   const data = response.data.data;
@@ -143,6 +201,18 @@ async function refreshAccessToken(): Promise<{ accessToken: string; refreshToken
   }
   return data;
 }
+
+// OAuth 实例响应拦截器：处理刷新接口返回的业务错误
+oauthInstance.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<R<unknown>>) => {
+    // 刷新接口本身失败，说明 refresh token 也无效，直接跳转登录
+    if (error.response?.status === 401 || error.response?.status === 400) {
+      clearAndRedirectToLogin();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ====================== 业务 API axios 实例 ======================
 
@@ -221,6 +291,11 @@ instance.interceptors.response.use(
  * @param config 原始请求配置
  */
 function handleAuthError(config: RetryConfig): Promise<never> {
+  // 正在退出登录，静默拒绝残留请求，避免二次跳转
+  if (isLoggingOut) {
+    return Promise.reject(new Error("正在退出登录"));
+  }
+
   const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
 
   // 无刷新令牌，直接跳转登录
@@ -268,9 +343,6 @@ function handleAuthError(config: RetryConfig): Promise<never> {
       // 通知等待队列中的所有请求刷新成功
       resolveSubscribers(result.accessToken);
 
-      // 释放刷新锁（必须在重试原始请求之前，避免竞态窗口）
-      isRefreshing = false;
-
       // 用新 token 重试原始请求
       config.headers.set("Authorization", `Bearer ${result.accessToken}`);
       return instance(config) as Promise<never>;
@@ -280,12 +352,13 @@ function handleAuthError(config: RetryConfig): Promise<never> {
       const error = refreshError instanceof Error ? refreshError : new Error("token 刷新失败");
       rejectSubscribers(error);
 
-      // 释放刷新锁
-      isRefreshing = false;
-
       // 清除存储并跳转登录页
       clearAndRedirectToLogin();
       return Promise.reject(error);
+    })
+    .finally(() => {
+      // 无论刷新成功或失败，都必须释放锁，避免死锁
+      isRefreshing = false;
     });
 }
 

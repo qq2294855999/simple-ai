@@ -2,7 +2,7 @@ import { RobotOutlined, SendOutlined, SettingOutlined, MessageOutlined, CloudSer
 import { Layout, Menu } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { getOauthServerUrl, buildOauthLoginUrl } from "../../api/http";
+import { getOauthServerUrl, buildOauthLoginUrl, setIsLoggingOut, clearAndRedirectToLogin } from "../../api/http";
 
 const { Header, Sider, Content } = Layout;
 
@@ -10,6 +10,34 @@ const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const NICKNAME_KEY = "nickname";
 const AVATAR_URL_KEY = "avatarUrl";
+
+/**
+ * 解码 JWT token 的 payload 并检查是否已过期。
+ * 如果 token 无法解码或没有 exp 字段，视为未过期（由后续请求的错误处理接管）。
+ *
+ * @param token JWT access token
+ * @return true 表示 token 已过期
+ * @author qty
+ */
+function isTokenExpired(token: string): boolean {
+  try {
+    // JWT 格式：header.payload.signature，取中间部分解码
+    const payloadBase64 = token.split(".")[1];
+    if (!payloadBase64) {
+      return false;
+    }
+    const payloadJson = atob(payloadBase64);
+    const payload = JSON.parse(payloadJson);
+    if (!payload.exp) {
+      return false;
+    }
+    // exp 是秒级时间戳，转换为毫秒后与当前时间比较
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    // 解码失败时不做预检，交给后续请求处理
+    return false;
+  }
+}
 
 /**
  * 根据昵称生成稳定的头像渐变色。
@@ -106,9 +134,27 @@ export function BasicLayoutComponent() {
       window.history.replaceState({}, "", cleanUrl);
       return;
     }
+
+    // 检查 localStorage 中是否有有效的 access token
     const accessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!accessToken) {
-      window.location.href = buildOauthLoginUrl();
+      // 无 token，跳转登录页并提示用户需要先登录
+      window.location.replace(buildOauthLoginUrl({ message: "请先登录" }));
+      return;
+    }
+
+    // 检查 token 是否已过期，避免第一次业务请求时才触发刷新
+    if (isTokenExpired(accessToken)) {
+      // token 已过期，先尝试刷新，刷新失败再跳转登录
+      const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (refreshToken) {
+        // 有 refresh token，清除 access token 让后续请求触发刷新流程
+        // 页面正常加载，子组件的数据请求会因 token 缺失而被 http 拦截器自动刷新
+        window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+        return;
+      }
+      // 无 refresh token，调用统一退出函数（自动设置 isLoggingOut 标记并携带提示文案）
+      clearAndRedirectToLogin("登录已过期，请重新登录");
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -139,7 +185,15 @@ export function BasicLayoutComponent() {
 
   // 退出登录
   const handleLogout = useCallback(async () => {
+    // 首先设置退出标记，防止残留请求在 token 清除后触发 handleAuthError 连锁跳转
+    setIsLoggingOut(true);
     const accessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+    // 先清除本地存储，防止残留请求再次触发跳转
+    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+    window.localStorage.removeItem(NICKNAME_KEY);
+    window.localStorage.removeItem(AVATAR_URL_KEY);
+    // 异步通知 OAuth 服务端退出，忽略可能的网络错误
     if (accessToken) {
       try {
         await fetch(`${getOauthServerUrl()}/auth/loginOut`, {
@@ -148,11 +202,11 @@ export function BasicLayoutComponent() {
         });
       } catch { /* ignore */ }
     }
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-    window.localStorage.removeItem(NICKNAME_KEY);
-    window.localStorage.removeItem(AVATAR_URL_KEY);
-    window.location.href = buildOauthLoginUrl();
+    // 跳转 OAuth 登录页，携带 logout=true 和退出提示
+    window.location.replace(buildOauthLoginUrl({
+      logout: "true",
+      message: "您已退出登录"
+    }));
   }, []);
 
   // ====== 修改密码 ======
@@ -176,7 +230,8 @@ export function BasicLayoutComponent() {
       if (!resp.ok) { const err = await resp.json(); throw new Error(err.message || "修改失败"); }
       alert("密码修改成功，请重新登录");
       window.localStorage.clear();
-      window.location.href = buildOauthLoginUrl();
+      // 密码修改成功，跳转 OAuth 登录页并提示用户重新登录
+      window.location.replace(buildOauthLoginUrl({ message: "密码修改成功，请重新登录" }));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "修改失败");
     } finally { setPasswordLoading(false); }
