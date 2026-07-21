@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.agentExecutor.AgentExecutorRepository">
+
+    <!-- 执行器类型分页查询 -->
+    <select id="selectPage" resultType="com.simple.ai.common.dto.agentExecutor.PageAgentExecutorResponse">
+        SELECT
+        e.id,
+        e.executor_code AS executorCode,
+        e.executor_name AS executorName,
+        e.description,
+        e.status,
+        e.create_user_id AS createUserId,
+        e.create_user_name AS createUserName,
+        e.create_time AS createTime,
+        e.update_user_id AS updateUserId,
+        e.update_user_name AS updateUserName,
+        e.update_time AS updateTime,
+        e.reserve,
+        e.remark
+        FROM agent_executor e
+        <where>
+            <if test="pageRequest.executorCode != null and pageRequest.executorCode != ''">
+                AND e.executor_code LIKE CONCAT('%', #{pageRequest.executorCode}, '%')
+            </if>
+            <if test="pageRequest.executorName != null and pageRequest.executorName != ''">
+                AND e.executor_name LIKE CONCAT('%', #{pageRequest.executorName}, '%')
+            </if>
+            <if test="pageRequest.status != null and pageRequest.status != ''">
+                AND e.status = #{pageRequest.status}
+            </if>
+        </where>
+        ORDER BY e.create_time DESC
+    </select>
+
+</mapper>

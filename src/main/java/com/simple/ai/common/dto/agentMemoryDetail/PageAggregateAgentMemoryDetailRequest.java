@@ -7,30 +7,30 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
- * Agent memory detail aggregate page request.
+ * 智能体记忆详情聚合分页请求参数。
  *
  * @author qty
  */
 @Data
 @Accessors(chain = true)
-@Schema(title = "Agent memory detail aggregate page request")
+@Schema(title = "智能体记忆详情聚合分页请求参数")
 public class PageAggregateAgentMemoryDetailRequest extends PageBase {
 
-    @Schema(description = "Keyword")
+    @Schema(description = "关键字")
     private String keyword;
 
-    @Schema(description = "Agent memory id")
+    @Schema(description = "智能体记忆ID")
     private String agentMemoryId;
 
-    @Schema(description = "Memory name")
+    @Schema(description = "记忆名称")
     private String memoryName;
 
-    @Schema(description = "Agent name")
+    @Schema(description = "智能体名称")
     private String agentName;
 
-    @Schema(description = "Step type")
+    @Schema(description = "步骤类型")
     private String stepType;
 
-    @Schema(description = "Status")
+    @Schema(description = "状态")
     private Status status;
 }

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.agentClient.AgentClientRepository">
+
+    <!-- 客户端实例分页查询 -->
+    <select id="selectPage" resultType="com.simple.ai.common.dto.agentClient.PageAgentClientResponse">
+        SELECT
+        c.id,
+        c.user_id AS userId,
+        c.executor_id AS executorId,
+        c.client_name AS clientName,
+        c.status,
+        c.expire_time AS expireTime,
+        c.last_connected_at AS lastConnectedAt,
+        c.last_disconnected_at AS lastDisconnectedAt,
+        c.last_handshake_error AS lastHandshakeError,
+        c.agent_version AS agentVersion,
+        c.machine_name AS machineName,
+        c.create_user_id AS createUserId,
+        c.create_user_name AS createUserName,
+        c.create_time AS createTime,
+        c.update_user_id AS updateUserId,
+        c.update_user_name AS updateUserName,
+        c.update_time AS updateTime,
+        c.reserve,
+        c.remark
+        FROM agent_client c
+        <where>
+            <if test="pageRequest.clientName != null and pageRequest.clientName != ''">
+                AND c.client_name LIKE CONCAT('%', #{pageRequest.clientName}, '%')
+            </if>
+            <if test="pageRequest.status != null and pageRequest.status != ''">
+                AND c.status = #{pageRequest.status}
+            </if>
+            <if test="pageRequest.executorId != null and pageRequest.executorId != ''">
+                AND c.executor_id = #{pageRequest.executorId}
+            </if>
+        </where>
+        ORDER BY c.create_time DESC
+    </select>
+
+    <!-- 按主键查询客户端实例（带 FOR UPDATE 行锁） -->
+    <select id="selectByIdWithLock" resultType="com.simple.ai.common.entity.agentClient.AgentClient">
+        SELECT id,
+               user_id              AS userId,
+               executor_id          AS executorId,
+               client_name          AS clientName,
+               client_secret_hash   AS clientSecretHash,
+               status,
+               expire_time          AS expireTime,
+               last_connected_at    AS lastConnectedAt,
+               last_disconnected_at AS lastDisconnectedAt,
+               last_handshake_error AS lastHandshakeError,
+               agent_version        AS agentVersion,
+               machine_name         AS machineName,
+               create_user_id       AS createUserId,
+               create_user_name     AS createUserName,
+               create_time          AS createTime,
+               update_user_id       AS updateUserId,
+               update_user_name     AS updateUserName,
+               update_time          AS updateTime,
+               reserve,
+               remark
+        FROM agent_client
+        WHERE id = #{id}
+            FOR UPDATE
+    </select>
+
+</mapper>

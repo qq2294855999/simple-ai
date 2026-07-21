@@ -6,35 +6,35 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
- * Agent memory create request.
+ * 智能体记忆新增请求参数。
  *
  * @author qty
  */
 @Data
 @Accessors(chain = true)
-@Schema(title = "Agent memory create request")
+@Schema(title = "智能体记忆新增请求参数")
 public class CreateAgentMemoryRequest {
 
-    @Schema(description = "Agent id")
-    @NotEmpty(message = "Agent id cannot be empty")
+    @Schema(description = "智能体ID")
+    @NotEmpty(message = "智能体ID不能为空")
     private String agentId;
 
-    @Schema(description = "Memory name")
-    @NotEmpty(message = "Memory name cannot be empty")
+    @Schema(description = "记忆名称")
+    @NotEmpty(message = "记忆名称不能为空")
     private String memoryName;
 
-    @Schema(description = "Step name")
-    @NotEmpty(message = "Step name cannot be empty")
+    @Schema(description = "步骤名称")
+    @NotEmpty(message = "步骤名称不能为空")
     private String stepName;
 
-    @Schema(description = "Trigger condition")
-    @NotEmpty(message = "Trigger condition cannot be empty")
+    @Schema(description = "触发条件")
+    @NotEmpty(message = "触发条件不能为空")
     private String triggerCondition;
 
-    @Schema(description = "Trigger action")
-    @NotEmpty(message = "Trigger action cannot be empty")
+    @Schema(description = "触发动作")
+    @NotEmpty(message = "触发动作不能为空")
     private String triggerAction;
 
-    @Schema(description = "Remark")
+    @Schema(description = "备注")
     private String remark;
 }

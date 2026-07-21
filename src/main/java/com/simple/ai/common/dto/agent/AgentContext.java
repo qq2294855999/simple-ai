@@ -1,6 +1,7 @@
 package com.simple.ai.common.dto.agent;
 
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
+import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.agentRule.AgentRule;
@@ -74,4 +75,10 @@ public class AgentContext {
     @Schema(description = "提示词内容")
     private String promptContent;
 
+    /**
+     * 执行器类型列表。
+     * <p>当前用户下所有启用的执行器类型，用于 AI 决策时按 executor_type 筛选可用命令。</p>
+     */
+    @Schema(description = "执行器类型列表")
+    private List<AgentExecutor> executors;
 }

@@ -6,33 +6,33 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
- * Task aggregate page request.
+ * 任务聚合分页请求参数。
  *
  * @author qty
  */
 @Data
 @Accessors(chain = true)
-@Schema(title = "Task aggregate page request")
+@Schema(title = "任务聚合分页请求参数")
 public class PageAggregateTaskRequest extends PageBase {
 
-    @Schema(description = "Keyword")
+    @Schema(description = "关键字")
     private String keyword;
 
-    @Schema(description = "Agent id")
+    @Schema(description = "智能体ID")
     private String agentId;
 
-    @Schema(description = "Agent name")
+    @Schema(description = "智能体名称")
     private String agentName;
 
-    @Schema(description = "Memory id")
+    @Schema(description = "记忆ID")
     private String memoryId;
 
-    @Schema(description = "Memory name")
+    @Schema(description = "记忆名称")
     private String memoryName;
 
-    @Schema(description = "Step type")
+    @Schema(description = "步骤类型")
     private String stepType;
 
-    @Schema(description = "Execution status")
+    @Schema(description = "执行状态")
     private String execStatus;
 }

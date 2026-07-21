@@ -8,69 +8,69 @@ import lombok.experimental.Accessors;
 import java.util.Date;
 
 /**
- * Task aggregate page response.
+ * 任务聚合分页响应参数。
  *
  * @author qty
  */
 @Data
 @Accessors(chain = true)
-@Schema(title = "Task aggregate page response")
+@Schema(title = "任务聚合分页响应参数")
 public class PageAggregateTaskResponse {
 
-    @Schema(description = "Primary key")
+    @Schema(description = "主键")
     private String id;
 
-    @Schema(description = "Agent memory id")
+    @Schema(description = "智能体记忆ID")
     private String agentMemoryId;
 
-    @Schema(description = "Memory name")
+    @Schema(description = "记忆名称")
     private String memoryName;
 
-    @Schema(description = "Agent id")
+    @Schema(description = "智能体ID")
     private String agentId;
 
-    @Schema(description = "Agent name")
+    @Schema(description = "智能体名称")
     private String agentName;
 
-    @Schema(description = "Task name")
+    @Schema(description = "任务名称")
     private String taskName;
 
-    @Schema(description = "Parent task id")
+    @Schema(description = "父任务ID")
     private String parentTaskId;
 
-    @Schema(description = "Parent task name")
+    @Schema(description = "父任务名称")
     private String parentTaskName;
 
-    @Schema(description = "Next task id")
+    @Schema(description = "下一个任务ID")
     private String nextTaskId;
 
-    @Schema(description = "Next task name")
+    @Schema(description = "下一个任务名称")
     private String nextTaskName;
 
-    @Schema(description = "Step type")
+    @Schema(description = "步骤类型")
     private String stepType;
 
-    @Schema(description = "Step type label")
+    @Schema(description = "步骤类型标签")
     private String stepTypeLabel;
 
-    @Schema(description = "Execution status")
+    @Schema(description = "执行状态")
     private String execStatus;
 
-    @Schema(description = "Execution status label")
+    @Schema(description = "执行状态标签")
     private String execStatusLabel;
 
-    @Schema(description = "Failure reason")
+    @Schema(description = "失败原因")
     private String failureReason;
 
-    @Schema(description = "Create time")
+    @Schema(description = "创建时间")
     private Date createTime;
 
-    @Schema(description = "Update time")
+    @Schema(description = "修改时间")
     private Date updateTime;
 
-    @Schema(description = "Status")
+    @Schema(description = "状态")
     private Status status;
 
-    @Schema(description = "Remark")
+    @Schema(description = "备注")
     private String remark;
 }

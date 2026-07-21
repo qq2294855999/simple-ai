@@ -1,5 +1,6 @@
 package com.simple.ai.service.command;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjUtil;
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
@@ -163,6 +164,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         // 校验子智能体递归深度，防止配置环路导致无限调度
         AssertUtils.isTrue(recursionDepth <= MAX_SUB_AGENT_DEPTH, "子智能体递归调度超过安全深度");
 
+        // 解析客户端ID：用户指定优先，否则由后续逻辑自动匹配唯一在线客户端
+        resolveClientIdIfAbsent(request);
+
         // 创建任务主记录并标记执行中
         Task task = createRunningTask(request, parentTaskId);
         publishProgress(progressConsumer, request, task, "TASK_CREATED", "任务已创建", "", Boolean.FALSE, "");
@@ -250,45 +254,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
         // 未命中记忆时调用 AI 生成探索响应
         return executeAiExploration(task, request, context, progressConsumer);
-    }
-
-    /**
-     * 判断 AI 探索是否达到可沉淀目标。
-     *
-     * @param responseContent AI 响应内容
-     * @return 是否达到可沉淀目标
-     */
-    @Deprecated
-    private boolean isAiGoalAchieved(String responseContent) {
-
-        // 响应内容为空时不能视为目标达成
-        if (responseContent == null || responseContent.isBlank()) {
-            return false;
-        }
-
-        // AI 明确声明失败或无法处理时不沉淀记忆
-        if (containsAnyText(responseContent, "无法完成", "未完成", "失败", "不能处理", "无法处理")) {
-            return false;
-        }
-        return containsAnyText(responseContent, "已完成", "完成", "成功", "执行结果", "处理结果", "方案", "步骤");
-    }
-
-    /**
-     * 判断文本是否包含任一关键词。
-     *
-     * @param text 文本内容
-     * @param keywords 关键词数组
-     * @return 是否包含任一关键词
-     */
-    private boolean containsAnyText(String text, String... keywords) {
-
-        // 遍历关键词，任一关键词命中即返回成功
-        for (String keyword : keywords) {
-            if (text.contains(keyword)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -798,6 +763,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     /**
      * 执行 AI 探索流程。
      *
+     * <p>AI 输出结构化 AgentExecutionPlan JSON，包含命令列表和校验规则。
+     * 探索成功后触发记忆沉淀判定，按规则生成 DRAFT 版本记忆。</p>
+     *
      * @param task 任务主记录
      * @param request 命令调度请求
      * @param context 智能体上下文
@@ -815,6 +783,11 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         saveAiTaskDetail(task, request, aiRequest, aiResponse);
         AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
         publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
+
+        // 触发记忆沉淀判定：AI 输出的结构化 AgentExecutionPlan 通过校验后，
+        // 由记忆沉淀服务提炼最短执行链并创建 agent_memory_version (DRAFT)
+        triggerMemoryPrecipitation(task, request, aiResponse);
+
         return aiResponse.getResponseContent();
     }
 
@@ -854,27 +827,8 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         invokeRequest.setAtomicCommandRole(resolveAtomicCommandRole(atomicCommand));
         invokeRequest.setCommandContent(resolveCommandContent(request, commandContent, atomicCommand));
         invokeRequest.setRequestParams(request.getRequestParams());
+        invokeRequest.setClientId(request.getClientId());
         return invokeRequest;
-    }
-
-    /**
-     * 匹配原子命令定义。
-     *
-     * @param commandContent 命令内容
-     * @return 原子命令定义
-     */
-    private AtomicCommand findMatchedAtomicCommand(String commandContent) {
-        FindAllAtomicCommandRequest request = new FindAllAtomicCommandRequest();
-        request.setStatus(Status.ON);
-        List<AtomicCommand> commands = atomicCommandView.findAll(request);
-
-        // 遍历启用原子命令，查找名称或命令内容命中的定义
-        for (AtomicCommand atomicCommand : commands) {
-            if (isAtomicCommandMatched(commandContent, atomicCommand)) {
-                return atomicCommand;
-            }
-        }
-        return null;
     }
 
     /**
@@ -901,7 +855,8 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * <p>在记忆步骤链执行前调用一次，后续所有步骤复用此列表，
      * 避免每个步骤都重复查询数据库。</p>
      *
-     * <p>优先按技能筛选，同时纳入 skill_id 为空的全局通用命令，
+     * <p>按技能ID列表批量查询一次，避免 N+1 循环查询。
+     * 同时纳入 skill_id 为空的全局通用命令，
      * 实现"智能体 → 技能 → 原子命令"三级关联。</p>
      *
      * @param context 智能体上下文
@@ -911,12 +866,12 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         List<String> skillIds = extractSkillIds(context);
         List<AtomicCommand> result = new ArrayList<>();
 
-        // 遍历上下文中所有技能ID，按技能分次查询原子命令
-        for (String skillId : skillIds) {
-            FindAllAtomicCommandRequest request = new FindAllAtomicCommandRequest();
-            request.setSkillId(skillId);
-            request.setStatus(Status.ON);
-            result.addAll(atomicCommandView.findAll(request));
+        // 按技能ID列表批量查询启用原子命令，避免 N+1 循环查询
+        if (CollectionUtil.isNotEmpty(skillIds)) {
+            FindAllAtomicCommandRequest batchRequest = new FindAllAtomicCommandRequest();
+            batchRequest.setSkillIds(skillIds);
+            batchRequest.setStatus(Status.ON);
+            result.addAll(atomicCommandView.findAll(batchRequest));
         }
 
         // 追加 skill_id 为空的全局通用命令，确保基础执行器始终可用
@@ -1514,6 +1469,40 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             // 会话摘要属于辅助上下文，写入失败不改变核心任务成功状态
             log.warn("智能体命令调度会话摘要写入失败，会话ID：{}", request.getSessionId(), e);
         }
+    }
+
+    /**
+     * 解析客户端ID：用户指定优先，未指定时由后续自动匹配。
+     *
+     * @param request 命令调度请求
+     */
+    private void resolveClientIdIfAbsent(CommandDispatchRequest request) {
+
+        // 用户已指定客户端ID时直接使用
+        if (request.getClientId() != null && !request.getClientId().isBlank()) {
+            return;
+        }
+        // TODO: 未指定时自动匹配唯一在线客户端
+        // 1. 查询当前用户下状态为 ACTIVE 且 last_connected_at 在有效期内的客户端列表
+        // 2. 唯一在线时自动绑定，多个在线时暂不绑定由前端指定
+    }
+
+    /**
+     * 触发记忆沉淀判定。
+     * <p>AI 探索成功后，按规则判断是否需要将执行结果沉淀为记忆版本。
+     * 沉淀流程：AI 提炼最短执行链 → 创建 agent_memory_version (DRAFT)。</p>
+     *
+     * @param task       任务主记录
+     * @param request    命令调度请求
+     * @param aiResponse AI 响应
+     */
+    private void triggerMemoryPrecipitation(Task task, CommandDispatchRequest request, AgentAiResponse aiResponse) {
+        // TODO: 实现记忆沉淀逻辑
+        // 1. 判断 AI 输出是否为结构化 AgentExecutionPlan JSON
+        // 2. 校验计划中命令归属技能 + 客户端支持 executor_type + argsSchema 合规
+        // 3. AI 提炼最短执行链 → 创建 agent_memory_version (DRAFT)
+        // 4. 关联到当前任务的 task.memory_version_id
+        log.debug("记忆沉淀待实现：taskId={}, agentId={}", task.getId(), request.getAgentId());
     }
 
     /**

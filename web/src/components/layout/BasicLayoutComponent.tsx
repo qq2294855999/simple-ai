@@ -1,8 +1,8 @@
-import { RobotOutlined, SendOutlined, SettingOutlined, MessageOutlined, CloudServerOutlined } from "@ant-design/icons";
-import { Layout, Menu } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { getOauthServerUrl, buildOauthLoginUrl, setIsLoggingOut, clearAndRedirectToLogin } from "../../api/http";
+import {ApiOutlined, CloudServerOutlined, MessageOutlined, RobotOutlined, SendOutlined, SettingOutlined} from "@ant-design/icons";
+import {Layout, Menu} from "antd";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {Outlet, useLocation, useNavigate, useSearchParams} from "react-router-dom";
+import {buildOauthLoginUrl, clearAndRedirectToLogin, getOauthServerUrl, setIsLoggingOut} from "../../api/http";
 
 const { Header, Sider, Content } = Layout;
 
@@ -69,6 +69,8 @@ const CHILD_TO_PARENT: Record<string, string> = {
   "/agent-skill": "group-agent-config",
   "/agent-rule": "group-agent-config",
   "/agent-memory": "group-agent-config",
+    "/agent-executor": "group-executor-client",
+    "/agent-client": "group-executor-client",
   "/command-dispatch": "group-command",
   "/atomic-command": "group-command",
   "/task": "group-command",
@@ -109,6 +111,8 @@ export function BasicLayoutComponent() {
     "/agent-skill": "技能管理",
     "/agent-rule": "规则管理",
     "/agent-memory": "记忆编排管理",
+      "/agent-executor": "执行器管理",
+      "/agent-client": "客户端管理",
     "/command-dispatch": "命令调度",
     "/atomic-command": "原子命令管理",
     "/task": "任务执行记录",
@@ -252,6 +256,13 @@ export function BasicLayoutComponent() {
       ]
     },
     {
+        key: "group-executor-client", icon: <ApiOutlined/>, label: "执行器与客户端",
+        children: [
+            {key: "/agent-executor", label: "执行器管理"},
+            {key: "/agent-client", label: "客户端管理"}
+        ]
+    },
+      {
       key: "group-command", icon: <SendOutlined />, label: "命令与执行",
       children: [
         { key: "/command-dispatch", label: "命令调度" },

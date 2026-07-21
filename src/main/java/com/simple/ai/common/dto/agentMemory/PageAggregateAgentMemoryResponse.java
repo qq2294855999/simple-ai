@@ -8,57 +8,57 @@ import lombok.experimental.Accessors;
 import java.util.Date;
 
 /**
- * Agent memory aggregate page response.
+ * 智能体记忆聚合分页响应。
  *
  * @author qty
  */
 @Data
 @Accessors(chain = true)
-@Schema(title = "Agent memory aggregate page response")
+@Schema(title = "智能体记忆聚合分页响应")
 public class PageAggregateAgentMemoryResponse {
 
-    @Schema(description = "Primary key")
+    @Schema(description = "主键")
     private String id;
 
-    @Schema(description = "Agent id")
+    @Schema(description = "智能体ID")
     private String agentId;
 
-    @Schema(description = "Agent name")
+    @Schema(description = "智能体名称")
     private String agentName;
 
-    @Schema(description = "Memory name")
+    @Schema(description = "记忆名称")
     private String memoryName;
 
-    @Schema(description = "Step name")
+    @Schema(description = "步骤名称")
     private String stepName;
 
-    @Schema(description = "Trigger condition")
+    @Schema(description = "触发条件")
     private String triggerCondition;
 
-    @Schema(description = "Trigger action")
+    @Schema(description = "触发动作")
     private String triggerAction;
 
-    @Schema(description = "Step count")
+    @Schema(description = "步骤数量")
     private Long stepCount;
 
-    @Schema(description = "Task count")
+    @Schema(description = "任务数量")
     private Long taskCount;
 
-    @Schema(description = "Latest task status")
+    @Schema(description = "最近任务状态")
     private String latestTaskStatus;
 
-    @Schema(description = "Latest task status label")
+    @Schema(description = "最近任务状态标签")
     private String latestTaskStatusLabel;
 
-    @Schema(description = "Create time")
+    @Schema(description = "创建时间")
     private Date createTime;
 
-    @Schema(description = "Update time")
+    @Schema(description = "修改时间")
     private Date updateTime;
 
-    @Schema(description = "Status")
+    @Schema(description = "状态")
     private Status status;
 
-    @Schema(description = "Remark")
+    @Schema(description = "备注")
     private String remark;
 }

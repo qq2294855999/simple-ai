@@ -1,16 +1,23 @@
-import { Button, Card, Checkbox, Empty, Input, List, Popconfirm, Select, Space, Spin, Tag, Timeline, Tooltip, Typography } from "antd";
-import { CloseOutlined, DeleteOutlined, LoadingOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined } from "@ant-design/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AgentChatApi } from "../api/agentChatApi";
-import { AgentDefinitionApi } from "../api/agentDefinitionApi";
-import { AiModelApi } from "../api/aiModelApi";
-import { RestrictedMarkdownComponent } from "../components/agentChat/RestrictedMarkdownComponent";
-import type { AgentChatMessageDto, AgentChatProgressEventDto, AgentChatSessionDto, AgentChatTrajectoryDto, SendAgentChatMessageRequestDto } from "../dto/agentChat/AgentChatDto";
-import type { AgentDefinitionPageDto } from "../dto/agentDefinition/AgentDefinitionDto";
-import type { AiModelResponseDto } from "../dto/aiModel/AiModelDto";
-import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
-import { ToastUtil } from "../utils/ToastUtil";
-import { appendAssistantToken, isAgentChatMessageEvent, replaceFinalMessage } from "../utils/agentChatStreamUtil";
+import {Button, Card, Checkbox, Empty, Input, List, Popconfirm, Select, Space, Spin, Tag, Timeline, Tooltip, Typography} from "antd";
+import {CloseOutlined, DeleteOutlined, LoadingOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined} from "@ant-design/icons";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {AgentChatApi} from "../api/agentChatApi";
+import {AgentClientApi} from "../api/agentClientApi";
+import {AgentDefinitionApi} from "../api/agentDefinitionApi";
+import {AiModelApi} from "../api/aiModelApi";
+import {RestrictedMarkdownComponent} from "../components/agentChat/RestrictedMarkdownComponent";
+import type {
+    AgentChatMessageDto,
+    AgentChatProgressEventDto,
+    AgentChatSessionDto,
+    AgentChatTrajectoryDto,
+    SendAgentChatMessageRequestDto
+} from "../dto/agentChat/AgentChatDto";
+import type {AgentDefinitionPageDto} from "../dto/agentDefinition/AgentDefinitionDto";
+import type {AiModelResponseDto} from "../dto/aiModel/AiModelDto";
+import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {ToastUtil} from "../utils/ToastUtil";
+import {appendAssistantToken, isAgentChatMessageEvent, replaceFinalMessage} from "../utils/agentChatStreamUtil";
 
 const maxTimelineEventCount = 300;
 const maxSessionNameLength = 14;
@@ -34,6 +41,8 @@ export function AgentChatPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>();
   const [models, setModels] = useState<AiModelResponseDto[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>();
+    const [clients, setClients] = useState<{ id: string; clientName: string }[]>([]);
+    const [selectedClientId, setSelectedClientId] = useState<string>();
   const [sessions, setSessions] = useState<AgentChatSessionDto[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>();
   const [messages, setMessages] = useState<AgentChatMessageDto[]>([]);
@@ -83,6 +92,15 @@ export function AgentChatPage() {
     const result = await AiModelApi.available(agentId);
     setModels(result);
   }, []);
+
+    const loadClients = useCallback(async () => {
+        try {
+            const result = await AgentClientApi.page({current: 1, size: 1000});
+            setClients((result.records || []).map((c: { id: string; clientName: string }) => ({id: c.id, clientName: c.clientName})));
+        } catch {
+            setClients([]);
+        }
+    }, []);
 
   const loadSessions = useCallback(async (agentId: string) => {
     const result = await AgentChatApi.findSessions(agentId);
@@ -142,7 +160,8 @@ export function AgentChatPage() {
 
   useEffect(() => {
     void loadAgents().catch(() => setAgents([]));
-  }, [loadAgents]);
+      void loadClients().catch(() => setClients([]));
+  }, [loadAgents, loadClients]);
 
   useEffect(() => {
     setSessions([]);
@@ -284,6 +303,11 @@ export function AgentChatPage() {
     if (selectedModelId) {
       request.modelId = selectedModelId;
     }
+
+      // 用户显式选择客户端时传递 clientId
+      if (selectedClientId) {
+          request.clientId = selectedClientId;
+      }
     try {
       await AgentChatApi.sendStream(request, handleProgress, abortController.signal);
     } catch (error) {
@@ -357,6 +381,20 @@ export function AgentChatPage() {
             }))}
           />
           <Button type="primary" icon={<PlusOutlined />} loading={creating} disabled={!selectedAgentId} onClick={handleCreateSession}>新建对话</Button>
+        </Space>
+      </div>
+        <div className="simple-search-panel" style={{marginTop: 12}}>
+            <Space wrap>
+                <Select
+                    placeholder="选择客户端（可选）"
+                    value={selectedClientId}
+                    allowClear
+                    style={{width: 220, height: 36}}
+                    onChange={setSelectedClientId}
+                    options={clients.map(c => ({label: c.clientName, value: c.id}))}
+                    showSearch
+                    filterOption={(input, option) => (option?.label as string || "").includes(input)}
+                />
         </Space>
       </div>
       <div className="agent-chat-layout">

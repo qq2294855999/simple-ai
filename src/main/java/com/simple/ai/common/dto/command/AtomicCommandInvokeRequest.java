@@ -41,6 +41,18 @@ public class AtomicCommandInvokeRequest {
     private String atomicCommandRole;
 
     /**
+     * 命令ID（雪花ID，用于 WebSocket 等待器匹配）
+     */
+    @Schema(description = "命令ID")
+    private String commandId;
+
+    /**
+     * 客户端ID（用于点对点 WebSocket 发送）
+     */
+    @Schema(description = "客户端ID")
+    private String clientId;
+
+    /**
      * 命令内容
      */
     @Schema(description = "命令内容")

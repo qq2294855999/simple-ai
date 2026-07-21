@@ -1,13 +1,12 @@
 package com.simple.ai.common.dto.atomicCommand;
 
-import java.util.Date;
-
-import com.simple.common.mp.page.PageBase;
-import io.swagger.v3.oas.annotations.media.Schema;
-import com.simple.common.mp.common.enums.DeleteState;
 import com.simple.common.mp.common.enums.Status;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
+
+import java.util.Date;
+import java.util.List;
 
 @Data
 @Accessors(chain = true)
@@ -28,6 +27,12 @@ public class FindAllAtomicCommandRequest {
 
     @Schema(description = "智能体技能ID")
     private String skillId;
+
+    /**
+     * 智能体技能ID列表（批量查询用）
+     */
+    @Schema(description = "智能体技能ID列表")
+    private List<String> skillIds;
 
     @Schema(description = "创建时间")
     private Date createTime;

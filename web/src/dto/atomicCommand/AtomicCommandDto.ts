@@ -14,6 +14,8 @@ export interface AtomicCommandPageRequestDto {
   keyword?: string;
   /** 技能ID精确筛选 */
   skillId?: string;
+    /** 执行器ID筛选 */
+    executorId?: string;
   /** 状态筛选 */
   status?: string;
 }
@@ -36,6 +38,10 @@ export interface AtomicCommandPageResponseDto {
   skillId: string;
   /** 技能描述 */
   skillDesc: string;
+    /** 执行器ID */
+    executorId?: string;
+    /** 执行器名称 */
+    executorName?: string;
   /** 智能体ID */
   agentId: string;
   /** 智能体名称 */
@@ -64,6 +70,8 @@ export interface CreateAtomicCommandRequestDto {
   role: string;
   /** 技能ID */
   skillId?: string;
+    /** 执行器ID */
+    executorId?: string;
   /** 备注 */
   remark?: string;
 }

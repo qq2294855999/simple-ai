@@ -1,6 +1,5 @@
 package com.simple.ai.common.dto.command;
 
-import com.simple.common.websocket.common.entity.WebSocketRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
@@ -36,6 +35,18 @@ public class CommandDispatchRequest {
     @Schema(description = "命令内容")
     @NotEmpty(message = "命令内容不能为空")
     private String commandContent;
+
+    /**
+     * 用户ID（用于按用户过滤资产）
+     */
+    @Schema(description = "用户ID")
+    private String userId;
+
+    /**
+     * 客户端ID（用于点对点下发命令）
+     */
+    @Schema(description = "客户端ID")
+    private String clientId;
 
     /**
      * 会话ID

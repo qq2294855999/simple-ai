@@ -1,31 +1,19 @@
 package com.simple.ai.view.atomicCommand;
 
-import java.util.Date;
-
 import cn.hutool.core.collection.CollectionUtil;
-import com.simple.common.core.utils.AssertUtils;
 import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.lang.Assert;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.springframework.stereotype.Component;
-import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.atomicCommand.*;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
-import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandRequest;
-import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandRequest;
-import com.simple.ai.common.dto.atomicCommand.PageAggregateAtomicCommandResponse;
-import com.simple.ai.common.dto.atomicCommand.FindOneAtomicCommandRequest;
-import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
-import com.simple.ai.common.dto.atomicCommand.DeleteAtomicCommandRequest;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
+import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
+import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 原子命令(atomic_command)数据库视图实现
@@ -75,6 +63,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getCommand()), AtomicCommand::getCommand, findAllRequest.getCommand())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRole()), AtomicCommand::getRole, findAllRequest.getRole())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getSkillId()), AtomicCommand::getSkillId, findAllRequest.getSkillId())
+                    .in(CollectionUtil.isNotEmpty(findAllRequest.getSkillIds()), AtomicCommand::getSkillId, findAllRequest.getSkillIds())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AtomicCommand::getStatus, findAllRequest.getStatus())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AtomicCommand::getReserver, findAllRequest.getReserver())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AtomicCommand::getRemark, findAllRequest.getRemark())

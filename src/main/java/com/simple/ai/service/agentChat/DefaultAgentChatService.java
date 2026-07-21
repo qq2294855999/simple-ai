@@ -320,6 +320,8 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 调用既有命令调度服务。
      *
+     * <p>透传 clientId 用于点对点下发命令，透传 memoryAction 用于记忆操作。</p>
+     *
      * @param session       会话实体
      * @param request       发送消息请求
      * @param eventConsumer 事件消费者
@@ -332,6 +334,7 @@ class DefaultAgentChatService implements AgentChatService {
         dispatchRequest.setCommandContent(request.getContent());
         dispatchRequest.setSessionId(session.getId());
         dispatchRequest.setModelId(request.getModelId());
+        dispatchRequest.setClientId(request.getClientId());
         return commandDispatchService.dispatchStream(dispatchRequest, eventConsumer);
     }
 

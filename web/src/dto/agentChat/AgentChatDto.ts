@@ -29,6 +29,10 @@ export interface SendAgentChatMessageRequestDto {
   content: string;
   /** 显式模型主键 */
   modelId?: string;
+    /** 客户端ID（指定执行目标客户端） */
+    clientId?: string;
+    /** 记忆操作标志（create/revise，空表示不操作记忆） */
+    memoryAction?: string;
 }
 
 export interface AgentChatProgressEventDto {
