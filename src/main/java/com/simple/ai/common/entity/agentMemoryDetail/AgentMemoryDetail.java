@@ -1,17 +1,14 @@
 package com.simple.ai.common.entity.agentMemoryDetail;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.annotation.*;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.common.mp.common.enums.DeleteState;
+import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import java.util.Map;
+import java.util.Date;
 
 /**
  * 智能体记忆详情(agent_memory_detail)实体类
@@ -57,7 +54,7 @@ public class AgentMemoryDetail {
      * 步骤类型：智能体记忆步骤类型
      */
     @TableField(value = "step_type")
-    private String stepType;
+    private AgentStepTypeProcess stepType;
 
     /**
      * 执行内容

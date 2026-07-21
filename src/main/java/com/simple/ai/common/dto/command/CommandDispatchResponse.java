@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.command;
 
+import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -22,7 +23,7 @@ public class CommandDispatchResponse {
      * 执行状态
      */
     @Schema(description = "执行状态")
-    private String execStatus;
+    private AgentExecutionStatusProcess execStatus;
 
     /**
      * 响应内容

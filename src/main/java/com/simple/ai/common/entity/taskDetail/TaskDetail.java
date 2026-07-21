@@ -1,17 +1,15 @@
 package com.simple.ai.common.entity.taskDetail;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.annotation.*;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.common.mp.common.enums.DeleteState;
+import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import java.util.Map;
+import java.util.Date;
 
 /**
  * 任务详情(task_detail)实体类
@@ -69,7 +67,7 @@ public class TaskDetail {
      * 步骤类型：智能体步骤类型
      */
     @TableField(value = "step_type")
-    private String stepType;
+    private AgentStepTypeProcess stepType;
 
     /**
      * 分支条件
@@ -99,7 +97,7 @@ public class TaskDetail {
      * 执行状态
      */
     @TableField(value = "exec_status")
-    private String execStatus;
+    private AgentExecutionStatusProcess execStatus;
 
     /** 运行供应商主键快照 */
     @TableField(value = "provider_id")

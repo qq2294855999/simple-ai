@@ -7,7 +7,6 @@ import com.simple.ai.common.dto.agentChat.SendAgentChatMessageRequest;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.command.CommandDispatchResponse;
-import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
@@ -15,6 +14,7 @@ import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentChatMessageRoleProcess;
+import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.ai.common.service.command.CommandDispatchService;
 import com.simple.ai.common.service.session.AgentSessionService;
@@ -30,12 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -48,38 +43,56 @@ import java.util.stream.Collectors;
 @Service
 class DefaultAgentChatService implements AgentChatService {
 
-    /** HTML 标签匹配表达式 */
+    /**
+     * HTML 标签匹配表达式
+     */
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("(?is)<[^>]*>");
 
-    /** 智能体定义视图 */
+    /**
+     * 智能体定义视图
+     */
     @Autowired
     private AgentDefinitionView agentDefinitionView;
 
-    /** 聊天会话视图 */
+    /**
+     * 聊天会话视图
+     */
     @Autowired
     private AgentChatSessionView agentChatSessionView;
 
-    /** 聊天消息视图 */
+    /**
+     * 聊天消息视图
+     */
     @Autowired
     private AgentChatMessageView agentChatMessageView;
 
-    /** 任务视图 */
+    /**
+     * 任务视图
+     */
     @Autowired
     private TaskView taskView;
 
-    /** 任务详情视图 */
+    /**
+     * 任务详情视图
+     */
     @Autowired
     private TaskDetailView taskDetailView;
 
-    /** 命令调度服务 */
+    /**
+     * 命令调度服务
+     */
     @Autowired
     private CommandDispatchService commandDispatchService;
 
-    /** 智能体会话服务 */
+    /**
+     * 智能体会话服务
+     */
     @Autowired
     private AgentSessionService agentSessionService;
 
-    /** 事务模板 */
+    /**
+     * 事务模板
+     */
     @Autowired
     private TransactionTemplate transactionTemplate;
 
@@ -289,13 +302,12 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 安全调用既有命令调度服务。
      *
-     * @param session 会话实体
-     * @param request 发送消息请求
+     * @param session       会话实体
+     * @param request       发送消息请求
      * @param eventConsumer 事件消费者
      * @return 调度响应
      */
-    private CommandDispatchResponse dispatchAgentSafely(AgentChatSession session, SendAgentChatMessageRequest request,
-                                                         Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private CommandDispatchResponse dispatchAgentSafely(AgentChatSession session, SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
         try {
             return dispatchAgent(session, request, eventConsumer);
         } catch (RuntimeException e) {
@@ -308,13 +320,12 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 调用既有命令调度服务。
      *
-     * @param session 会话实体
-     * @param request 发送消息请求
+     * @param session       会话实体
+     * @param request       发送消息请求
      * @param eventConsumer 事件消费者
      * @return 调度响应
      */
-    private CommandDispatchResponse dispatchAgent(AgentChatSession session, SendAgentChatMessageRequest request,
-                                                   Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private CommandDispatchResponse dispatchAgent(AgentChatSession session, SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
         CommandDispatchRequest dispatchRequest = new CommandDispatchRequest();
         dispatchRequest.setAgentId(session.getAgentId());
         dispatchRequest.setCommandName("人机对话");
@@ -333,7 +344,7 @@ class DefaultAgentChatService implements AgentChatService {
     private CommandDispatchResponse buildDispatchFailureResponse(RuntimeException exception) {
         CommandDispatchResponse response = new CommandDispatchResponse();
         response.setTaskId("");
-        response.setExecStatus("FAILED");
+        response.setExecStatus(AgentExecutionStatusProcess.FAILED);
         response.setResponseContent("");
         response.setFailureReason(resolveDispatchFailureReason(exception));
         return response;
@@ -353,12 +364,11 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 保存最终 AI 消息。
      *
-     * @param session 会话实体
-     * @param response 调度响应
+     * @param session       会话实体
+     * @param response      调度响应
      * @param eventConsumer 事件消费者
      */
-    private void saveFinalMessage(AgentChatSession session, CommandDispatchResponse response,
-                                   Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private void saveFinalMessage(AgentChatSession session, CommandDispatchResponse response, Consumer<CommandDispatchProgressEvent> eventConsumer) {
         transactionTemplate.executeWithoutResult(status -> {
 
             // 重新锁定会话并分配最终消息序号
@@ -388,8 +398,8 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 创建用户消息实体。
      *
-     * @param sessionId 会话主键
-     * @param content 用户文本
+     * @param sessionId  会话主键
+     * @param content    用户文本
      * @param sequenceNo 消息序号
      * @return 用户消息
      */
@@ -397,9 +407,9 @@ class DefaultAgentChatService implements AgentChatService {
         AgentChatMessage message = new AgentChatMessage();
         message.setSessionId(sessionId);
         message.setTaskId("");
-        message.setRole(AgentChatMessageRoleProcess.USER.name());
+        message.setRole(AgentChatMessageRoleProcess.USER);
         message.setContent(content);
-        message.setContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT.name());
+        message.setContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT);
         message.setSequenceNo(sequenceNo);
         message.setStatus(Status.ON);
         message.setReserver("");
@@ -410,8 +420,8 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 创建最终消息实体。
      *
-     * @param sessionId 会话主键
-     * @param response 调度响应
+     * @param sessionId  会话主键
+     * @param response   调度响应
      * @param sequenceNo 消息序号
      * @return 最终消息
      */
@@ -462,9 +472,7 @@ class DefaultAgentChatService implements AgentChatService {
      * @return 可安全按纯文本展示的内容
      */
     private String escapeHtmlMarkup(String content) {
-        return content.replace("&", "\u0026amp;")
-                .replace("<", "\u0026lt;")
-                .replace(">", "\u0026gt;");
+        return content.replace("&", "\u0026amp;").replace("<", "\u0026lt;").replace(">", "\u0026gt;");
     }
 
     /**
@@ -473,8 +481,8 @@ class DefaultAgentChatService implements AgentChatService {
      * @param success 调度是否成功
      * @return 消息角色
      */
-    private String resolveFinalMessageRole(boolean success) {
-        return success ? AgentChatMessageRoleProcess.ASSISTANT.name() : AgentChatMessageRoleProcess.SYSTEM_ERROR.name();
+    private AgentChatMessageRoleProcess resolveFinalMessageRole(boolean success) {
+        return success ? AgentChatMessageRoleProcess.ASSISTANT : AgentChatMessageRoleProcess.SYSTEM_ERROR;
     }
 
     /**
@@ -483,9 +491,8 @@ class DefaultAgentChatService implements AgentChatService {
      * @param success 调度是否成功
      * @return 内容格式
      */
-    private String resolveFinalMessageFormat(boolean success) {
-        return success ? AgentChatMessageFormatProcess.RESTRICTED_MARKDOWN.name()
-                : AgentChatMessageFormatProcess.PLAIN_TEXT.name();
+    private AgentChatMessageFormatProcess resolveFinalMessageFormat(boolean success) {
+        return success ? AgentChatMessageFormatProcess.RESTRICTED_MARKDOWN : AgentChatMessageFormatProcess.PLAIN_TEXT;
     }
 
     /**
@@ -519,33 +526,31 @@ class DefaultAgentChatService implements AgentChatService {
      * 发布最终消息事件。
      *
      * @param eventConsumer 事件消费者
-     * @param sessionId 会话主键
-     * @param message 最终消息
-     * @param response 调度响应
+     * @param sessionId     会话主键
+     * @param message       最终消息
+     * @param response      调度响应
      */
-    private void publishFinalEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId,
-                                    AgentChatMessage message, CommandDispatchResponse response) {
+    private void publishFinalEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId, AgentChatMessage message, CommandDispatchResponse response) {
         boolean success = "SUCCESS".equals(response.getExecStatus());
         String eventType = success ? "MESSAGE_COMPLETED" : "CHAT_FAILED";
         String eventMessage = success ? "AI 最终回复已保存" : "AI 对话执行失败";
-        publishChatEvent(eventConsumer, sessionId, eventType, eventMessage, message.getTaskId(), message.getContent(), true,
-                response.getFailureReason());
+        publishChatEvent(eventConsumer, sessionId, eventType, eventMessage, message.getTaskId(), message.getContent(), true, response.getFailureReason());
     }
 
     /**
      * 发布聊天事件。
      *
      * @param eventConsumer 事件消费者
-     * @param sessionId 会话主键
-     * @param eventType 事件类型
-     * @param message 事件说明
-     * @param taskId 任务主键
-     * @param payload 事件载荷
-     * @param completed 是否完成
+     * @param sessionId     会话主键
+     * @param eventType     事件类型
+     * @param message       事件说明
+     * @param taskId        任务主键
+     * @param payload       事件载荷
+     * @param completed     是否完成
      * @param failureReason 失败原因
      */
-    private void publishChatEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId, String eventType,
-                                   String message, String taskId, String payload, boolean completed, String failureReason) {
+    private void publishChatEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId, String eventType, String message, String taskId, String payload, boolean completed,
+                                  String failureReason) {
 
         // 客户端未订阅时无需构建事件
         if (eventConsumer == null) {
@@ -557,7 +562,7 @@ class DefaultAgentChatService implements AgentChatService {
         event.setEventType(eventType);
         event.setStepId("");
         event.setStepName("");
-        event.setExecStatus("");
+        event.setExecStatus(null);
         event.setMessage(message);
         event.setPayload(payload);
         event.setCompleted(completed);
@@ -573,7 +578,7 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 构建会话响应。
      *
-     * @param session 会话实体
+     * @param session         会话实体
      * @param agentDefinition 智能体实体
      * @return 会话响应
      */
@@ -590,7 +595,7 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 构建会话响应列表。
      *
-     * @param sessions 会话列表
+     * @param sessions        会话列表
      * @param agentDefinition 智能体实体
      * @return 会话响应列表
      */

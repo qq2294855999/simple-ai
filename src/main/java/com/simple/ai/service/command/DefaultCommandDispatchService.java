@@ -1,16 +1,12 @@
 package com.simple.ai.service.command;
 
+import cn.hutool.core.util.ObjUtil;
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
+import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
-import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
-import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
-import com.simple.ai.common.dto.command.CommandDispatchRequest;
-import com.simple.ai.common.dto.command.CommandDispatchResponse;
-import com.simple.ai.common.dto.command.SubAgentDispatchContext;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
@@ -219,12 +215,12 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         task.setTaskName(request.getCommandName());
         task.setParentTaskId(parentTaskId == null ? "" : parentTaskId);
         task.setNextTaskId("");
-        task.setStepType(AgentStepTypeProcess.ATOMIC_COMMAND.getCode());
+        task.setStepType(AgentStepTypeProcess.ATOMIC_COMMAND);
         task.setBranchCondition("");
         task.setBranchRoute("");
         task.setRequestParams(JsonUtils.toJsonStr(request));
         task.setReturnParams("");
-        task.setExecStatus(AgentExecutionStatusProcess.RUNNING.getCode());
+        task.setExecStatus(AgentExecutionStatusProcess.RUNNING);
         task.setFailureReason("");
         task.setStatus(Status.ON);
         task.setReserver("");
@@ -414,12 +410,12 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
                                              Map<String, Integer> loopExecuteCountMap) {
 
         // 判断步骤根据分支条件决定后续路由
-        if (AgentStepTypeProcess.JUDGE.getCode().equals(currentDetail.getStepType())) {
+        if (AgentStepTypeProcess.JUDGE.equals(currentDetail.getStepType())) {
             return findNextDetailForJudge(detailMap, currentDetail, responseContent);
         }
 
         // 循环结束步骤根据退出条件和次数决定是否回跳
-        if (AgentStepTypeProcess.LOOP_END.getCode().equals(currentDetail.getStepType())) {
+        if (AgentStepTypeProcess.LOOP_END.equals(currentDetail.getStepType())) {
             return findNextDetailForLoopEnd(detailMap, currentDetail, responseContent, loopExecuteCountMap);
         }
         return findNextDetailByNextStepId(detailMap, currentDetail);
@@ -526,7 +522,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private void assertLoopExecutionAllowed(AgentMemoryDetail currentDetail, Map<String, Integer> loopExecuteCountMap) {
 
         // 非循环开始步骤不执行循环次数校验
-        if (!AgentStepTypeProcess.LOOP_START.getCode().equals(currentDetail.getStepType())) {
+        if (!AgentStepTypeProcess.LOOP_START.equals(currentDetail.getStepType())) {
             return;
         }
         Integer executeCount = loopExecuteCountMap.get(currentDetail.getId());
@@ -625,7 +621,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         }
 
         // 原子命令步骤使用预加载的原子命令列表执行，避免循环内重复查询数据库
-        if (AgentStepTypeProcess.ATOMIC_COMMAND.getCode().equals(detail.getStepType())) {
+        if (AgentStepTypeProcess.ATOMIC_COMMAND.equals(detail.getStepType())) {
             return executeAtomicCommand(task, request, detail, atomicCommands);
         }
 
@@ -690,7 +686,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         linkParentTaskToSubTask(task, subResponse);
         AtomicCommandInvokeResponse recordResponse = buildSubAgentRecordResponse(subResponse);
         saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(dispatchContext), recordResponse);
-        AssertUtils.isTrue(AgentExecutionStatusProcess.SUCCESS.getCode().equals(subResponse.getExecStatus()), subResponse.getFailureReason());
+        AssertUtils.isTrue(AgentExecutionStatusProcess.SUCCESS.equals(subResponse.getExecStatus()), subResponse.getFailureReason());
         publishProgress(progressConsumer, request, task, "SUB_AGENT_COMPLETED", detail.getStepName(), subResponse.getResponseContent(), Boolean.FALSE, "");
         return subResponse.getResponseContent();
     }
@@ -775,7 +771,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      */
     private AtomicCommandInvokeResponse buildSubAgentRecordResponse(CommandDispatchResponse subResponse) {
         AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
-        response.setSuccess(AgentExecutionStatusProcess.SUCCESS.getCode().equals(subResponse.getExecStatus()));
+        response.setSuccess(AgentExecutionStatusProcess.SUCCESS.equals(subResponse.getExecStatus()));
         response.setResponseContent(subResponse.getResponseContent());
         response.setFailureReason(subResponse.getFailureReason());
         return response;
@@ -1128,7 +1124,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         taskDetail.setTaskName(request.getCommandName());
         taskDetail.setParentTaskId("");
         taskDetail.setNextTaskId("");
-        taskDetail.setStepType(AgentStepTypeProcess.JUDGE.getCode());
+        taskDetail.setStepType(AgentStepTypeProcess.JUDGE);
         taskDetail.setBranchCondition("");
         taskDetail.setBranchRoute("");
         taskDetail.setRequestParams(JsonUtils.toJsonStr(aiRequest));
@@ -1183,7 +1179,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private boolean hasFailedTaskDetail(Task task) {
         FindAllTaskDetailRequest findAllRequest = new FindAllTaskDetailRequest();
         findAllRequest.setTaskId(task.getId());
-        findAllRequest.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        findAllRequest.setExecStatus(AgentExecutionStatusProcess.FAILED);
         List<TaskDetail> taskDetails = taskDetailView.findAll(findAllRequest);
         return !taskDetails.isEmpty();
     }
@@ -1201,12 +1197,12 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         taskDetail.setTaskName(request.getCommandName());
         taskDetail.setParentTaskId("");
         taskDetail.setNextTaskId("");
-        taskDetail.setStepType(AgentStepTypeProcess.JUDGE.getCode());
+        taskDetail.setStepType(AgentStepTypeProcess.JUDGE);
         taskDetail.setBranchCondition("");
         taskDetail.setBranchRoute("");
         taskDetail.setRequestParams(JsonUtils.toJsonStr(request));
         taskDetail.setReturnParams(failureReason == null ? "" : failureReason);
-        taskDetail.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        taskDetail.setExecStatus(AgentExecutionStatusProcess.FAILED);
         taskDetail.setStatus(Status.ON);
         taskDetail.setReserver("");
         taskDetail.setRemark("智能体命令调度失败详情");
@@ -1419,11 +1415,11 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param detail 记忆详情
      * @return 步骤类型
      */
-    private String resolveStepType(AgentMemoryDetail detail) {
+    private AgentStepTypeProcess resolveStepType(AgentMemoryDetail detail) {
 
         // 记忆详情为空时按原子命令记录
-        if (detail == null || detail.getStepType() == null || detail.getStepType().isBlank()) {
-            return AgentStepTypeProcess.ATOMIC_COMMAND.getCode();
+        if (detail == null || detail.getStepType() == null || ObjUtil.isEmpty(detail.getStepType())) {
+            return AgentStepTypeProcess.ATOMIC_COMMAND;
         }
         return detail.getStepType();
     }
@@ -1464,13 +1460,13 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param success 是否成功
      * @return 执行状态
      */
-    private String resolveDetailStatus(Boolean success) {
+    private AgentExecutionStatusProcess resolveDetailStatus(Boolean success) {
 
         // 执行响应不为成功时统一标记失败
         if (!Boolean.TRUE.equals(success)) {
-            return AgentExecutionStatusProcess.FAILED.getCode();
+            return AgentExecutionStatusProcess.FAILED;
         }
-        return AgentExecutionStatusProcess.SUCCESS.getCode();
+        return AgentExecutionStatusProcess.SUCCESS;
     }
 
     /**
@@ -1481,7 +1477,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      */
     private void markTaskSuccess(Task task, String responseContent) {
         task.setReturnParams(responseContent);
-        task.setExecStatus(AgentExecutionStatusProcess.SUCCESS.getCode());
+        task.setExecStatus(AgentExecutionStatusProcess.SUCCESS);
         task.setFailureReason("");
         taskView.updateById(task);
     }
@@ -1493,7 +1489,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param failureReason 失败原因
      */
     private void markTaskFailed(Task task, String failureReason) {
-        task.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        task.setExecStatus(AgentExecutionStatusProcess.FAILED);
         task.setFailureReason(failureReason);
         taskView.updateById(task);
     }
@@ -1551,7 +1547,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private CommandDispatchResponse buildSuccessResponse(Task task, String responseContent) {
         CommandDispatchResponse response = new CommandDispatchResponse();
         response.setTaskId(task.getId());
-        response.setExecStatus(AgentExecutionStatusProcess.SUCCESS.getCode());
+        response.setExecStatus(AgentExecutionStatusProcess.SUCCESS);
         response.setResponseContent(responseContent);
         response.setFailureReason("");
         fillResponseRuntimeSnapshot(response, task);
@@ -1568,7 +1564,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private CommandDispatchResponse buildFailedResponse(Task task, String failureReason) {
         CommandDispatchResponse response = new CommandDispatchResponse();
         response.setTaskId(task.getId());
-        response.setExecStatus(AgentExecutionStatusProcess.FAILED.getCode());
+        response.setExecStatus(AgentExecutionStatusProcess.FAILED);
         response.setResponseContent("");
         response.setFailureReason(failureReason);
         fillResponseRuntimeSnapshot(response, task);

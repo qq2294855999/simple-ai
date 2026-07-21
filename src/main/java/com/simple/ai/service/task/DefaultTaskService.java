@@ -1,31 +1,21 @@
 package com.simple.ai.service.task;
 
-import java.util.Date;
-
-import com.simple.common.core.utils.BeanUtils;
-import com.simple.common.core.utils.AssertUtils;
-import com.simple.common.eventbus.common.service.EventBusService;
-import org.springframework.beans.factory.annotation.Autowired;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import com.simple.ai.common.service.task.TaskService;
-import com.simple.ai.common.entity.task.Task;
+import com.simple.ai.common.copy.task.TaskCopyMapper;
+import com.simple.ai.common.dto.task.*;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
+import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.service.task.TaskService;
+import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.view.task.TaskRepository;
-import com.simple.ai.common.view.agentMemory.AgentMemoryView;
-import com.simple.ai.common.dto.task.PageTaskResponse;
-import com.simple.ai.common.dto.task.InfoTaskResponse;
-import com.simple.ai.common.dto.task.CreateTaskRequest;
-import com.simple.ai.common.dto.task.UpdateTaskRequest;
-import com.simple.ai.common.dto.task.PageTaskRequest;
-import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
-import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
-import com.simple.ai.common.copy.task.TaskCopyMapper;
+import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.eventbus.common.service.EventBusService;
 import com.simple.common.mp.common.enums.Status;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -83,7 +73,7 @@ class DefaultTaskService implements TaskService {
         var entity = copy.toEntity(createRequest);
         entity.setAgentId(memory.getAgentId());
         entity.setStatus(Status.ON);
-        entity.setExecStatus("WAITING");
+        entity.setExecStatus(AgentExecutionStatusProcess.WAITING);
         taskView.save(entity);
         return entity.getId();
     }

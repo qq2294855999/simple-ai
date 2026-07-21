@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.agentMemoryDetail;
 
+import com.simple.ai.common.enums.AgentStepTypeProcess;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
@@ -25,7 +26,7 @@ public class CreateAgentMemoryDetailRequest {
 
     @Schema(description = "Step type")
     @NotEmpty(message = "Step type cannot be empty")
-    private String stepType;
+    private AgentStepTypeProcess stepType;
 
     @Schema(description = "Execution content")
     @NotEmpty(message = "Execution content cannot be empty")

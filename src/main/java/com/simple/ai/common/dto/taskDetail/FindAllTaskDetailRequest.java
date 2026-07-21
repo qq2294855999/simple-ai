@@ -1,13 +1,12 @@
 package com.simple.ai.common.dto.taskDetail;
 
-import java.util.Date;
-
-import com.simple.common.mp.page.PageBase;
-import io.swagger.v3.oas.annotations.media.Schema;
-import com.simple.common.mp.common.enums.DeleteState;
+import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.common.mp.common.enums.Status;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
+
+import java.util.Date;
 
 @Data
 @Accessors(chain = true)
@@ -45,7 +44,7 @@ public class FindAllTaskDetailRequest {
     private String returnParams;
 
     @Schema(description = "执行状态")
-    private String execStatus;
+    private AgentExecutionStatusProcess execStatus;
 
     @Schema(description = "创建时间")
     private Date createTime;
