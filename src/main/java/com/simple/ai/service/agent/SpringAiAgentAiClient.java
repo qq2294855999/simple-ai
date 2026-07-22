@@ -8,10 +8,12 @@ import com.simple.ai.service.aiModel.AiModelChatClientFactory;
 import com.simple.ai.service.aiModel.AiModelRoutingService;
 import com.simple.common.core.utils.AssertUtils;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -27,6 +29,9 @@ class SpringAiAgentAiClient implements AgentAiClient {
 
     @Autowired
     private AiModelChatClientFactory aiModelChatClientFactory;
+
+    @Autowired
+    private List<ToolCallback> toolCallbacks;
 
     @Override
     public AgentAiResponse chat(AgentAiRequest request) {
@@ -93,9 +98,11 @@ class SpringAiAgentAiClient implements AgentAiClient {
      */
     private String callSpringAi(ChatClient chatClient, AgentAiRequest request) {
         String userContent = buildUserContent(request);
-        return chatClient.prompt()
-                .user(userContent)
-                .call()
+        // 注册工具回调，让 AI 在对话中自主调用工具完成数据操作
+        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
+        ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
+        ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks);
+        return toolSpec.call()
                 .content();
     }
 
@@ -114,7 +121,9 @@ class SpringAiAgentAiClient implements AgentAiClient {
         // 构建 Spring AI 流式请求，保留原生 token 输出能力
         ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
         ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
-        ChatClient.StreamResponseSpec streamSpec = userSpec.stream();
+        // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
+        ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks);
+        ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
         Flux<String> contentFlux = streamSpec.content();
 
         // 消费模型输出片段，同时聚合完整响应用于任务最终落库

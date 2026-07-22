@@ -1,31 +1,48 @@
 package com.simple.ai.service.command;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simple.ai.common.dto.agentClient.CreateAgentClientRequest;
+import com.simple.ai.common.dto.agentClient.InfoAgentClientResponse;
 import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
+import com.simple.ai.common.dto.agentDefinition.UpdateAgentDefinitionRequest;
+import com.simple.ai.common.dto.agentExecutor.CreateAgentExecutorRequest;
 import com.simple.ai.common.dto.agentMemory.CreateAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.UpdateAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemoryVersion.CreateAgentMemoryVersionRequest;
 import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.UpdateAgentSkillRequest;
+import com.simple.ai.common.dto.atomicCommand.CreateAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.UpdateAtomicCommandRequest;
 import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
 import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
+import com.simple.ai.common.service.agentClient.AgentClientService;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
+import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
 import com.simple.ai.common.service.agentMemory.AgentMemoryService;
+import com.simple.ai.common.service.agentMemoryVersion.AgentMemoryVersionService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
+import com.simple.ai.common.service.atomicCommand.AtomicCommandService;
 import com.simple.ai.common.service.command.AtomicCommandExecutor;
+import com.simple.common.auth.client.util.LoginUserUtils;
 import com.simple.common.core.utils.AssertUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simple.common.core.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
  * 写入类原子命令执行器。
  *
- * <p>支持白名单内的本地写入操作：创建记忆、规则、技能、智能体定义。
+ * <p>支持白名单内的本地写入操作：创建/更新/删除 记忆、规则、技能、智能体定义、原子命令、执行器、客户端、记忆版本。
  * 非白名单写入命令仍按安全策略阻断。</p>
  *
  * @author qty
@@ -80,6 +97,76 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
      */
     private static final String CREATE_AGENT_KEY = "创建智能体";
 
+    /**
+     * 创建原子命令关键字
+     */
+    private static final String CREATE_COMMAND_KEY = "创建原子命令";
+
+    /**
+     * 创建执行器关键字
+     */
+    private static final String CREATE_EXECUTOR_KEY = "创建执行器";
+
+    /**
+     * 创建客户端关键字
+     */
+    private static final String CREATE_CLIENT_KEY = "创建客户端";
+
+    /**
+     * 创建记忆版本关键字
+     */
+    private static final String CREATE_MEMORY_VERSION_KEY = "创建记忆版本";
+
+    /**
+     * 更新记忆关键字
+     */
+    private static final String UPDATE_MEMORY_KEY = "更新记忆";
+
+    /**
+     * 更新规则关键字
+     */
+    private static final String UPDATE_RULE_KEY = "更新规则";
+
+    /**
+     * 更新技能关键字
+     */
+    private static final String UPDATE_SKILL_KEY = "更新技能";
+
+    /**
+     * 更新智能体关键字
+     */
+    private static final String UPDATE_AGENT_KEY = "更新智能体";
+
+    /**
+     * 更新原子命令关键字
+     */
+    private static final String UPDATE_COMMAND_KEY = "更新原子命令";
+
+    /**
+     * 删除记忆关键字
+     */
+    private static final String DELETE_MEMORY_KEY = "删除记忆";
+
+    /**
+     * 删除规则关键字
+     */
+    private static final String DELETE_RULE_KEY = "删除规则";
+
+    /**
+     * 删除技能关键字
+     */
+    private static final String DELETE_SKILL_KEY = "删除技能";
+
+    /**
+     * 删除智能体关键字
+     */
+    private static final String DELETE_AGENT_KEY = "删除智能体";
+
+    /**
+     * 删除原子命令关键字
+     */
+    private static final String DELETE_COMMAND_KEY = "删除原子命令";
+
     @Autowired
     private AgentMemoryService agentMemoryService;
 
@@ -91,6 +178,18 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
 
     @Autowired
     private AgentDefinitionService agentDefinitionService;
+
+    @Autowired
+    private AtomicCommandService atomicCommandService;
+
+    @Autowired
+    private AgentExecutorService agentExecutorService;
+
+    @Autowired
+    private AgentClientService agentClientService;
+
+    @Autowired
+    private AgentMemoryVersionService agentMemoryVersionService;
 
     @Override
     public boolean supports(AtomicCommandInvokeRequest request) {
@@ -119,13 +218,22 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
             return buildBlockedWriteResponse(request, "无法解析写入命令参数，命令内容需为JSON格式");
         }
 
-        // 根据写入类型分发到对应创建方法
+        // 根据写入类型分发到对应方法
         String writeType = (String) writeParams.getOrDefault("type", "");
+
+        // 根据角色决定分发到 CREATE / UPDATE / DELETE
+        String role = request.getAtomicCommandRole();
+        if (isUpdateRole(role)) {
+            return dispatchUpdate(request, writeType, writeParams);
+        }
+        if (isDeleteRole(role)) {
+            return dispatchDelete(request, writeType, writeParams);
+        }
         return dispatchWrite(request, writeType, writeParams);
     }
 
     /**
-     * 根据写入类型分发执行。
+     * 根据写入类型分发执行创建操作。
      *
      * @param request 原子命令调用请求
      * @param writeType 写入类型
@@ -147,12 +255,94 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
             if (CREATE_AGENT_KEY.equals(writeType)) {
                 return handleCreateAgent(request, writeParams);
             }
+            if (CREATE_COMMAND_KEY.equals(writeType)) {
+                return handleCreateAtomicCommand(request, writeParams);
+            }
+            if (CREATE_EXECUTOR_KEY.equals(writeType)) {
+                return handleCreateExecutor(request, writeParams);
+            }
+            if (CREATE_CLIENT_KEY.equals(writeType)) {
+                return handleCreateClient(request, writeParams);
+            }
+            if (CREATE_MEMORY_VERSION_KEY.equals(writeType)) {
+                return handleCreateMemoryVersion(request, writeParams);
+            }
 
             // type 不在白名单内则阻断
             return buildBlockedWriteResponse(request, "写入类型[" + writeType + "]不在白名单内");
         } catch (RuntimeException e) {
             log.error("执行写入命令失败 [taskId={}]", request.getTaskId(), e);
             return buildBlockedWriteResponse(request, "写入执行失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据更新类型分发执行更新操作。
+     *
+     * @param request     原子命令调用请求
+     * @param writeType   更新类型
+     * @param writeParams 更新参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse dispatchUpdate(AtomicCommandInvokeRequest request, String writeType, Map<String, Object> writeParams) {
+        try {
+            if (UPDATE_MEMORY_KEY.equals(writeType)) {
+                return handleUpdateMemory(request, writeParams);
+            }
+            if (UPDATE_RULE_KEY.equals(writeType)) {
+                return handleUpdateRule(request, writeParams);
+            }
+            if (UPDATE_SKILL_KEY.equals(writeType)) {
+                return handleUpdateSkill(request, writeParams);
+            }
+            if (UPDATE_AGENT_KEY.equals(writeType)) {
+                return handleUpdateAgent(request, writeParams);
+            }
+            if (UPDATE_COMMAND_KEY.equals(writeType)) {
+                return handleUpdateAtomicCommand(request, writeParams);
+            }
+
+            // type 不在白名单内则阻断
+            return buildBlockedWriteResponse(request, "更新类型[" + writeType + "]不在白名单内");
+        } catch (RuntimeException e) {
+            log.error("执行更新命令失败 [taskId={}]", request.getTaskId(), e);
+            return buildBlockedWriteResponse(request, "更新执行失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据删除类型分发执行删除操作。
+     *
+     * @param request     原子命令调用请求
+     * @param writeType   删除类型
+     * @param writeParams 删除参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse dispatchDelete(AtomicCommandInvokeRequest request, String writeType, Map<String, Object> writeParams) {
+        try {
+            if (DELETE_MEMORY_KEY.equals(writeType)) {
+                return handleDeleteByIds(request, writeType, writeParams, agentMemoryService);
+            }
+            if (DELETE_RULE_KEY.equals(writeType)) {
+                return handleDeleteByIds(request, writeType, writeParams, agentRuleService);
+            }
+            if (DELETE_SKILL_KEY.equals(writeType)) {
+                return handleDeleteByIds(request, writeType, writeParams, agentSkillService);
+            }
+            if (DELETE_AGENT_KEY.equals(writeType)) {
+                return handleDeleteByIds(request, writeType, writeParams, agentDefinitionService);
+            }
+            if (DELETE_COMMAND_KEY.equals(writeType)) {
+                return handleDeleteByIds(request, writeType, writeParams, atomicCommandService);
+            }
+
+            // type 不在白名单内则阻断
+            return buildBlockedWriteResponse(request, "删除类型[" + writeType + "]不在白名单内");
+        } catch (RuntimeException e) {
+            log.error("执行删除命令失败 [taskId={}]", request.getTaskId(), e);
+            return buildBlockedWriteResponse(request, "删除执行失败：" + e.getMessage());
         }
     }
 
@@ -240,6 +430,253 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
     }
 
     /**
+     * 处理创建原子命令。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 写入参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleCreateAtomicCommand(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        CreateAtomicCommandRequest createRequest = new CreateAtomicCommandRequest();
+        createRequest.setName((String) writeParams.get("name"));
+        createRequest.setCommand((String) writeParams.get("command"));
+        createRequest.setRole((String) writeParams.get("role"));
+        createRequest.setSkillId((String) writeParams.getOrDefault("skillId", null));
+
+        // 备注默认为"AI对话创建"
+        createRequest.setRemark((String) writeParams.getOrDefault("remark", "AI对话创建"));
+
+        // 调用原子命令服务保存
+        String commandId = atomicCommandService.save(createRequest);
+        return buildSuccessResponse(request, "原子命令创建成功", commandId);
+    }
+
+    /**
+     * 处理创建执行器。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 写入参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleCreateExecutor(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        CreateAgentExecutorRequest createRequest = new CreateAgentExecutorRequest();
+        createRequest.setExecutorCode((String) writeParams.get("executorCode"));
+        createRequest.setExecutorName((String) writeParams.get("executorName"));
+        createRequest.setDescription((String) writeParams.getOrDefault("description", ""));
+        createRequest.setStatus((String) writeParams.getOrDefault("status", null));
+        createRequest.setRemark((String) writeParams.getOrDefault("remark", "AI对话创建"));
+
+        // 调用执行器服务保存
+        String executorId = agentExecutorService.save(createRequest);
+        return buildSuccessResponse(request, "执行器创建成功", executorId);
+    }
+
+    /**
+     * 处理创建客户端。
+     * <p>客户端创建需要用户ID，从当前登录上下文获取。</p>
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 写入参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleCreateClient(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        CreateAgentClientRequest createRequest = new CreateAgentClientRequest();
+        createRequest.setExecutorId((String) writeParams.get("executorId"));
+        createRequest.setClientName((String) writeParams.get("clientName"));
+        createRequest.setRemark((String) writeParams.getOrDefault("remark", "AI对话创建"));
+
+        // 过期时间配置（可选）
+        Object expireDuration = writeParams.get("expireDuration");
+        if (expireDuration instanceof Integer) {
+            createRequest.setExpireDuration((Integer) expireDuration);
+        }
+        createRequest.setExpireUnit((String) writeParams.getOrDefault("expireUnit", null));
+
+        // 从当前登录上下文获取用户ID
+        String userId = LoginUserUtils.getUserTemporary().getUserId();
+        AssertUtils.notEmpty(userId, "当前登录用户身份为空");
+
+        // 调用客户端服务保存，返回含密钥的详情
+        InfoAgentClientResponse clientInfo = agentClientService.save(createRequest, userId);
+        return buildSuccessResponse(request, "客户端创建成功", clientInfo.getId());
+    }
+
+    /**
+     * 处理创建记忆版本。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 写入参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleCreateMemoryVersion(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        CreateAgentMemoryVersionRequest createRequest = new CreateAgentMemoryVersionRequest();
+        createRequest.setMemoryId((String) writeParams.get("memoryId"));
+        createRequest.setVersionNo((Integer) writeParams.get("versionNo"));
+        createRequest.setVersionStatus((String) writeParams.getOrDefault("versionStatus", null));
+        createRequest.setSourceTaskId((String) writeParams.getOrDefault("sourceTaskId", request.getTaskId()));
+        createRequest.setSuccessAssertion((String) writeParams.getOrDefault("successAssertion", null));
+        createRequest.setSummary((String) writeParams.getOrDefault("summary", null));
+        createRequest.setCreateReason((String) writeParams.getOrDefault("createReason", "AI对话创建"));
+
+        // 调用记忆版本服务保存
+        String versionId = agentMemoryVersionService.save(createRequest);
+        return buildSuccessResponse(request, "记忆版本创建成功", versionId);
+    }
+
+    /**
+     * 处理更新记忆。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 更新参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleUpdateMemory(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        UpdateAgentMemoryRequest updateRequest = new UpdateAgentMemoryRequest();
+        updateRequest.setId((String) writeParams.get("id"));
+        updateRequest.setAgentId((String) writeParams.get("agentId"));
+        updateRequest.setMemoryName((String) writeParams.get("memoryName"));
+        updateRequest.setStepName((String) writeParams.get("stepName"));
+        updateRequest.setTriggerCondition((String) writeParams.get("triggerCondition"));
+        updateRequest.setTriggerAction((String) writeParams.get("triggerAction"));
+        updateRequest.setRemark((String) writeParams.getOrDefault("remark", null));
+
+        // 调用记忆服务更新
+        String memoryId = agentMemoryService.updateById(updateRequest);
+        return buildSuccessResponse(request, "记忆更新成功", memoryId);
+    }
+
+    /**
+     * 处理更新规则。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 更新参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleUpdateRule(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        UpdateAgentRuleRequest updateRequest = new UpdateAgentRuleRequest();
+        updateRequest.setId((String) writeParams.get("id"));
+        updateRequest.setAgentId((String) writeParams.get("agentId"));
+        updateRequest.setDefinitionDesc((String) writeParams.get("definitionDesc"));
+        updateRequest.setTriggerCondition((String) writeParams.get("triggerCondition"));
+        updateRequest.setTriggerAction((String) writeParams.get("triggerAction"));
+        updateRequest.setRemark((String) writeParams.getOrDefault("remark", null));
+
+        // 调用规则服务更新
+        String ruleId = agentRuleService.updateById(updateRequest);
+        return buildSuccessResponse(request, "规则更新成功", ruleId);
+    }
+
+    /**
+     * 处理更新技能。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 更新参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleUpdateSkill(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        UpdateAgentSkillRequest updateRequest = new UpdateAgentSkillRequest();
+        updateRequest.setId((String) writeParams.get("id"));
+        updateRequest.setAgentId((String) writeParams.get("agentId"));
+        updateRequest.setDefinitionDesc((String) writeParams.get("definitionDesc"));
+        updateRequest.setExecContent((String) writeParams.get("execContent"));
+        updateRequest.setReturnDataFormat((String) writeParams.get("returnDataFormat"));
+        updateRequest.setRemark((String) writeParams.getOrDefault("remark", null));
+
+        // 调用技能服务更新
+        String skillId = agentSkillService.updateById(updateRequest);
+        return buildSuccessResponse(request, "技能更新成功", skillId);
+    }
+
+    /**
+     * 处理更新智能体定义。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 更新参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleUpdateAgent(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        UpdateAgentDefinitionRequest updateRequest = new UpdateAgentDefinitionRequest();
+        updateRequest.setId((String) writeParams.get("id"));
+        updateRequest.setName((String) writeParams.get("name"));
+        updateRequest.setDefinitionDesc((String) writeParams.get("definitionDesc"));
+        updateRequest.setFirstPrinciple((String) writeParams.getOrDefault("firstPrinciple", null));
+        updateRequest.setSecondRule((String) writeParams.getOrDefault("secondRule", null));
+        updateRequest.setThirdSkill((String) writeParams.getOrDefault("thirdSkill", null));
+        updateRequest.setDefaultModelId((String) writeParams.getOrDefault("defaultModelId", null));
+        updateRequest.setRemark((String) writeParams.getOrDefault("remark", null));
+
+        // 调用智能体定义服务更新
+        String agentId = agentDefinitionService.updateById(updateRequest);
+        return buildSuccessResponse(request, "智能体更新成功", agentId);
+    }
+
+    /**
+     * 处理更新原子命令。
+     *
+     * @param request     原子命令调用请求
+     * @param writeParams 更新参数
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleUpdateAtomicCommand(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
+        UpdateAtomicCommandRequest updateRequest = new UpdateAtomicCommandRequest();
+        updateRequest.setId((String) writeParams.get("id"));
+        updateRequest.setName((String) writeParams.get("name"));
+        updateRequest.setCommand((String) writeParams.get("command"));
+        updateRequest.setRole((String) writeParams.get("role"));
+        updateRequest.setSkillId((String) writeParams.getOrDefault("skillId", null));
+        updateRequest.setRemark((String) writeParams.getOrDefault("remark", null));
+
+        // 调用原子命令服务更新
+        String commandId = atomicCommandService.updateById(updateRequest);
+        return buildSuccessResponse(request, "原子命令更新成功", commandId);
+    }
+
+    /**
+     * 统一处理按ID列表删除。
+     * <p>各 Service 的 deleteByIds 方法签名一致，统一分发。</p>
+     *
+     * @param request      原子命令调用请求
+     * @param targetType   删除目标类型
+     * @param deleteParams 删除参数（含 ids 字段，逗号分隔）
+     * @param service      目标服务对象，需提供 deleteByIds 方法
+     * @return 原子命令调用响应
+     * @author qty
+     */
+    private AtomicCommandInvokeResponse handleDeleteByIds(AtomicCommandInvokeRequest request, String targetType, Map<String, Object> deleteParams, Object service) {
+        // 从参数中提取逗号分隔的ID列表
+        String idsStr = (String) deleteParams.get("ids");
+        AssertUtils.notEmpty(idsStr, "删除参数中ids不能为空");
+
+        List<String> ids = Arrays.asList(idsStr.split(","));
+
+        // 按目标类型分发到对应服务执行删除
+        if (service instanceof AgentMemoryService) {
+            ((AgentMemoryService) service).deleteByIds(ids);
+        } else if (service instanceof AgentRuleService) {
+            ((AgentRuleService) service).deleteByIds(ids);
+        } else if (service instanceof AgentSkillService) {
+            ((AgentSkillService) service).deleteByIds(ids);
+        } else if (service instanceof AgentDefinitionService) {
+            ((AgentDefinitionService) service).deleteByIds(ids);
+        } else if (service instanceof AtomicCommandService) {
+            ((AtomicCommandService) service).deleteByIds(ids);
+        } else {
+            return buildBlockedWriteResponse(request, "不支持的删除服务类型：" + service.getClass().getSimpleName());
+        }
+
+        return buildSuccessResponse(request, targetType + "成功", idsStr);
+    }
+
+    /**
      * 从命令内容解析写入参数。
      *
      * @param commandContent 命令内容
@@ -275,8 +712,37 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
         return upperText.contains(WRITE_ROLE)
                 || upperText.contains(SAVE_ROLE)
                 || upperText.contains(UPDATE_ROLE)
-                || upperText.contains(DELETE_ROLE)
-                || text.contains(WRITE_NAME);
+                || upperText.contains(DELETE_ROLE) || text.contains(WRITE_NAME);
+    }
+
+    /**
+     * 判断角色是否为更新类。
+     *
+     * @param role 角色文本
+     * @return 是否更新类角色
+     */
+    private boolean isUpdateRole(String role) {
+
+        // 角色为空时不是更新类
+        if (role == null || role.isBlank()) {
+            return false;
+        }
+        return role.toUpperCase(Locale.ROOT).contains(UPDATE_ROLE);
+    }
+
+    /**
+     * 判断角色是否为删除类。
+     *
+     * @param role 角色文本
+     * @return 是否删除类角色
+     */
+    private boolean isDeleteRole(String role) {
+
+        // 角色为空时不是删除类
+        if (role == null || role.isBlank()) {
+            return false;
+        }
+        return role.toUpperCase(Locale.ROOT).contains(DELETE_ROLE);
     }
 
     /**

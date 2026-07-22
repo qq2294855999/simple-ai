@@ -1,0 +1,15 @@
+Total messages: 12 (Errors: 8, Warnings: 1)
+Returning 8 messages for level "error"
+
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5175/api/sys/agent-definition/aggregate-list?current=1&size=10:0
+[ERROR] Warning: [antd: notification] Static function can not consume context like dynamic theme. Please use 'App' component instead. @ http://localhost:5175/node_modules/.vite/deps/antd.js?v=e71d8bb7:1276
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5175/api/sys/agent-definition/aggregate-list?current=1&size=10:0
+[ERROR] Warning: [antd: Notification] `message` is deprecated. Please use `title` instead. @ http://localhost:5175/node_modules/.vite/deps/antd.js?v=e71d8bb7:1276
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5175/api/sys/ai-model/list:0
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5175/api/sys/ai-model/list:0
+AxiosError: Request failed with status code 500
+    at settle (http://localhost:5175/node_modules/.vite/deps/axios.js?v=e71d8bb7:1838:14)
+    at XMLHttpRequest.onloadend (http://localhost:5175/node_modules/.vite/deps/axios.js?v=e71d8bb7:2231:4)
+AxiosError: Request failed with status code 500
+    at settle (http://localhost:5175/node_modules/.vite/deps/axios.js?v=e71d8bb7:1838:14)
+    at XMLHttpRequest.onloadend (http://localhost:5175/node_modules/.vite/deps/axios.js?v=e71d8bb7:2231:4)

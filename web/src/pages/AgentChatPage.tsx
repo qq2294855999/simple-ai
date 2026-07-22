@@ -17,7 +17,7 @@ import type {AgentDefinitionPageDto} from "../dto/agentDefinition/AgentDefinitio
 import type {AiModelResponseDto} from "../dto/aiModel/AiModelDto";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
 import {ToastUtil} from "../utils/ToastUtil";
-import {appendAssistantToken, isAgentChatMessageEvent, replaceFinalMessage} from "../utils/agentChatStreamUtil";
+import {appendAssistantToken, isAgentChatMessageEvent, replaceFinalMessage, stripProtocolJson} from "../utils/agentChatStreamUtil";
 
 const maxTimelineEventCount = 300;
 const maxSessionNameLength = 14;
@@ -496,8 +496,8 @@ export function AgentChatPage() {
                   )}
                 </div>
                 {message.contentFormat === "RESTRICTED_MARKDOWN"
-                  ? <RestrictedMarkdownComponent content={message.content} />
-                  : <Typography.Paragraph style={{ whiteSpace: "pre-wrap", marginBottom: 0 }}>{message.content}</Typography.Paragraph>}
+                    ? <RestrictedMarkdownComponent content={stripProtocolJson(message.content)}/>
+                    : <Typography.Paragraph style={{whiteSpace: "pre-wrap", marginBottom: 0}}>{stripProtocolJson(message.content)}</Typography.Paragraph>}
               </div>
             ))}
             {aiThinking && (
