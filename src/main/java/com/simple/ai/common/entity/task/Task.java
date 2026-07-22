@@ -150,8 +150,8 @@ public class Task {
     /**
      * 扩展
      */
-    @TableField(value = "reserver")
-    private String reserver;
+    @TableField(value = "reserve")
+    private String reserve;
 
     /**
      * 备注

@@ -1,31 +1,38 @@
 package com.simple.ai.service.agentChat;
 
-import com.simple.ai.common.dto.agentChat.AgentChatMessageResponse;
-import com.simple.ai.common.dto.agentChat.AgentChatSessionResponse;
-import com.simple.ai.common.dto.agentChat.CreateAgentChatSessionRequest;
-import com.simple.ai.common.dto.agentChat.SendAgentChatMessageRequest;
+import com.simple.ai.common.dto.agentChat.*;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.command.CommandDispatchResponse;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
+import com.simple.ai.common.entity.executionEvent.ExecutionEvent;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentChatMessageRoleProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.service.agentChat.AgentChatService;
+import com.simple.ai.common.service.chatTurn.ChatTurnService;
 import com.simple.ai.common.service.command.CommandDispatchService;
+import com.simple.ai.common.service.executionEvent.AgentMemoryDistiller;
+import com.simple.ai.common.service.executionEvent.ExecutionEventBus;
 import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
 import com.simple.ai.common.view.agentChatSession.AgentChatSessionView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
+import com.simple.ai.common.view.chatTurn.ChatTurnView;
+import com.simple.ai.common.view.executionEvent.ExecutionEventView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
+import com.simple.common.auth.client.util.LoginUserUtils;
+import com.simple.common.core.common.service.lock.LockService;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.mp.common.enums.Status;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -40,6 +47,7 @@ import java.util.stream.Collectors;
  *
  * @author qty
  */
+@Slf4j
 @Service
 class DefaultAgentChatService implements AgentChatService {
 
@@ -96,6 +104,48 @@ class DefaultAgentChatService implements AgentChatService {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    /**
+     * 对话轮次服务，管理每轮对话的轮次记录
+     */
+    @Autowired
+    private ChatTurnService chatTurnService;
+
+    /**
+     * 执行事件总线，将调度进度事件转换为 ExecutionEvent 并持久化
+     */
+    @Autowired
+    private ExecutionEventBus executionEventBus;
+
+    /**
+     * 执行事件视图，用于查询消息关联的执行事件
+     */
+    @Autowired
+    private ExecutionEventView executionEventView;
+
+    /**
+     * 智能体记忆蒸馏器，在每轮对话完成后提炼执行轨迹为记忆证据
+     */
+    @Autowired
+    private AgentMemoryDistiller agentMemoryDistiller;
+
+    /**
+     * 对话轮次视图，用于查询轮次状态
+     */
+    @Autowired
+    private ChatTurnView chatTurnView;
+
+    /**
+     * 分布式锁服务，用于会话级并发控制
+     */
+    @Autowired
+    private LockService lockService;
+
+    /**
+     * Redis 字符串模板，用于幂等键去重
+     */
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
     @Override
     public AgentChatSessionResponse createSession(CreateAgentChatSessionRequest request) {
         AssertUtils.notEmpty(request.getAgentId(), "智能体主键不能为空");
@@ -143,17 +193,149 @@ class DefaultAgentChatService implements AgentChatService {
         AssertUtils.notEmpty(request.getSessionId(), "会话主键不能为空");
         AssertUtils.notEmpty(request.getContent(), "用户消息不能为空");
 
+        // 幂等检查：通过 Redis SETNX 防止断线重连后产生重复消息
+        checkIdempotent(request);
+
+        // 会话级分布式锁：同一会话并发请求排队执行，避免消息序号错乱
+        String lockKey = "chat:session:lock:" + request.getSessionId();
+        lockService.lock(lockKey, () -> sendStreamInternal(request, eventConsumer));
+    }
+
+    /**
+     * 流式发送聊天消息的内部实现，在分布式锁保护下执行。
+     *
+     * @param request       发送消息请求
+     * @param eventConsumer 进度事件消费者
+     */
+    private void sendStreamInternal(SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+
         // 在短事务内锁定会话并持久化用户消息，避免模型执行期间占用数据库锁
         AgentChatSession session = saveUserMessage(request);
+
+        // 创建本轮对话轮次记录
+        String turnId = startChatTurn(session, request);
+
+        // 构建组合消费者：将调度事件同时写入执行轨迹并透传给SSE通道
+        Consumer<CommandDispatchProgressEvent> compositeConsumer = buildCompositeConsumer(turnId, eventConsumer);
 
         // 通知客户端用户消息已被服务端接收
         publishChatEvent(eventConsumer, session.getId(), "MESSAGE_ACCEPTED", "用户消息已保存", "", "", false, "");
 
         // 基于原有命令调度核心执行 AI 与智能体流程
-        CommandDispatchResponse response = dispatchAgentSafely(session, request, eventConsumer);
+        CommandDispatchResponse response = dispatchAgentSafely(session, request, compositeConsumer);
 
         // 在独立短事务内持久化最终消息，保证流式收尾与数据库审计闭环
-        saveFinalMessage(session, response, eventConsumer);
+        String assistantMessageId = saveFinalMessage(session, response, eventConsumer);
+
+        // 完成本轮对话，关联AI回复消息
+        chatTurnService.completeTurn(turnId, assistantMessageId, "");
+
+        // 异步触发记忆蒸馏：收集执行事件并创建记忆证据
+        triggerDistillation(turnId, response.getTaskId(), session.getAgentId(), request.getContent());
+    }
+
+    /**
+     * 幂等检查：通过 Redis SETNX 判断当前请求是否已处理过。
+     * <p>幂等键有效期为5分钟，覆盖正常对话超时窗口。</p>
+     *
+     * @param request 发送消息请求
+     */
+    private void checkIdempotent(SendAgentChatMessageRequest request) {
+        String idempotencyKey = request.getIdempotencyKey();
+
+        // 无幂等键时跳过检查，保持向后兼容
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return;
+        }
+
+        // 使用 Redis SETNX 原子操作判断键是否已存在
+        String redisKey = "chat:idempotent:" + idempotencyKey;
+        Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofMinutes(5));
+
+        // 键已存在说明是重复请求，直接跳过不产生重复消息
+        AssertUtils.isTrue(Boolean.TRUE.equals(acquired), "消息已处理，请勿重复发送");
+    }
+
+    /**
+     * 查询轮次状态，用于断线重连时判断轮次是否已完成。
+     *
+     * @param turnId 轮次主键
+     * @return 轮次状态响应
+     */
+    @Override
+    public AgentChatTurnStatusResponse findTurnStatus(String turnId) {
+        AssertUtils.notEmpty(turnId, "轮次主键不能为空");
+
+        // 查询轮次记录
+        com.simple.ai.common.entity.chatTurn.ChatTurn turn = chatTurnView.findById(turnId);
+        AssertUtils.notEmpty(turn, "轮次[{}]不存在", turnId);
+
+        // 根据是否已关联AI回复消息判断轮次状态
+        String turnStatus = (turn.getAssistantMessageId() != null && !turn.getAssistantMessageId().isBlank()) ? "COMPLETED" : "IN_PROGRESS";
+
+        // 组装响应
+        AgentChatTurnStatusResponse response = new AgentChatTurnStatusResponse();
+        response.setTurnId(turn.getId());
+        response.setSessionId(turn.getSessionId());
+        response.setTurnNumber(turn.getTurnNumber());
+        response.setTurnStatus(turnStatus);
+        response.setAssistantMessageId(turn.getAssistantMessageId());
+        response.setTaskId(turn.getTaskId());
+        return response;
+    }
+
+    /**
+     * 触发记忆蒸馏，将本轮执行轨迹提炼为记忆证据。
+     * <p>蒸馏过程在独立事务中执行，失败不影响主流程。</p>
+     *
+     * @param turnId         对话轮次主键
+     * @param taskId         调度任务主键
+     * @param agentId        智能体主键
+     * @param commandContent 用户命令内容
+     */
+    private void triggerDistillation(String turnId, String taskId, String agentId, String commandContent) {
+
+        // 轮次为空时跳过蒸馏
+        if (turnId == null || turnId.isBlank()) {
+            return;
+        }
+        try {
+            agentMemoryDistiller.distill(turnId, taskId, agentId, commandContent);
+        } catch (RuntimeException e) {
+
+            // 蒸馏失败不影响聊天主流程
+            log.warn("记忆蒸馏失败，turnId={}", turnId, e);
+        }
+    }
+
+    /**
+     * 构建组合事件消费者，在透传事件的同时记录执行轨迹。
+     * <p>MESSAGE_* 等聊天层事件由 ExecutionEventBus 内部白名单过滤，不会误录入执行轨迹。</p>
+     *
+     * @param turnId        对话轮次主键
+     * @param eventConsumer 原始事件消费者（SSE 通道）
+     * @return 组合消费者
+     */
+    private Consumer<CommandDispatchProgressEvent> buildCompositeConsumer(String turnId, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+
+        // 轮次为空时不记录执行轨迹
+        if (turnId == null || turnId.isBlank()) {
+            return eventConsumer;
+        }
+
+        // 组合消费：先记录到执行事件表，再透传给原始消费者
+        return event -> {
+            try {
+                executionEventBus.recordEvent(turnId, "", event);
+            } catch (RuntimeException e) {
+
+                // 执行轨迹落库异常不影响主流程
+                log.warn("执行事件记录失败，turnId={}, eventType={}", turnId, event.getEventType(), e);
+            }
+            if (eventConsumer != null) {
+                eventConsumer.accept(event);
+            }
+        };
     }
 
     @Override
@@ -196,6 +378,26 @@ class DefaultAgentChatService implements AgentChatService {
 
         // 批量查询任务详情
         return taskDetailView.findAllByTaskIds(new ArrayList<>(taskIds));
+    }
+
+    /**
+     * 创建本轮对话轮次记录。
+     * <p>从最近一次保存的用户消息获取消息ID和任务ID，创建对话轮次。</p>
+     *
+     * @param session 会话实体
+     * @param request 发送消息请求
+     * @return 轮次主键
+     */
+    private String startChatTurn(AgentChatSession session, SendAgentChatMessageRequest request) {
+        // 从已保存的用户消息中获取最后一条消息作为本轮用户消息
+        List<AgentChatMessage> messages = agentChatMessageView.findAllBySessionId(session.getId());
+        if (messages.isEmpty()) {
+            return "";
+        }
+        AgentChatMessage userMessage = messages.get(messages.size() - 1);
+        String taskId = userMessage.getTaskId() != null ? userMessage.getTaskId() : "";
+        com.simple.ai.common.entity.chatTurn.ChatTurn turn = chatTurnService.startTurn(session.getId(), userMessage.getId(), taskId);
+        return turn.getId();
     }
 
     /**
@@ -269,8 +471,14 @@ class DefaultAgentChatService implements AgentChatService {
         session.setSessionName("新对话");
         session.setLastMessageAt(new Date());
         session.setStatus(Status.ON);
-        session.setReserver("");
+        session.setReserve("");
         session.setRemark("智能体人机对话会话");
+
+        // 从登录上下文获取当前用户ID并设置会话归属
+        String currentUserId = LoginUserUtils.getUserTemporary().getUserId();
+        AssertUtils.notEmpty(currentUserId, "当前登录用户身份为空");
+        session.setCreateUserId(currentUserId);
+        session.setUserId(currentUserId);
         return session;
     }
 
@@ -335,6 +543,10 @@ class DefaultAgentChatService implements AgentChatService {
         dispatchRequest.setSessionId(session.getId());
         dispatchRequest.setModelId(request.getModelId());
         dispatchRequest.setClientId(request.getClientId());
+
+        // 从登录上下文获取当前用户ID并注入调度请求，确保AI按用户过滤资产
+        String currentUserId = LoginUserUtils.getUserTemporary().getUserId();
+        dispatchRequest.setUserId(currentUserId);
         return commandDispatchService.dispatchStream(dispatchRequest, eventConsumer);
     }
 
@@ -371,8 +583,8 @@ class DefaultAgentChatService implements AgentChatService {
      * @param response      调度响应
      * @param eventConsumer 事件消费者
      */
-    private void saveFinalMessage(AgentChatSession session, CommandDispatchResponse response, Consumer<CommandDispatchProgressEvent> eventConsumer) {
-        transactionTemplate.executeWithoutResult(status -> {
+    private String saveFinalMessage(AgentChatSession session, CommandDispatchResponse response, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+        return transactionTemplate.execute(status -> {
 
             // 重新锁定会话并分配最终消息序号
             AgentChatSession lockedSession = agentChatSessionView.findByIdForUpdate(session.getId());
@@ -384,6 +596,7 @@ class DefaultAgentChatService implements AgentChatService {
             // 更新会话最后消息时间
             updateSessionAfterMessage(lockedSession, message.getContent());
             publishFinalEvent(eventConsumer, lockedSession.getId(), message, response);
+            return message.getId();
         });
     }
 
@@ -415,7 +628,7 @@ class DefaultAgentChatService implements AgentChatService {
         message.setContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT);
         message.setSequenceNo(sequenceNo);
         message.setStatus(Status.ON);
-        message.setReserver("");
+        message.setReserve("");
         message.setRemark("用户聊天消息");
         return message;
     }
@@ -443,7 +656,7 @@ class DefaultAgentChatService implements AgentChatService {
         message.setModelId(response.getModelId());
         message.setModelCode(response.getModelCode());
         message.setStatus(Status.ON);
-        message.setReserver("");
+        message.setReserve("");
         message.setRemark("智能体最终回复消息");
         return message;
     }
@@ -613,7 +826,7 @@ class DefaultAgentChatService implements AgentChatService {
     }
 
     /**
-     * 构建消息响应列表。
+     * 构建消息响应列表，包含执行事件。
      *
      * @param messages 消息列表
      * @return 消息响应列表
@@ -621,11 +834,23 @@ class DefaultAgentChatService implements AgentChatService {
     private List<AgentChatMessageResponse> buildMessageResponses(List<AgentChatMessage> messages) {
         List<AgentChatMessageResponse> responses = new ArrayList<>();
 
-        // 保持数据库已排序的会话消息顺序
+        // 收集所有非空任务ID用于批量查询执行事件
+        List<String> taskIds = new ArrayList<>();
+        for (AgentChatMessage message : messages) {
+            if (message.getTaskId() != null && !message.getTaskId().isBlank()) {
+                taskIds.add(message.getTaskId());
+            }
+        }
+
+        // 批量加载执行事件并按任务ID分组
+        Map<String, List<ExecutionEvent>> eventsByTaskId = loadExecutionEventsByTaskIds(taskIds);
+
+        // 保持数据库已排序的会话消息顺序，组装响应
         for (AgentChatMessage message : messages) {
             AgentChatMessageResponse response = new AgentChatMessageResponse();
             response.setId(message.getId());
             response.setTaskId(message.getTaskId());
+            response.setTurnId(message.getTurnId());
             response.setRole(message.getRole());
             response.setContent(message.getContent());
             response.setContentFormat(message.getContentFormat());
@@ -633,8 +858,70 @@ class DefaultAgentChatService implements AgentChatService {
             response.setProviderName(message.getProviderName());
             response.setModelCode(message.getModelCode());
             response.setCreateTime(message.getCreateTime());
+
+            // 填充该消息关联的执行事件
+            String taskId = message.getTaskId();
+            if (taskId != null && !taskId.isBlank()) {
+                List<ExecutionEvent> events = eventsByTaskId.getOrDefault(taskId, Collections.emptyList());
+                response.setExecutionEvents(mapToExecutionEventDtos(events));
+            }
             responses.add(response);
         }
         return responses;
+    }
+
+    /**
+     * 按任务主键批量加载执行事件，并按任务ID分组。
+     *
+     * @param taskIds 任务主键列表
+     * @return 任务ID到执行事件列表的映射
+     */
+    private Map<String, List<ExecutionEvent>> loadExecutionEventsByTaskIds(List<String> taskIds) {
+
+        // 无任务时返回空映射
+        if (taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // 批量查询执行事件
+        List<ExecutionEvent> allEvents = executionEventView.findAllByTaskIds(taskIds);
+        Map<String, List<ExecutionEvent>> eventsByTaskId = new HashMap<>();
+
+        // 按任务ID分组
+        for (ExecutionEvent event : allEvents) {
+            String taskId = event.getTaskId();
+            if (taskId != null && !taskId.isBlank()) {
+                eventsByTaskId.computeIfAbsent(taskId, k -> new ArrayList<>()).add(event);
+            }
+        }
+        return eventsByTaskId;
+    }
+
+    /**
+     * 将 ExecutionEvent 实体列表映射为前端 DTO 列表。
+     *
+     * @param events 执行事件列表
+     * @return 前端 DTO 列表
+     */
+    private List<AgentChatExecutionEventDto> mapToExecutionEventDtos(List<ExecutionEvent> events) {
+        List<AgentChatExecutionEventDto> dtos = new ArrayList<>();
+
+        // 遍历事件列表转换字段
+        for (ExecutionEvent event : events) {
+            AgentChatExecutionEventDto dto = new AgentChatExecutionEventDto();
+            dto.setId(event.getId());
+            dto.setEventType(event.getEventType());
+            dto.setStepName(event.getStepName());
+            dto.setCommandName(event.getCommandName());
+            dto.setResponseContent(event.getResponseContent());
+            dto.setFailureReason(event.getFailureReason());
+            dto.setSequenceNo(event.getSequenceNo());
+            dto.setStartedAt(event.getStartedAt());
+            dto.setFinishedAt(event.getFinishedAt());
+            dto.setProviderName(event.getProviderName());
+            dto.setModelCode(event.getModelCode());
+            dtos.add(dto);
+        }
+        return dtos;
     }
 }

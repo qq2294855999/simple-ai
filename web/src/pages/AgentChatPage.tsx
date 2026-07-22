@@ -1,5 +1,5 @@
-import {Button, Card, Checkbox, Empty, Input, List, Popconfirm, Select, Space, Spin, Tag, Timeline, Tooltip, Typography} from "antd";
-import {CloseOutlined, DeleteOutlined, LoadingOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined} from "@ant-design/icons";
+import {Button, Card, Checkbox, Collapse, Empty, Input, List, Popconfirm, Select, Space, Spin, Tag, Tooltip, Typography} from "antd";
+import {CloseOutlined, DeleteOutlined, LoadingOutlined, PlusOutlined, RightOutlined, RobotOutlined, SendOutlined, UserOutlined} from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AgentChatApi} from "../api/agentChatApi";
 import {AgentClientApi} from "../api/agentClientApi";
@@ -7,19 +7,18 @@ import {AgentDefinitionApi} from "../api/agentDefinitionApi";
 import {AiModelApi} from "../api/aiModelApi";
 import {RestrictedMarkdownComponent} from "../components/agentChat/RestrictedMarkdownComponent";
 import type {
+    AgentChatExecutionEventDto,
     AgentChatMessageDto,
     AgentChatProgressEventDto,
     AgentChatSessionDto,
-    AgentChatTrajectoryDto,
     SendAgentChatMessageRequestDto
 } from "../dto/agentChat/AgentChatDto";
 import type {AgentDefinitionPageDto} from "../dto/agentDefinition/AgentDefinitionDto";
 import type {AiModelResponseDto} from "../dto/aiModel/AiModelDto";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
 import {ToastUtil} from "../utils/ToastUtil";
-import {appendAssistantToken, isAgentChatMessageEvent, replaceFinalMessage, stripProtocolJson} from "../utils/agentChatStreamUtil";
+import {appendAssistantToken, replaceFinalMessage, stripProtocolJson} from "../utils/agentChatStreamUtil";
 
-const maxTimelineEventCount = 300;
 const maxSessionNameLength = 14;
 const messagePageSize = 50;
 
@@ -46,8 +45,6 @@ export function AgentChatPage() {
   const [sessions, setSessions] = useState<AgentChatSessionDto[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>();
   const [messages, setMessages] = useState<AgentChatMessageDto[]>([]);
-  const [events, setEvents] = useState<AgentChatProgressEventDto[]>([]);
-  const [trajectories, setTrajectories] = useState<AgentChatTrajectoryDto[]>([]);
   const [input, setInput] = useState("");
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
   const [showBatchSelect, setShowBatchSelect] = useState(false);
@@ -56,7 +53,6 @@ export function AgentChatPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const streamAbortControllerRef = useRef<AbortController | undefined>(undefined);
   const messageListRef = useRef<HTMLDivElement>(null);
-  const timelineBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const prevScrollHeightRef = useRef(0);
 
@@ -65,15 +61,6 @@ export function AgentChatPage() {
     requestAnimationFrame(() => {
       if (messageListRef.current) {
         messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-      }
-    });
-  }, []);
-
-  /** 执行轨迹自动滚动到最新。 */
-  const scrollTimelineToEnd = useCallback(() => {
-    requestAnimationFrame(() => {
-      if (timelineBodyRef.current) {
-        timelineBodyRef.current.scrollTop = timelineBodyRef.current.scrollHeight;
       }
     });
   }, []);
@@ -148,16 +135,6 @@ export function AgentChatPage() {
     prevScrollHeightRef.current = 0;
   }, [messages, loadingMore]);
 
-  /** 加载会话的历史执行轨迹。 */
-  const loadTrajectories = useCallback(async (sessionId: string) => {
-    try {
-      const result = await AgentChatApi.findTrajectory(sessionId);
-      setTrajectories(result);
-    } catch {
-      setTrajectories([]);
-    }
-  }, []);
-
   useEffect(() => {
     void loadAgents().catch(() => setAgents([]));
       void loadClients().catch(() => setClients([]));
@@ -166,8 +143,6 @@ export function AgentChatPage() {
   useEffect(() => {
     setSessions([]);
     setMessages([]);
-    setEvents([]);
-    setTrajectories([]);
     setSelectedSessionId(undefined);
     setSelectedSessionIds([]);
     setModels([]);
@@ -185,22 +160,12 @@ export function AgentChatPage() {
     scrollMessagesToBottom();
   }, [messages, aiThinking, scrollMessagesToBottom]);
 
-  // 执行轨迹事件变化时自动滚动到最新
-  useEffect(() => {
-    scrollTimelineToEnd();
-  }, [events, trajectories, scrollTimelineToEnd]);
-
   const handleSelectSession = useCallback((sessionId: string) => {
     setSelectedSessionId(sessionId);
-    setEvents([]);
-    setTrajectories([]);
     setHasMore(true);
     setLoadingMore(false);
     void loadMessages(sessionId).catch(() => setMessages([]));
-
-    // 切换会话时加载历史执行轨迹
-    void loadTrajectories(sessionId);
-  }, [loadMessages, loadTrajectories]);
+  }, [loadMessages]);
 
   const { onClick: handleCreateSession, loading: creating } = usePreventDoubleClickHook(async () => {
     if (!selectedAgentId) {
@@ -211,8 +176,6 @@ export function AgentChatPage() {
     setSessions(previousSessions => [session, ...previousSessions]);
     setSelectedSessionId(session.id);
     setMessages([]);
-    setEvents([]);
-    setTrajectories([]);
   });
 
   /** 删除单个会话。 */
@@ -224,8 +187,6 @@ export function AgentChatPage() {
     if (sessionId === selectedSessionId) {
       setSelectedSessionId(undefined);
       setMessages([]);
-      setEvents([]);
-      setTrajectories([]);
     }
     ToastUtil.success("删除成功");
   });
@@ -240,8 +201,6 @@ export function AgentChatPage() {
     if (selectedSessionId && selectedSessionIds.includes(selectedSessionId)) {
       setSelectedSessionId(undefined);
       setMessages([]);
-      setEvents([]);
-      setTrajectories([]);
     }
     setSelectedSessionIds([]);
     ToastUtil.success("批量删除成功");
@@ -266,11 +225,7 @@ export function AgentChatPage() {
   }, []);
 
   const handleProgress = useCallback((event: AgentChatProgressEventDto) => {
-    if (!isAgentChatMessageEvent(event.eventType)) {
-      setEvents(previousEvents => [...previousEvents, event].slice(-maxTimelineEventCount));
-    }
-
-    // token 仅进入对话消息流，绝不显示为执行轨迹文本
+      // token 仅进入对话消息流
     if (event.eventType === "AI_TOKEN") {
       // 首 token 到达时结束思考动画
       setAiThinking(false);
@@ -292,12 +247,14 @@ export function AgentChatPage() {
     const abortController = new AbortController();
     streamAbortControllerRef.current = abortController;
     setInput("");
-    setEvents([]);
-    setTrajectories([]);
     setAiThinking(true);
     setMessages(previousMessages => [...previousMessages, buildOptimisticUserMessage(content)]);
     scrollMessagesToBottom();
-    const request: SendAgentChatMessageRequestDto = { sessionId: selectedSessionId, content };
+
+      // 生成唯一幂等键，防止断线重连后产生重复消息
+      const idempotencyKey = crypto.randomUUID();
+
+      const request: SendAgentChatMessageRequestDto = {sessionId: selectedSessionId, content, idempotencyKey};
 
     // 用户显式选择模型时传递 modelId
     if (selectedModelId) {
@@ -309,7 +266,13 @@ export function AgentChatPage() {
           request.clientId = selectedClientId;
       }
     try {
-      await AgentChatApi.sendStream(request, handleProgress, abortController.signal);
+        // 使用带断线重连的流式发送，网络断开时自动指数退避重试
+        await AgentChatApi.sendStreamWithRetry(
+            request,
+            handleProgress,
+            abortController.signal,
+            () => AgentChatApi.findMessagesPage(selectedSessionId, messagePageSize, Number.MAX_SAFE_INTEGER)
+        );
     } catch (error) {
       if (abortController.signal.aborted) {
         ToastUtil.error("已停止等待聊天响应");
@@ -329,8 +292,7 @@ export function AgentChatPage() {
         await loadSessions(selectedAgentId);
       }
 
-      // 发送完成后刷新轨迹，结束后聚焦输入框
-      await loadTrajectories(selectedSessionId);
+        // 结束后聚焦输入框
       inputRef.current?.focus();
     }
   });
@@ -498,6 +460,20 @@ export function AgentChatPage() {
                 {message.contentFormat === "RESTRICTED_MARKDOWN"
                     ? <RestrictedMarkdownComponent content={stripProtocolJson(message.content)}/>
                     : <Typography.Paragraph style={{whiteSpace: "pre-wrap", marginBottom: 0}}>{stripProtocolJson(message.content)}</Typography.Paragraph>}
+                  {/* AI 消息内嵌折叠执行轨迹 */}
+                  {message.role === "ASSISTANT" && message.executionEvents && message.executionEvents.length > 0 && (
+                      <Collapse
+                          ghost
+                          size="small"
+                          style={{marginTop: 12}}
+                          expandIcon={({isActive}) => <RightOutlined rotate={isActive ? 90 : 0}/>}
+                          items={[{
+                              key: `exec-${message.id}`,
+                              label: <Typography.Text type="secondary" style={{fontSize: 12}}>执行详情 ({message.executionEvents.length} 步)</Typography.Text>,
+                              children: renderExecutionEvents(message.executionEvents)
+                          }]}
+                      />
+                  )}
               </div>
             ))}
             {aiThinking && (
@@ -530,49 +506,104 @@ export function AgentChatPage() {
             </Space>
           </div>
         </Card>
-        <Card title="执行轨迹" className="agent-chat-timeline" bodyStyle={{ padding: "12px 16px" }}>
-          <div className="agent-chat-timeline-body" ref={timelineBodyRef}>
-          <Timeline
-            items={[
-              // 历史轨迹（持久化任务详情）
-              ...trajectories.map(trajectory => ({
-                key: `traj-${trajectory.id}`,
-                color: trajectory.execStatus === "FAILED" ? ("red" as const) : ("blue" as const),
-                children: (
-                  <div>
-                    <Tag>{trajectory.stepType}</Tag>
-                    <Typography.Text>{trajectory.taskName}</Typography.Text>
-                    {trajectory.providerName && (
-                      <Typography.Paragraph type="secondary">{trajectory.providerName} · {trajectory.modelCode}</Typography.Paragraph>
-                    )}
-                  </div>
-                )
-              })),
-              // 当前实时事件
-              ...events.map((event, index) => ({
-                key: `${event.taskId}-${event.eventType}-${index}`,
-                color: event.eventType.includes("FAILED") ? ("red" as const) : ("blue" as const),
-                children: (
-                  <div>
-                    <Tag>{event.eventType}</Tag>
-                    <Typography.Text>{event.message}</Typography.Text>
-                    {event.stepName && <Typography.Paragraph type="secondary">{event.stepName}</Typography.Paragraph>}
-                    {event.failureReason && <Typography.Paragraph type="danger">{event.failureReason}</Typography.Paragraph>}
-                  </div>
-                )
-              }))
-            ]}
-          />
-          {trajectories.length === 0 && events.length === 0 && <Empty description="调度事件将以结构化时间线展示" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
-          </div>
-        </Card>
       </div>
     </div>
   );
 }
 
+/**
+ * 渲染内嵌执行轨迹，按事件序号排列，展示步骤名称和耗时。
+ *
+ * @param events 执行事件列表
+ * @returns React 元素列表
+ */
+function renderExecutionEvents(events: AgentChatExecutionEventDto[]) {
+    if (!events || events.length === 0) {
+        return <Typography.Text type="secondary">无执行事件</Typography.Text>;
+    }
+
+    // 按序号排序展示原子命令调用链
+    const sortedEvents = [...events].sort((a, b) => (a.sequenceNo || 0) - (b.sequenceNo || 0));
+
+    // 收集原子命令事件（仅展示有意义的步骤）
+    const commandEvents = sortedEvents.filter(event =>
+        event.eventType === "ATOMIC_COMMAND_START" ||
+        event.eventType === "ATOMIC_COMMAND_COMPLETE" ||
+        event.eventType === "AI_STARTED" ||
+        event.eventType === "AI_COMPLETED" ||
+        event.eventType === "CONTEXT_ASSEMBLED" ||
+        event.eventType === "MEMORY_MATCHED" ||
+        event.eventType === "MEMORY_MISSED"
+    );
+
+    if (commandEvents.length === 0) {
+        return <Typography.Text type="secondary">暂无步骤详情</Typography.Text>;
+    }
+
+    return (
+        <div style={{paddingLeft: 4}}>
+            {commandEvents.map(event => {
+                // 失败事件用红色标记
+                const isFailed = event.eventType.includes("FAILED") || event.failureReason;
+                const color = isFailed ? "red" : event.eventType.includes("AI") ? "purple" : "blue";
+
+                return (
+                    <div
+                        key={event.id}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "4px 0",
+                            fontSize: 12
+                        }}
+                    >
+                        <Tag color={color} style={{fontSize: 11, marginRight: 8, minWidth: 120, textAlign: "center"}}>
+                            {event.stepName || event.commandName || event.eventType}
+                        </Tag>
+                        {event.responseContent && (
+                            <Tooltip title={event.responseContent}>
+                                <Typography.Text
+                                    type="secondary"
+                                    style={{
+                                        maxWidth: 200,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                        marginRight: 8
+                                    }}
+                                >
+                                    {event.responseContent.length > 30
+                                        ? event.responseContent.substring(0, 30) + "..."
+                                        : event.responseContent}
+                                </Typography.Text>
+                            </Tooltip>
+                        )}
+                        {event.failureReason && (
+                            <Typography.Text type="danger" style={{fontSize: 11}}>
+                                {event.failureReason}
+                            </Typography.Text>
+                        )}
+          </div>
+                );
+            })}
+    </div>
+  );
+}
+
 function buildOptimisticUserMessage(content: string): AgentChatMessageDto {
-  return { id: `local-user-${Date.now()}`, taskId: "", role: "USER", content, contentFormat: "PLAIN_TEXT", sequenceNo: Date.now(), createTime: "", providerName: "", modelCode: "" };
+    return {
+        id: `local-user-${Date.now()}`,
+        taskId: "",
+        turnId: "",
+        role: "USER",
+        content,
+        contentFormat: "PLAIN_TEXT",
+        sequenceNo: Date.now(),
+        createTime: "",
+        providerName: "",
+        modelCode: "",
+        executionEvents: []
+    };
 }
 
 function buildChatFailureEvent(message: string): AgentChatProgressEventDto {

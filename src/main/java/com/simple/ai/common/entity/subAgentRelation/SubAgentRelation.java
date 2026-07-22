@@ -1,17 +1,13 @@
 package com.simple.ai.common.entity.subAgentRelation;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.annotation.*;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.common.mp.common.enums.DeleteState;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import java.util.Map;
+import java.util.Date;
 
 /**
  * 子智能体关联(sub_agent_relation)实体类
@@ -74,8 +70,8 @@ public class SubAgentRelation {
     /**
      * 扩展
      */
-    @TableField(value = "reserver")
-    private String reserver;
+    @TableField(value = "reserve")
+    private String reserve;
 
     /**
      * 备注

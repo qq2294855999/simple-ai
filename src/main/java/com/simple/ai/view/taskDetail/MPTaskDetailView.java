@@ -1,29 +1,22 @@
 package com.simple.ai.view.taskDetail;
 
-import java.util.Date;
-
 import cn.hutool.core.collection.CollectionUtil;
-import com.simple.common.core.utils.AssertUtils;
 import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.lang.Assert;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.springframework.stereotype.Component;
-import com.simple.ai.common.view.taskDetail.TaskDetailView;
-import com.simple.ai.common.entity.taskDetail.TaskDetail;
-import com.simple.ai.common.dto.taskDetail.PageTaskDetailRequest;
-import com.simple.ai.common.dto.taskDetail.FindOneTaskDetailRequest;
-import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
 import com.simple.ai.common.dto.taskDetail.DeleteTaskDetailRequest;
+import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
+import com.simple.ai.common.dto.taskDetail.FindOneTaskDetailRequest;
+import com.simple.ai.common.dto.taskDetail.PageTaskDetailRequest;
+import com.simple.ai.common.entity.taskDetail.TaskDetail;
+import com.simple.ai.common.view.taskDetail.TaskDetailView;
+import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.core.utils.JsonUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-
-import com.simple.common.core.utils.JsonUtils;
 
 /**
  * 任务详情(task_detail)数据库视图实现
@@ -50,7 +43,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getReturnParams()), TaskDetail::getReturnParams, pageRequest.getReturnParams())
                     .like(ObjUtil.isNotEmpty(pageRequest.getExecStatus()), TaskDetail::getExecStatus, pageRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), TaskDetail::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), TaskDetail::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), TaskDetail::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), TaskDetail::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(TaskDetail.class), queryWrapper);
     }
@@ -70,7 +63,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getReturnParams()), TaskDetail::getReturnParams, findAllRequest.getReturnParams())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getExecStatus()), TaskDetail::getExecStatus, findAllRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), TaskDetail::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), TaskDetail::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), TaskDetail::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), TaskDetail::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), TaskDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskId()), TaskDetail::getTaskId, neRequest.getTaskId())
@@ -84,7 +77,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getReturnParams()), TaskDetail::getReturnParams, neRequest.getReturnParams())
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), TaskDetail::getExecStatus, neRequest.getExecStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), TaskDetail::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), TaskDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), TaskDetail::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), TaskDetail::getRemark, neRequest.getRemark());
 
         return repository.selectList(queryWrapper);
@@ -105,7 +98,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnParams()), TaskDetail::getReturnParams, findOneRequest.getReturnParams())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getExecStatus()), TaskDetail::getExecStatus, findOneRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), TaskDetail::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), TaskDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), TaskDetail::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), TaskDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), TaskDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskId()), TaskDetail::getTaskId, neRequest.getTaskId())
@@ -119,7 +112,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getReturnParams()), TaskDetail::getReturnParams, neRequest.getReturnParams())
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), TaskDetail::getExecStatus, neRequest.getExecStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), TaskDetail::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), TaskDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), TaskDetail::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), TaskDetail::getRemark, neRequest.getRemark());
 
         List<TaskDetail> list = repository.selectList(queryWrapper);
@@ -146,7 +139,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnParams()), TaskDetail::getReturnParams, findOneRequest.getReturnParams())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getExecStatus()), TaskDetail::getExecStatus, findOneRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), TaskDetail::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), TaskDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), TaskDetail::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), TaskDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), TaskDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskId()), TaskDetail::getTaskId, neRequest.getTaskId())
@@ -160,7 +153,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getReturnParams()), TaskDetail::getReturnParams, neRequest.getReturnParams())
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), TaskDetail::getExecStatus, neRequest.getExecStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), TaskDetail::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), TaskDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), TaskDetail::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), TaskDetail::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
@@ -229,7 +222,7 @@ class MPTaskDetailView implements TaskDetailView {
                     .eq(ObjUtil.isNotEmpty(request.getReturnParams()), TaskDetail::getReturnParams, request.getReturnParams())
                     .eq(ObjUtil.isNotEmpty(request.getExecStatus()), TaskDetail::getExecStatus, request.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), TaskDetail::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), TaskDetail::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), TaskDetail::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), TaskDetail::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }

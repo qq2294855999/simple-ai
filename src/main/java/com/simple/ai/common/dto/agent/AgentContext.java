@@ -81,4 +81,22 @@ public class AgentContext {
      */
     @Schema(description = "执行器类型列表")
     private List<AgentExecutor> executors;
+
+    /**
+     * 当前登录用户ID，用于按用户过滤资产和校验权限。
+     */
+    @Schema(description = "当前登录用户ID")
+    private String userId;
+
+    /**
+     * 当前使用的客户端ID，用于点对点下发命令。
+     */
+    @Schema(description = "当前客户端ID")
+    private String clientId;
+
+    /**
+     * 当前客户端关联的执行器类型ID，用于AI决策时了解可用命令范围。
+     */
+    @Schema(description = "当前执行器类型ID")
+    private String executorId;
 }

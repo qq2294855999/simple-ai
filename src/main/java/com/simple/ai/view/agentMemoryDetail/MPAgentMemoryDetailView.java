@@ -1,32 +1,20 @@
 package com.simple.ai.view.agentMemoryDetail;
 
-import java.util.Date;
-
 import cn.hutool.core.collection.CollectionUtil;
-import com.simple.common.core.utils.AssertUtils;
 import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.lang.Assert;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.springframework.stereotype.Component;
-import com.simple.ai.common.view.agentMemoryDetail.AgentMemoryDetailView;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.agentMemoryDetail.*;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailRequest;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailRequest;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAggregateAgentMemoryDetailResponse;
-import com.simple.ai.common.dto.agentMemoryDetail.FindOneAgentMemoryDetailRequest;
-import com.simple.ai.common.dto.agentMemoryDetail.FindAllAgentMemoryDetailRequest;
-import com.simple.ai.common.dto.agentMemoryDetail.DeleteAgentMemoryDetailRequest;
-import com.simple.common.mp.common.enums.Status;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
+import com.simple.ai.common.view.agentMemoryDetail.AgentMemoryDetailView;
+import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
+import com.simple.common.mp.common.enums.Status;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 智能体记忆详情(agent_memory_detail)数据库视图实现
@@ -53,7 +41,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, pageRequest.getBranchRoute())
                     .like(ObjUtil.isNotEmpty(pageRequest.getModel()), AgentMemoryDetail::getModel, pageRequest.getModel())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemoryDetail::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentMemoryDetail::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AgentMemoryDetail::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentMemoryDetail::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentMemoryDetail.class), queryWrapper);
     }
@@ -89,7 +77,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, findAllRequest.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getModel()), AgentMemoryDetail::getModel, findAllRequest.getModel())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemoryDetail::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentMemoryDetail::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AgentMemoryDetail::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentMemoryDetail::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemoryDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, neRequest.getAgentMemoryId())
@@ -103,7 +91,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute())
                     .ne(ObjUtil.isNotEmpty(neRequest.getModel()), AgentMemoryDetail::getModel, neRequest.getModel())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemoryDetail::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemoryDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentMemoryDetail::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemoryDetail::getRemark, neRequest.getRemark());
 
         return repository.selectList(queryWrapper);
@@ -132,7 +120,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, findOneRequest.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getModel()), AgentMemoryDetail::getModel, findOneRequest.getModel())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemoryDetail::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentMemoryDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AgentMemoryDetail::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentMemoryDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemoryDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, neRequest.getAgentMemoryId())
@@ -146,7 +134,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute())
                     .ne(ObjUtil.isNotEmpty(neRequest.getModel()), AgentMemoryDetail::getModel, neRequest.getModel())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemoryDetail::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemoryDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentMemoryDetail::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemoryDetail::getRemark, neRequest.getRemark());
 
         List<AgentMemoryDetail> list = repository.selectList(queryWrapper);
@@ -173,7 +161,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, findOneRequest.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getModel()), AgentMemoryDetail::getModel, findOneRequest.getModel())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemoryDetail::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentMemoryDetail::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AgentMemoryDetail::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentMemoryDetail::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemoryDetail::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), AgentMemoryDetail::getAgentMemoryId, neRequest.getAgentMemoryId())
@@ -187,7 +175,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getBranchRoute()), AgentMemoryDetail::getBranchRoute, neRequest.getBranchRoute())
                     .ne(ObjUtil.isNotEmpty(neRequest.getModel()), AgentMemoryDetail::getModel, neRequest.getModel())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemoryDetail::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemoryDetail::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentMemoryDetail::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemoryDetail::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
@@ -239,7 +227,7 @@ class MPAgentMemoryDetailView implements AgentMemoryDetailView {
                     .eq(ObjUtil.isNotEmpty(request.getBranchRoute()), AgentMemoryDetail::getBranchRoute, request.getBranchRoute())
                     .eq(ObjUtil.isNotEmpty(request.getModel()), AgentMemoryDetail::getModel, request.getModel())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemoryDetail::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentMemoryDetail::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentMemoryDetail::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentMemoryDetail::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }

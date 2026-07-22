@@ -3,7 +3,12 @@
 <mapper namespace="com.simple.ai.view.agentChatMessage.AgentChatMessageRepository">
     <select id="selectAllBySessionId" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
         select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
-               sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserver, remark
+               sequence_no as sequenceNo,
+               create_time as createTime,
+               update_time as updateTime,
+               status,
+               reserve,
+               remark
         from agent_chat_message
         where session_id = #{sessionId}
         order by sequence_no asc
@@ -18,7 +23,7 @@
 
     <select id="selectAllBySessionIds" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
         select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
-               sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserver, remark
+        sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserve, remark
         from agent_chat_message
         where session_id in
         <foreach collection="sessionIds" item="sid" open="(" separator="," close=")">
@@ -31,7 +36,12 @@
     <select id="selectPageBySessionId" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
         <![CDATA[
         select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
-               sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserver, remark
+               sequence_no as sequenceNo,
+               create_time as createTime,
+               update_time as updateTime,
+               status,
+               reserve,
+               remark
         from agent_chat_message
         where session_id = #{sessionId}
           and sequence_no < #{beforeSequenceNo}

@@ -75,13 +75,15 @@ export function replaceFinalMessage(messages: AgentChatMessageDto[], event: Agen
   const message: AgentChatMessageDto = {
     id: `final-${event.taskId}`,
     taskId: event.taskId,
+      turnId: "",
     role: isFailed ? "SYSTEM_ERROR" : "ASSISTANT",
     content: event.payload || event.failureReason,
     contentFormat: isFailed ? "PLAIN_TEXT" : "RESTRICTED_MARKDOWN",
     sequenceNo: Date.now(),
     createTime: "",
     providerName: "",
-    modelCode: ""
+      modelCode: "",
+      executionEvents: []
   };
   const withoutStreaming = messages.filter(item => item.id !== "streaming-assistant");
   return [...withoutStreaming, message];
@@ -97,13 +99,15 @@ function eventToStreamingMessage(event: AgentChatProgressEventDto): AgentChatMes
   return {
     id: "streaming-assistant",
     taskId: event.taskId,
+      turnId: "",
     role: "ASSISTANT",
     content: event.payload,
     contentFormat: "RESTRICTED_MARKDOWN",
     sequenceNo: Date.now(),
     createTime: "",
     providerName: "",
-    modelCode: ""
+      modelCode: "",
+      executionEvents: []
   };
 }
 

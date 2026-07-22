@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.chatTurn.ChatTurnRepository">
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into chat_turn(id, session_id, turn_number, user_message_id, assistant_message_id, task_id, reasoning_summary, create_time, update_time, status, reserve, remark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.id}, #{entity.sessionId}, #{entity.turnNumber}, #{entity.userMessageId}, #{entity.assistantMessageId}, #{entity.taskId}, #{entity.reasoningSummary}, #{entity.createTime},
+            #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
+        </foreach>
+    </insert>
+</mapper>
+

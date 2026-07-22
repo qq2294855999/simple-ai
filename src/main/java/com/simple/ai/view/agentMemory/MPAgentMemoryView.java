@@ -5,12 +5,7 @@ import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.dto.agentMemory.DeleteAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.FindOneAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.PageAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryResponse;
+import com.simple.ai.common.dto.agentMemory.*;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.common.core.utils.AssertUtils;
@@ -40,7 +35,7 @@ class MPAgentMemoryView implements AgentMemoryView {
                 .like(ObjUtil.isNotEmpty(pageRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, pageRequest.getTriggerCondition())
                 .like(ObjUtil.isNotEmpty(pageRequest.getTriggerAction()), AgentMemory::getTriggerAction, pageRequest.getTriggerAction())
                 .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemory::getStatus, pageRequest.getStatus())
-                .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentMemory::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AgentMemory::getReserve, pageRequest.getReserve())
                 .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentMemory::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentMemory.class), queryWrapper);
     }
@@ -134,7 +129,7 @@ class MPAgentMemoryView implements AgentMemoryView {
                 .eq(ObjUtil.isNotEmpty(request.getTriggerCondition()), AgentMemory::getTriggerCondition, request.getTriggerCondition())
                 .eq(ObjUtil.isNotEmpty(request.getTriggerAction()), AgentMemory::getTriggerAction, request.getTriggerAction())
                 .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemory::getStatus, request.getStatus())
-                .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentMemory::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentMemory::getReserve, request.getReserve())
                 .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentMemory::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
@@ -155,7 +150,7 @@ class MPAgentMemoryView implements AgentMemoryView {
                 .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, findAllRequest.getTriggerCondition())
                 .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerAction()), AgentMemory::getTriggerAction, findAllRequest.getTriggerAction())
                 .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemory::getStatus, findAllRequest.getStatus())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentMemory::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AgentMemory::getReserve, findAllRequest.getReserve())
                 .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentMemory::getRemark, findAllRequest.getRemark())
                 .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
                 .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId())
@@ -164,7 +159,7 @@ class MPAgentMemoryView implements AgentMemoryView {
                 .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, neRequest.getTriggerCondition())
                 .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentMemory::getTriggerAction, neRequest.getTriggerAction())
                 .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus())
-                .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentMemory::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentMemory::getReserve, neRequest.getReserve())
                 .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemory::getRemark, neRequest.getRemark());
         return queryWrapper;
     }
@@ -196,7 +191,7 @@ class MPAgentMemoryView implements AgentMemoryView {
         result.setTriggerCondition(request.getTriggerCondition());
         result.setTriggerAction(request.getTriggerAction());
         result.setStatus(request.getStatus());
-        result.setReserver(request.getReserver());
+        result.setReserve(request.getReserve());
         result.setRemark(request.getRemark());
         return result;
     }

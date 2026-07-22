@@ -34,7 +34,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getRole()), AtomicCommand::getRole, pageRequest.getRole())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getSkillId()), AtomicCommand::getSkillId, pageRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AtomicCommand::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AtomicCommand::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AtomicCommand::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AtomicCommand::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AtomicCommand.class), queryWrapper);
     }
@@ -65,7 +65,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getSkillId()), AtomicCommand::getSkillId, findAllRequest.getSkillId())
                     .in(CollectionUtil.isNotEmpty(findAllRequest.getSkillIds()), AtomicCommand::getSkillId, findAllRequest.getSkillIds())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AtomicCommand::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AtomicCommand::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AtomicCommand::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AtomicCommand::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AtomicCommand::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AtomicCommand::getName, neRequest.getName())
@@ -73,7 +73,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getRole()), AtomicCommand::getRole, neRequest.getRole())
                     .ne(ObjUtil.isNotEmpty(neRequest.getSkillId()), AtomicCommand::getSkillId, neRequest.getSkillId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AtomicCommand::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AtomicCommand::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AtomicCommand::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AtomicCommand::getRemark, neRequest.getRemark());
 
         return repository.selectList(queryWrapper);
@@ -88,7 +88,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRole()), AtomicCommand::getRole, findOneRequest.getRole())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getSkillId()), AtomicCommand::getSkillId, findOneRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AtomicCommand::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AtomicCommand::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AtomicCommand::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AtomicCommand::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AtomicCommand::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AtomicCommand::getName, neRequest.getName())
@@ -96,7 +96,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getRole()), AtomicCommand::getRole, neRequest.getRole())
                     .ne(ObjUtil.isNotEmpty(neRequest.getSkillId()), AtomicCommand::getSkillId, neRequest.getSkillId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AtomicCommand::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AtomicCommand::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AtomicCommand::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AtomicCommand::getRemark, neRequest.getRemark());
 
         List<AtomicCommand> list = repository.selectList(queryWrapper);
@@ -117,7 +117,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRole()), AtomicCommand::getRole, findOneRequest.getRole())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getSkillId()), AtomicCommand::getSkillId, findOneRequest.getSkillId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AtomicCommand::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AtomicCommand::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AtomicCommand::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AtomicCommand::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AtomicCommand::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AtomicCommand::getName, neRequest.getName())
@@ -125,7 +125,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getRole()), AtomicCommand::getRole, neRequest.getRole())
                     .ne(ObjUtil.isNotEmpty(neRequest.getSkillId()), AtomicCommand::getSkillId, neRequest.getSkillId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AtomicCommand::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AtomicCommand::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AtomicCommand::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AtomicCommand::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
@@ -170,7 +170,7 @@ class MPAtomicCommandView implements AtomicCommandView {
                     .eq(ObjUtil.isNotEmpty(request.getCommand()), AtomicCommand::getCommand, request.getCommand())
                     .eq(ObjUtil.isNotEmpty(request.getRole()), AtomicCommand::getRole, request.getRole())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), AtomicCommand::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AtomicCommand::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AtomicCommand::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), AtomicCommand::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }

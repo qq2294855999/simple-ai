@@ -5,12 +5,7 @@ import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.dto.agentSkill.DeleteAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.FindAllAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.FindOneAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse;
+import com.simple.ai.common.dto.agentSkill.*;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.view.agentSkill.AgentSkillView;
 import com.simple.common.core.utils.AssertUtils;
@@ -39,7 +34,7 @@ class MPAgentSkillView implements AgentSkillView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getExecContent()), AgentSkill::getExecContent, pageRequest.getExecContent())
                     .like(ObjUtil.isNotEmpty(pageRequest.getReturnDataFormat()), AgentSkill::getReturnDataFormat, pageRequest.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentSkill::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentSkill::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AgentSkill::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentSkill::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentSkill.class), queryWrapper);
     }
@@ -132,7 +127,7 @@ class MPAgentSkillView implements AgentSkillView {
                     .eq(ObjUtil.isNotEmpty(request.getExecContent()), AgentSkill::getExecContent, request.getExecContent())
                     .eq(ObjUtil.isNotEmpty(request.getReturnDataFormat()), AgentSkill::getReturnDataFormat, request.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentSkill::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentSkill::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentSkill::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentSkill::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
@@ -152,7 +147,7 @@ class MPAgentSkillView implements AgentSkillView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getExecContent()), AgentSkill::getExecContent, findAllRequest.getExecContent())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getReturnDataFormat()), AgentSkill::getReturnDataFormat, findAllRequest.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentSkill::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentSkill::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AgentSkill::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentSkill::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentSkill::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentSkill::getAgentId, neRequest.getAgentId())
@@ -160,7 +155,7 @@ class MPAgentSkillView implements AgentSkillView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecContent()), AgentSkill::getExecContent, neRequest.getExecContent())
                     .ne(ObjUtil.isNotEmpty(neRequest.getReturnDataFormat()), AgentSkill::getReturnDataFormat, neRequest.getReturnDataFormat())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentSkill::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentSkill::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentSkill::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentSkill::getRemark, neRequest.getRemark());
         return queryWrapper;
     }
@@ -180,7 +175,7 @@ class MPAgentSkillView implements AgentSkillView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getExecContent()), AgentSkill::getExecContent, findOneRequest.getExecContent())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReturnDataFormat()), AgentSkill::getReturnDataFormat, findOneRequest.getReturnDataFormat())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentSkill::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentSkill::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AgentSkill::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentSkill::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentSkill::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentSkill::getAgentId, neRequest.getAgentId())
@@ -188,7 +183,7 @@ class MPAgentSkillView implements AgentSkillView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecContent()), AgentSkill::getExecContent, neRequest.getExecContent())
                     .ne(ObjUtil.isNotEmpty(neRequest.getReturnDataFormat()), AgentSkill::getReturnDataFormat, neRequest.getReturnDataFormat())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentSkill::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentSkill::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentSkill::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentSkill::getRemark, neRequest.getRemark());
         return queryWrapper;
     }

@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * 智能体聊天消息响应。
@@ -25,6 +26,11 @@ public class AgentChatMessageResponse {
      * 调度任务主键
      */
     private String taskId;
+
+    /**
+     * 对话轮次主键
+     */
+    private String turnId;
 
     /**
      * 消息角色
@@ -60,4 +66,9 @@ public class AgentChatMessageResponse {
      * 创建时间
      */
     private Date createTime;
+
+    /**
+     * 该消息关联的执行事件列表，用于前端内嵌折叠轨迹展示
+     */
+    private List<AgentChatExecutionEventDto> executionEvents;
 }

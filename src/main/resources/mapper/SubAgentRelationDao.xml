@@ -3,10 +3,10 @@
 <mapper namespace="com.simple.ai.view.subAgentRelation.SubAgentRelationRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into sub_agent_relation(id, main_agent_id, sub_agent_id, create_time, update_time, status, reserver, remark)
+        insert into sub_agent_relation(id, main_agent_id, sub_agent_id, create_time, update_time, status, reserve, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.mainAgentId}, #{entity.subAgentId}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
+            (#{entity.id}, #{entity.mainAgentId}, #{entity.subAgentId}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
         </foreach>
     </insert>
 

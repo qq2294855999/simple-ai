@@ -1,16 +1,12 @@
 package com.simple.ai.common.dto.agentDefinition;
 
-import java.util.Date;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.common.mp.common.enums.DeleteState;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.util.Map;
-
 import lombok.experimental.Accessors;
+
+import java.util.Date;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -58,7 +54,7 @@ public class PageAgentDefinitionResponse {
     private Status status;
 
     @Schema(description = "扩展")
-    private String reserver;
+    private String reserve;
 
     @Schema(description = "备注")
     private String remark;

@@ -9,6 +9,8 @@ export interface AgentChatSessionDto {
 export interface AgentChatMessageDto {
   id: string;
   taskId: string;
+    /** 对话轮次主键 */
+    turnId: string;
   role: "USER" | "ASSISTANT" | "SYSTEM_ERROR";
   content: string;
   contentFormat: "PLAIN_TEXT" | "RESTRICTED_MARKDOWN";
@@ -18,6 +20,8 @@ export interface AgentChatMessageDto {
   providerName: string;
   /** 模型编码快照 */
   modelCode: string;
+    /** 该消息关联的执行事件列表，用于内嵌折叠轨迹展示 */
+    executionEvents: AgentChatExecutionEventDto[];
 }
 
 export interface CreateAgentChatSessionRequestDto {
@@ -33,6 +37,8 @@ export interface SendAgentChatMessageRequestDto {
     clientId?: string;
     /** 记忆操作标志（create/revise，空表示不操作记忆） */
     memoryAction?: string;
+    /** 幂等键，防止断线重连后产生重复消息 */
+    idempotencyKey?: string;
 }
 
 export interface AgentChatProgressEventDto {
@@ -58,4 +64,30 @@ export interface AgentChatTrajectoryDto {
   providerName: string;
   modelCode: string;
   createTime: string;
+}
+
+/** 智能体聊天执行事件（内嵌折叠轨迹用）。 */
+export interface AgentChatExecutionEventDto {
+    id: string;
+    eventType: string;
+    stepName: string;
+    commandName: string;
+    responseContent: string;
+    failureReason: string;
+    sequenceNo: number;
+    startedAt: string;
+    finishedAt: string;
+    providerName: string;
+    modelCode: string;
+}
+
+/** 对话轮次状态（断线重连时查询）。 */
+export interface AgentChatTurnStatusDto {
+    turnId: string;
+    sessionId: string;
+    turnNumber: number;
+    /** IN_PROGRESS / COMPLETED */
+    turnStatus: string;
+    assistantMessageId: string;
+    taskId: string;
 }

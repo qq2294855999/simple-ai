@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.executionEvent.ExecutionEventRepository">
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into execution_event(id, turn_id, task_id, task_detail_id, event_type, step_name, command_name, command_content, response_content, failure_reason, sequence_no, started_at, finished_at,
+        atomic_command_id, atomic_command_code, provider_id, provider_name, model_id, model_code, create_time, status)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.id}, #{entity.turnId}, #{entity.taskId}, #{entity.taskDetailId}, #{entity.eventType}, #{entity.stepName}, #{entity.commandName}, #{entity.commandContent},
+            #{entity.responseContent}, #{entity.failureReason}, #{entity.sequenceNo}, #{entity.startedAt}, #{entity.finishedAt}, #{entity.atomicCommandId}, #{entity.atomicCommandCode},
+            #{entity.providerId}, #{entity.providerName}, #{entity.modelId}, #{entity.modelCode}, #{entity.createTime}, #{entity.status})
+        </foreach>
+    </insert>
+</mapper>
+

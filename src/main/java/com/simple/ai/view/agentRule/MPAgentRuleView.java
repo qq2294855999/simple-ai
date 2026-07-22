@@ -5,12 +5,7 @@ import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.dto.agentRule.DeleteAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.FindAllAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.FindOneAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
+import com.simple.ai.common.dto.agentRule.*;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.view.agentRule.AgentRuleView;
 import com.simple.common.core.utils.AssertUtils;
@@ -39,7 +34,7 @@ class MPAgentRuleView implements AgentRuleView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getTriggerCondition()), AgentRule::getTriggerCondition, pageRequest.getTriggerCondition())
                     .like(ObjUtil.isNotEmpty(pageRequest.getTriggerAction()), AgentRule::getTriggerAction, pageRequest.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentRule::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentRule::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AgentRule::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentRule::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentRule.class), queryWrapper);
     }
@@ -132,7 +127,7 @@ class MPAgentRuleView implements AgentRuleView {
                     .eq(ObjUtil.isNotEmpty(request.getTriggerCondition()), AgentRule::getTriggerCondition, request.getTriggerCondition())
                     .eq(ObjUtil.isNotEmpty(request.getTriggerAction()), AgentRule::getTriggerAction, request.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentRule::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentRule::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentRule::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentRule::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
@@ -152,7 +147,7 @@ class MPAgentRuleView implements AgentRuleView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerCondition()), AgentRule::getTriggerCondition, findAllRequest.getTriggerCondition())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerAction()), AgentRule::getTriggerAction, findAllRequest.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentRule::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentRule::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AgentRule::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentRule::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentRule::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentRule::getAgentId, neRequest.getAgentId())
@@ -160,7 +155,7 @@ class MPAgentRuleView implements AgentRuleView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentRule::getTriggerCondition, neRequest.getTriggerCondition())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentRule::getTriggerAction, neRequest.getTriggerAction())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentRule::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentRule::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentRule::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentRule::getRemark, neRequest.getRemark());
         return queryWrapper;
     }
@@ -180,7 +175,7 @@ class MPAgentRuleView implements AgentRuleView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTriggerCondition()), AgentRule::getTriggerCondition, findOneRequest.getTriggerCondition())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTriggerAction()), AgentRule::getTriggerAction, findOneRequest.getTriggerAction())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentRule::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentRule::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AgentRule::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentRule::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentRule::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentRule::getAgentId, neRequest.getAgentId())
@@ -188,7 +183,7 @@ class MPAgentRuleView implements AgentRuleView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentRule::getTriggerCondition, neRequest.getTriggerCondition())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentRule::getTriggerAction, neRequest.getTriggerAction())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentRule::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentRule::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentRule::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentRule::getRemark, neRequest.getRemark());
         return queryWrapper;
     }

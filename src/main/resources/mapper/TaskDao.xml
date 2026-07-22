@@ -4,11 +4,11 @@
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
         insert into task(id, agent_memory_id, agent_id, task_name, parent_task_id, next_task_id, step_type, branch_condition, branch_route, request_params, return_params, exec_status, failure_reason,
-        create_time, update_time, status, reserver, remark)
+        create_time, update_time, status, reserve, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
             (#{entity.id}, #{entity.agentMemoryId}, #{entity.agentId}, #{entity.taskName}, #{entity.parentTaskId}, #{entity.nextTaskId}, #{entity.stepType}, #{entity.branchCondition}, #{entity.branchRoute},
-            #{entity.requestParams}, #{entity.returnParams}, #{entity.execStatus}, #{entity.failureReason}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver},
+            #{entity.requestParams}, #{entity.returnParams}, #{entity.execStatus}, #{entity.failureReason}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve},
             #{entity.remark})
         </foreach>
     </insert>

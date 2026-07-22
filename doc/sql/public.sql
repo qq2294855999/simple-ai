@@ -12,7 +12,7 @@
  Target Server Version : 140018 (140018)
  File Encoding         : 65001
 
- Date: 22/07/2026 14:08:09
+ Date: 22/07/2026 19:51:42
 */
 
 
@@ -50,59 +50,29 @@ COMMENT ON TABLE "public"."agent_chat_message" IS '智能体聊天消息';
 -- Records of agent_chat_message
 -- ----------------------------
 INSERT INTO "public"."agent_chat_message"
-VALUES ('2079808032222781440', '2079808015135186944', '', 'USER', '你好', 'PLAIN_TEXT', 1, '2026-07-22 13:57:30.503', '2026-07-22 13:57:30.503', 1, '',
+VALUES ('2079874707756457984', '2079874618833018880', '', 'USER', '控制微信，找到文件传输助手，发送消息  你好啊', 'PLAIN_TEXT', 1, '2026-07-22 18:22:27.189',
+        '2026-07-22 18:22:27.189', 1, '', '用户聊天消息', '', '', '', '');
+INSERT INTO "public"."agent_chat_message"
+VALUES ('2079874723304742912', '2079874618833018880', '2079874707785818112', 'SYSTEM_ERROR', '执行器类型[win_rpa]不存在', 'PLAIN_TEXT', 2,
+        '2026-07-22 18:22:30.896', '2026-07-22 18:22:30.896', 1, '', '智能体最终回复消息', '', '', '', '');
+INSERT INTO "public"."agent_chat_message"
+VALUES ('2079874915840073728', '2079874618833018880', '', 'USER', '任务断了 重试', 'PLAIN_TEXT', 3, '2026-07-22 18:23:16.8', '2026-07-22 18:23:16.8', 1, '',
         '用户聊天消息', '', '', '', '');
 INSERT INTO "public"."agent_chat_message"
-VALUES ('2079808032273113088', '2079808015135186944', '', 'SYSTEM_ERROR', '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：292
-### The error may exist in com/simple/ai/view/taskDetail/TaskDetailRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,task_id,task_name,parent_task_id,next_task_id,step_type,branch_condition,branch_route,request_params,return_params,exec_status,provider_id,provider_name,model_id,model_code,create_time,update_time,status,reserver,remark  FROM task_detail      WHERE  (task_id = ? AND exec_status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：292
-; bad SQL grammar []', 'PLAIN_TEXT', 2, '2026-07-22 13:57:30.516', '2026-07-22 13:57:30.516', 1, '', '智能体最终回复消息', '', '', '', '');
+VALUES ('2079874938707419136', '2079874618833018880', '2079874915848462336', 'ASSISTANT', '抱歉，当前会话没有之前任务的上下文记录。我无法知道之前中断的是什么任务。
+
+能否请你说明一下：
+
+- **之前的任务目标**是什么？（例如：打开某个软件、操作某个窗口、执行某个流程等）
+
+这样我可以从断点处重新开始执行。', 'RESTRICTED_MARKDOWN', 4, '2026-07-22 18:23:22.252', '2026-07-22 18:23:22.252', 1, '', '智能体最终回复消息',
+        '2077379712738693120', '词元之河', '2077431632937414656', 'deepseek-v4-pro');
 INSERT INTO "public"."agent_chat_message"
-VALUES ('2079809785680928768', '2079808015135186944', '', 'USER', '1', 'PLAIN_TEXT', 3, '2026-07-22 14:04:28.56', '2026-07-22 14:04:28.56', 1, '',
-        '用户聊天消息', '', '', '', '');
+VALUES ('2079874975210446848', '2079874618833018880', '', 'USER', '控制微信，找到文件传输助手，发送消息  你好啊', 'PLAIN_TEXT', 5, '2026-07-22 18:23:30.955',
+        '2026-07-22 18:23:30.955', 1, '', '用户聊天消息', '', '', '', '');
 INSERT INTO "public"."agent_chat_message"
-VALUES ('2079809785756426240', '2079808015135186944', '2079809785689317376', 'SYSTEM_ERROR', '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-### The error may exist in com/simple/ai/view/agentExecutor/AgentExecutorRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,executor_code,executor_name,description,status,create_user_id,create_user_name,create_time,update_user_id,update_user_name,update_time,reserve,remark  FROM agent_executor      WHERE  (status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-; bad SQL grammar []', 'PLAIN_TEXT', 4, '2026-07-22 14:04:28.578', '2026-07-22 14:04:28.578', 1, '', '智能体最终回复消息', '', '', '', '');
-INSERT INTO "public"."agent_chat_message"
-VALUES ('2079809932871667712', '2079808015135186944', '', 'USER', '1', 'PLAIN_TEXT', 5, '2026-07-22 14:05:03.653', '2026-07-22 14:05:03.653', 1, '',
-        '用户聊天消息', '', '', '', '');
-INSERT INTO "public"."agent_chat_message"
-VALUES ('2079809933349818368', '2079808015135186944', '2079809932976525312', 'SYSTEM_ERROR', '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-### The error may exist in com/simple/ai/view/agentExecutor/AgentExecutorRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,executor_code,executor_name,description,status,create_user_id,create_user_name,create_time,update_user_id,update_user_name,update_time,reserve,remark  FROM agent_executor      WHERE  (status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-; bad SQL grammar []', 'PLAIN_TEXT', 6, '2026-07-22 14:05:03.767', '2026-07-22 14:05:03.767', 1, '', '智能体最终回复消息', '', '', '', '');
-INSERT INTO "public"."agent_chat_message"
-VALUES ('2079810475790766080', '2079808015135186944', '', 'USER', '1', 'PLAIN_TEXT', 7, '2026-07-22 14:07:13.095', '2026-07-22 14:07:13.095', 1, '',
-        '用户聊天消息', '', '', '', '');
-INSERT INTO "public"."agent_chat_message"
-VALUES ('2079810492890943488', '2079808015135186944', '2079810475803348992', 'SYSTEM_ERROR', '', 'PLAIN_TEXT', 8, '2026-07-22 14:07:17.172',
-        '2026-07-22 14:07:17.172', 1, '', '智能体最终回复消息', '2077379712738693120', '词元之河', '2077431632937414656', 'deepseek-v4-pro');
+VALUES ('2079875397899821056', '2079874618833018880', '2079874975223029760', 'SYSTEM_ERROR', '执行器类型[win_rpa]不存在', 'PLAIN_TEXT', 6,
+        '2026-07-22 18:25:11.732', '2026-07-22 18:25:11.732', 1, '', '智能体最终回复消息', '', '', '', '');
 
 -- ----------------------------
 -- Table structure for agent_chat_session
@@ -133,8 +103,8 @@ COMMENT ON TABLE "public"."agent_chat_session" IS '智能体聊天会话';
 -- Records of agent_chat_session
 -- ----------------------------
 INSERT INTO "public"."agent_chat_session"
-VALUES ('2079808015135186944', '2079806936913846272', '你好', '2026-07-22 14:07:17.173', '2026-07-22 13:57:26.429', '2026-07-22 13:57:26.429', 1, '',
-        '智能体人机对话会话', NULL);
+VALUES ('2079874618833018880', '2079806936913846272', '控制微信，找到文件传输助手，发送消息 你好啊', '2026-07-22 18:25:11.733', '2026-07-22 18:22:05.988',
+        '2026-07-22 18:22:05.988', 1, '', '智能体人机对话会话', NULL);
 
 -- ----------------------------
 -- Table structure for agent_client
@@ -212,7 +182,7 @@ ON TABLE "public"."agent_client" IS '客户端实例';
 -- ----------------------------
 INSERT INTO "public"."agent_client"
 VALUES ('2079805807278751744', '1', '2079542278239834112', '家用', '$2a$10$TpFvA2YsZjIvyLnUsBjXCeUoqXAJsGHhXj46YCancdL4K6lgMgq3W', '2027-07-22 13:48:39.963',
-        '2026-07-22 14:04:56.934', NULL, NULL, NULL, NULL, '1', NULL, '2026-07-22 13:48:40.035', NULL, NULL, '2026-07-22 14:04:56.937', NULL, NULL, 1);
+        '2026-07-22 18:20:56.494', NULL, NULL, NULL, NULL, '1', NULL, '2026-07-22 13:48:40.035', NULL, NULL, '2026-07-22 18:20:56.497', NULL, NULL, 1);
 
 -- ----------------------------
 -- Table structure for agent_definition
@@ -259,8 +229,9 @@ COMMENT ON TABLE "public"."agent_definition" IS '智能体定义';
 -- Records of agent_definition
 -- ----------------------------
 INSERT INTO "public"."agent_definition"
-VALUES ('2079806936913846272', '软件控制', '你是一个win10上的控制软件，你的职责是根据用户下达的任务，通过执行器原子命令进行软件控制，直到达成目的', NULL, NULL,
-        NULL, '', '', '', '2026-07-22 13:53:09.361', '2026-07-22 13:53:09.361', 1, NULL, '', '2077431632937414656', NULL);
+VALUES ('2079806936913846272', '软件控制',
+        '你是一个win10上的控制软件，你的职责是根据用户下达的任务，通过执行器原子命令进行软件控制，直到达成目的。记住，不是一次性生成所有命令顺序，而是一个命令一个命令的执行，根据返回的数据结果，在决定执行哪一个命令',
+        NULL, NULL, NULL, '', '', '', '2026-07-22 13:53:09.361', '2026-07-22 18:21:56.214', 1, NULL, '', '2077431632937414656', NULL);
 
 -- ----------------------------
 -- Table structure for agent_executor
@@ -557,7 +528,7 @@ CREATE TABLE "public"."agent_skill" (
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
   "reserver" text COLLATE "pg_catalog"."default",
-  "remark"  varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "user_id" varchar(255) COLLATE "pg_catalog"."default",
   "plan_output_schema" text COLLATE "pg_catalog"."default",
   "observation_schema" text COLLATE "pg_catalog"."default"
@@ -706,7 +677,7 @@ CREATE TABLE "public"."atomic_command" (
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
   "reserver" text COLLATE "pg_catalog"."default",
-  "remark"  varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "user_id" varchar(255) COLLATE "pg_catalog"."default",
   "executor_id" varchar(255) COLLATE "pg_catalog"."default"
 )
@@ -825,49 +796,28 @@ COMMENT ON TABLE "public"."task" IS '任务';
 -- Records of task
 -- ----------------------------
 INSERT INTO "public"."task"
-VALUES ('2079806976881369088', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"你好","sessionId":"2079806962201305088","modelId":"2077431632937414656"}',
-        '', 2, '', '2026-07-22 13:53:18.89', '2026-07-22 13:53:18.89', 1, '', '智能体命令调度任务', '', '', '', '', NULL, NULL, NULL, NULL);
+VALUES ('2079874707785818112', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"控制微信，找到文件传输助手，发送消息  你好啊","clientId":"2079805807278751744","sessionId":"2079874618833018880","modelId":"2077431632937414656"}',
+        '', 4, '执行器类型[win_rpa]不存在', '2026-07-22 18:22:27.196', '2026-07-22 18:22:27.196', 1, '', '智能体命令调度任务', '', '', '', '', NULL, NULL, NULL,
+        NULL);
 INSERT INTO "public"."task"
-VALUES ('2079808032231170048', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"你好","clientId":"2079805807278751744","sessionId":"2079808015135186944","modelId":"2077431632937414656"}',
-        '', 2, '', '2026-07-22 13:57:30.505', '2026-07-22 13:57:30.505', 1, '', '智能体命令调度任务', '', '', '', '', NULL, NULL, NULL, NULL);
-INSERT INTO "public"."task"
-VALUES ('2079809785689317376', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"1","clientId":"2079805807278751744","sessionId":"2079808015135186944","modelId":"2077431632937414656"}',
-        '', 4, '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-### The error may exist in com/simple/ai/view/agentExecutor/AgentExecutorRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,executor_code,executor_name,description,status,create_user_id,create_user_name,create_time,update_user_id,update_user_name,update_time,reserve,remark  FROM agent_executor      WHERE  (status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-; bad SQL grammar []', '2026-07-22 14:04:28.562', '2026-07-22 14:04:28.562', 1, '', '智能体命令调度任务', '', '', '', '', NULL, NULL, NULL, NULL);
-INSERT INTO "public"."task"
-VALUES ('2079809932976525312', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"1","clientId":"2079805807278751744","sessionId":"2079808015135186944","modelId":"2077431632937414656"}',
-        '', 4, '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-### The error may exist in com/simple/ai/view/agentExecutor/AgentExecutorRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,executor_code,executor_name,description,status,create_user_id,create_user_name,create_time,update_user_id,update_user_name,update_time,reserve,remark  FROM agent_executor      WHERE  (status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-; bad SQL grammar []', '2026-07-22 14:05:03.678', '2026-07-22 14:05:03.678', 1, '', '智能体命令调度任务', '', '', '', '', NULL, NULL, NULL, NULL);
-INSERT INTO "public"."task"
-VALUES ('2079810475803348992', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"1","clientId":"2079805807278751744","sessionId":"2079808015135186944","modelId":"2077431632937414656"}', '<answer>#等待指令系统就绪。
+VALUES ('2079874915848462336', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"任务断了 重试","clientId":"2079805807278751744","sessionId":"2079874618833018880","modelId":"2077431632937414656"}', '抱歉，当前会话没有之前任务的上下文记录。我无法知道之前中断的是什么任务。
 
-请描述您需要在 Win10上执行的控制任务，我将调度 **WinRPA执行器**逐步完成。</answer>', '3', '', '2026-07-22 14:07:13.098', '2026-07-22 14:07:13.098', 1, '',
-        '智能体命令调度任务', '2077379712738693120', '词元之河', '2077431632937414656', 'deepseek-v4-pro', NULL, NULL, NULL, NULL);
+能否请你说明一下：
+
+- **之前的任务目标**是什么？（例如：打开某个软件、操作某个窗口、执行某个流程等）
+
+这样我可以从断点处重新开始执行。', 3, '', '2026-07-22 18:23:16.802', '2026-07-22 18:23:16.802', 1, '', '智能体命令调度任务', '2077379712738693120', '词元之河',
+        '2077431632937414656', 'deepseek-v4-pro', NULL, NULL, NULL, NULL);
+INSERT INTO "public"."task"
+VALUES ('2079874975223029760', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"控制微信，找到文件传输助手，发送消息  你好啊","clientId":"2079805807278751744","sessionId":"2079874618833018880","modelId":"2077431632937414656"}',
+        '', 4, '执行器类型[win_rpa]不存在', '2026-07-22 18:23:30.958', '2026-07-22 18:23:30.958', 1, '', '智能体命令调度任务', '', '', '', '', NULL, NULL, NULL,
+        NULL);
+
+-- ----------------------------
+-- Table structure for task_detail
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."task_detail";
 CREATE TABLE "public"."task_detail" (
@@ -932,41 +882,21 @@ COMMENT ON TABLE "public"."task_detail" IS '任务详情';
 -- Records of task_detail
 -- ----------------------------
 INSERT INTO "public"."task_detail"
-VALUES ('2079809785731260416', '2079809785689317376', '人机对话', '', '', '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"1","clientId":"2079805807278751744","sessionId":"2079808015135186944","modelId":"2077431632937414656"}', '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-### The error may exist in com/simple/ai/view/agentExecutor/AgentExecutorRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,executor_code,executor_name,description,status,create_user_id,create_user_name,create_time,update_user_id,update_user_name,update_time,reserve,remark  FROM agent_executor      WHERE  (status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-; bad SQL grammar []', '2026-07-22 14:04:28.572', '2026-07-22 14:04:28.572', 1, '', '智能体命令调度失败详情', '', '', '', '', NULL, NULL, NULL, NULL, NULL, 1,
-        4);
+VALUES ('2079874723275382784', '2079874707785818112', '人机对话', '', '', '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"控制微信，找到文件传输助手，发送消息  你好啊","clientId":"2079805807278751744","sessionId":"2079874618833018880","modelId":"2077431632937414656"}',
+        '执行器类型[win_rpa]不存在', '2026-07-22 18:22:30.89', '2026-07-22 18:22:30.89', 1, '', '智能体命令调度失败详情', '', '', '', '', NULL, NULL, NULL,
+        NULL, NULL, 1, 4);
 INSERT INTO "public"."task_detail"
-VALUES ('2079809933312069632', '2079809932976525312', '人机对话', '', '', '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"1","clientId":"2079805807278751744","sessionId":"2079808015135186944","modelId":"2077431632937414656"}', '
-### Error querying database.  Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-### The error may exist in com/simple/ai/view/agentExecutor/AgentExecutorRepository.java (best guess)
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: SELECT  id,executor_code,executor_name,description,status,create_user_id,create_user_name,create_time,update_user_id,update_user_name,update_time,reserve,remark  FROM agent_executor      WHERE  (status = ?)
-### Cause: org.postgresql.util.PSQLException: 错误: 操作符不存在: character varying = integer
-  建议：没有匹配指定名称和参数类型的操作符. 您也许需要增加明确的类型转换.
-  位置：203
-; bad SQL grammar []', '2026-07-22 14:05:03.758', '2026-07-22 14:05:03.758', 1, '', '智能体命令调度失败详情', '', '', '', '', NULL, NULL, NULL, NULL, NULL, 1,
-        4);
-INSERT INTO "public"."task_detail"
-VALUES ('2079810492844806144', '2079810475803348992', '人机对话', '', '', '', '',
-        '{"agentId":"2079806936913846272","modelId":"2077431632937414656","promptContent":"# 系统铁律\n必须优先保证用户目标闭环；必须遵守安全边界；必须记录每个任务步骤；必须在失败时返回明确失败原因；最终用户回复只能使用受限Markdown（标题、段落、列表、引用、表格、行内代码、带语言标识的代码块），禁止HTML、SVG、脚本、事件属性；调度过程必须通过结构化事件输出，不得伪装成最终回复。当用户要求创建记忆、规则、技能或智能体时，必须在任务步骤中使用WRITE角色并以JSON格式输出创建参数。创建记忆JSON格式：{\"type\":\"创建记忆\",\"agentId\":\"当前智能体ID\",\"memoryName\":\"记忆名称\",\"stepName\":\"步骤名称\",\"triggerCondition\":\"触发条件\",\"triggerAction\":\"触发动作\"}；创建规则JSON格式：{\"type\":\"创建规则\",\"agentId\":\"当前智能体ID\",\"definitionDesc\":\"定义描述\",\"triggerCondition\":\"触发条件\",\"triggerAction\":\"触发动作\"}；创建技能JSON格式：{\"type\":\"创建技能\",\"agentId\":\"当前智能体ID\",\"definitionDesc\":\"定义描述\",\"execContent\":\"执行内容\",\"returnDataFormat\":\"返回格式\"}；创建智能体JSON格式：{\"type\":\"创建智能体\",\"name\":\"名称\",\"definitionDesc\":\"定义描述\"}。\n\n# 智能体定义\n你是一个win10上的控制软件，你的职责是根据用户下达的任务，通过执行器原子命令进行软件控制，直到达成目的\n\n# 第一铁律\nnull\n\n# 第二规则\nnull\n\n# 第三技能\nnull\n\n# 直属规则\n\n# 直属技能\n\n# 子智能体关系\n\n# 候选记忆\n\n# 可用执行器类型\n## 执行器\n编码：win_rpa\n名称：WinRPA执行器\n描述：Win10的RPA执行器\n\n# 会话摘要\n\n","commandContent":"1"}',
-        '{"success":true,"responseContent":"<answer>#等待指令系统就绪。\n\n请描述您需要在 Win10上执行的控制任务，我将调度 **WinRPA执行器**逐步完成。</answer>","failureReason":"","providerId":"2077379712738693120","providerName":"词元之河","modelId":"2077431632937414656","modelCode":"deepseek-v4-pro"}',
-        '2026-07-22 14:07:17.161', '2026-07-22 14:07:17.161', 1, '', 'AI探索执行详情', '2077379712738693120', '词元之河', '2077431632937414656',
+VALUES ('2079874938665476096', '2079874915848462336', '人机对话', '', '', '', '',
+        '{"agentId":"2079806936913846272","modelId":"2077431632937414656","promptContent":"# 系统铁律\n必须优先保证用户目标闭环；必须遵守安全边界；必须记录每个任务步骤；必须在失败时返回明确失败原因；最终用户回复只能使用受限Markdown（标题、段落、列表、引用、表格、行内代码、带语言标识的代码块），禁止HTML、SVG、脚本、事件属性；调度过程必须通过结构化事件输出，不得伪装成最终回复。当用户要求创建记忆、规则、技能或智能体时，必须在任务步骤中使用WRITE角色并以JSON格式输出创建参数。创建记忆JSON格式：{\"type\":\"创建记忆\",\"agentId\":\"当前智能体ID\",\"memoryName\":\"记忆名称\",\"stepName\":\"步骤名称\",\"triggerCondition\":\"触发条件\",\"triggerAction\":\"触发动作\"}；创建规则JSON格式：{\"type\":\"创建规则\",\"agentId\":\"当前智能体ID\",\"definitionDesc\":\"定义描述\",\"triggerCondition\":\"触发条件\",\"triggerAction\":\"触发动作\"}；创建技能JSON格式：{\"type\":\"创建技能\",\"agentId\":\"当前智能体ID\",\"definitionDesc\":\"定义描述\",\"execContent\":\"执行内容\",\"returnDataFormat\":\"返回格式\"}；创建智能体JSON格式：{\"type\":\"创建智能体\",\"name\":\"名称\",\"definitionDesc\":\"定义描述\"}。\n\n# 智能体定义\n你是一个win10上的控制软件，你的职责是根据用户下达的任务，通过执行器原子命令进行软件控制，直到达成目的。记住，不是一次性生成所有命令顺序，而是一个命令一个命令的执行，根据返回的数据结果，在决定执行哪一个命令\n\n# 第一铁律\nnull\n\n# 第二规则\nnull\n\n# 第三技能\nnull\n\n# 直属规则\n\n# 直属技能\n\n# 子智能体关系\n\n# 候选记忆\n\n# 可用执行器类型\n## 执行器\n编码：win_rpa\n名称：WinRPA执行器\n描述：Win10的RPA执行器\n\n# 会话摘要\n\n","commandContent":"任务断了 重试"}',
+        '{"success":true,"responseContent":"抱歉，当前会话没有之前任务的上下文记录。我无法知道之前中断的是什么任务。\n\n能否请你说明一下：\n\n- **之前的任务目标**是什么？（例如：打开某个软件、操作某个窗口、执行某个流程等）\n\n这样我可以从断点处重新开始执行。","failureReason":"","providerId":"2077379712738693120","providerName":"词元之河","modelId":"2077431632937414656","modelCode":"deepseek-v4-pro"}',
+        '2026-07-22 18:23:22.242', '2026-07-22 18:23:22.242', 1, '', 'AI探索执行详情', '2077379712738693120', '词元之河', '2077431632937414656',
         'deepseek-v4-pro', NULL, NULL, NULL, NULL, NULL, 1, 3);
+INSERT INTO "public"."task_detail"
+VALUES ('2079875397866266624', '2079874975223029760', '人机对话', '', '', '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"控制微信，找到文件传输助手，发送消息  你好啊","clientId":"2079805807278751744","sessionId":"2079874618833018880","modelId":"2077431632937414656"}',
+        '执行器类型[win_rpa]不存在', '2026-07-22 18:25:11.724', '2026-07-22 18:25:11.724', 1, '', '智能体命令调度失败详情', '', '', '', '', NULL, NULL, NULL,
+        NULL, NULL, 1, 4);
 
 -- ----------------------------
 -- Indexes structure for table agent_chat_message

@@ -135,7 +135,7 @@ public class AgentContextAssembler {
         List<AgentExecutor> executors = loadExecutors(request.getUserId());
 
         // 构建上下文对象
-        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, memoryDetails, sessionSummary, executors);
+        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, memoryDetails, sessionSummary, executors, request.getUserId(), request.getClientId());
     }
 
     /**
@@ -250,9 +250,8 @@ public class AgentContextAssembler {
      * @param executors 执行器类型列表
      * @return 智能体上下文
      */
-    private AgentContext buildContext(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills,
-                                      List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories, List<AgentMemoryDetail> memoryDetails, String sessionSummary,
-                                      List<AgentExecutor> executors) {
+    private AgentContext buildContext(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills, List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories,
+                                      List<AgentMemoryDetail> memoryDetails, String sessionSummary, List<AgentExecutor> executors, String userId, String clientId) {
         AgentContext context = new AgentContext();
         context.setAgentDefinition(agentDefinition);
         context.setSystemIronRule(AgentIronRuleConstant.SYSTEM_IRON_RULE);
@@ -263,6 +262,15 @@ public class AgentContextAssembler {
         context.setMemoryDetails(memoryDetails);
         context.setSessionSummary(sessionSummary);
         context.setExecutors(executors);
+
+        // 注入可信上下文：当前用户ID和客户端ID，供后续AI调用和命令路由使用
+        context.setUserId(userId);
+        context.setClientId(clientId);
+
+        // 根据客户端ID推导执行器类型ID，告知AI当前可用命令范围
+        String executorId = resolveExecutorId(clientId);
+        context.setExecutorId(executorId);
+
         context.setPromptContent(buildPromptContent(agentDefinition, rules, skills, subAgentRelations, memories, sessionSummary, executors));
         return context;
     }
@@ -301,6 +309,23 @@ public class AgentContextAssembler {
     private List<AgentExecutor> loadExecutors(String userId) {
         LambdaQueryWrapper<AgentExecutor> wrapper = new LambdaQueryWrapper<AgentExecutor>().eq(AgentExecutor::getStatus, Status.ON);
         return agentExecutorRepository.selectList(wrapper);
+    }
+
+    /**
+     * 根据客户端ID解析执行器类型ID。
+     * <p>从 agent_client 表查询客户端关联的执行器类型。
+     * 客户端未指定时返回空字符串。</p>
+     *
+     * @param clientId 客户端ID
+     * @return 执行器类型ID，客户端未指定时返回空字符串
+     */
+    private String resolveExecutorId(String clientId) {
+        if (clientId == null || clientId.isBlank()) {
+            return "";
+        }
+        // TODO: 通过 AgentClientView 查询 agent_client 表的 executor_id
+        // 当前阶段暂未引入 AgentClientView，后续任务 1.4 resolveClientIdIfAbsent 统一处理
+        return "";
     }
 
     /**

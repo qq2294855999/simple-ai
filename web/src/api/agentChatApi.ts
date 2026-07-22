@@ -1,12 +1,13 @@
-import { API_BASE_URL, clearAndRedirectToLogin, getBusinessAuthorizationHeader, http } from "./http";
-import { consumeAgentChatSseEvents } from "../utils/agentChatStreamUtil";
+import {API_BASE_URL, clearAndRedirectToLogin, getBusinessAuthorizationHeader, http} from "./http";
+import {consumeAgentChatSseEvents} from "../utils/agentChatStreamUtil";
 import type {
-  AgentChatMessageDto,
-  AgentChatProgressEventDto,
-  AgentChatSessionDto,
-  AgentChatTrajectoryDto,
-  CreateAgentChatSessionRequestDto,
-  SendAgentChatMessageRequestDto
+    AgentChatMessageDto,
+    AgentChatProgressEventDto,
+    AgentChatSessionDto,
+    AgentChatTrajectoryDto,
+    AgentChatTurnStatusDto,
+    CreateAgentChatSessionRequestDto,
+    SendAgentChatMessageRequestDto
 } from "../dto/agentChat/AgentChatDto";
 
 const chatStreamUrl = `${API_BASE_URL}/sys/agent-chat/send-stream`;
@@ -99,5 +100,84 @@ export const AgentChatApi = {
 
   /** 查询会话的历史执行轨迹。 */
   findTrajectory: (sessionId: string) =>
-    http.get<AgentChatTrajectoryDto[]>(`/sys/agent-chat/trajectory/${sessionId}`)
+      http.get<AgentChatTrajectoryDto[]>(`/sys/agent-chat/trajectory/${sessionId}`),
+
+    /** 查询轮次状态，用于断线重连时判断轮次是否已完成。 */
+    findTurnStatus: (turnId: string) =>
+        http.get<AgentChatTurnStatusDto>(`/sys/agent-chat/turn/${turnId}/status`),
+
+    /**
+     * 带断线重连的流式发送消息。
+     * 在网络断开后自动重试，使用指数退避策略，最多重试5次。
+     *
+     * @param data 发送消息请求（含幂等键）
+     * @param onProgress 进度事件回调
+     * @param signal 取消信号
+     * @param loadMessagesFn 重新加载消息的回调，用于检查AI是否已回复
+     */
+    sendStreamWithRetry: async (
+        data: SendAgentChatMessageRequestDto,
+        onProgress: (event: AgentChatProgressEventDto) => void,
+        signal: AbortSignal,
+        loadMessagesFn: () => Promise<AgentChatMessageDto[]>
+    ) => {
+        const maxRetries = 5;
+        const maxBackoff = 30000;
+
+        // 记录当前消息列表中的ID集合，用于判断是否有新AI回复
+        const existingMessageIds = new Set<string>();
+
+        let lastError: unknown;
+
+        // 重试循环
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            // 首次不延时
+            if (attempt > 0) {
+                // 指数退避：1s, 2s, 4s, 8s, 16s, 30s
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1), maxBackoff);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+
+            // 每次重试前检查取消状态
+            if (signal.aborted) {
+                throw new Error("请求已取消");
+            }
+
+            try {
+                await AgentChatApi.sendStream(data, onProgress, signal);
+                return;
+            } catch (error) {
+                // 用户主动取消不重试
+                if (signal.aborted) {
+                    throw error;
+                }
+                lastError = error;
+
+                // 已达最大重试次数
+                if (attempt >= maxRetries) {
+                    break;
+                }
+
+                try {
+                    // 重新加载消息，检查AI是否已经回复
+                    const loadedMessages = await loadMessagesFn();
+
+                    // 检查是否有新的AI回复（不在已有消息集合中）
+                    const hasNewAiReply = loadedMessages.some(
+                        m => (m.role === "ASSISTANT" || m.role === "SYSTEM_ERROR") && !existingMessageIds.has(m.id)
+                    );
+
+                    // AI已回复，重连成功（由调用方处理消息更新）
+                    if (hasNewAiReply) {
+                        return;
+                    }
+                } catch {
+                    // 加载消息失败不影响重试流程
+                }
+            }
+        }
+
+        // 所有重试均失败
+        throw lastError;
+    }
 };

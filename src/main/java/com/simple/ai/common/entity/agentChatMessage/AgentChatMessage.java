@@ -66,6 +66,12 @@ public class AgentChatMessage {
     private Long sequenceNo;
 
     /**
+     * 轮次主键，关联 chat_turn.id
+     */
+    @TableField(value = "turn_id")
+    private String turnId;
+
+    /**
      * 运行供应商主键快照
      */
     @TableField(value = "provider_id")
@@ -108,10 +114,10 @@ public class AgentChatMessage {
     private Status status;
 
     /**
-     * 扩展
+     * 扩展字段，JSON格式
      */
-    @TableField(value = "reserver")
-    private String reserver;
+    @TableField(value = "reserve")
+    private String reserve;
 
     /**
      * 备注

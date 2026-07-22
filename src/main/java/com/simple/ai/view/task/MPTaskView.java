@@ -1,31 +1,19 @@
 package com.simple.ai.view.task;
 
-import java.util.Date;
-
 import cn.hutool.core.collection.CollectionUtil;
-import com.simple.common.core.utils.AssertUtils;
 import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.lang.Assert;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.springframework.stereotype.Component;
-import com.simple.ai.common.view.task.TaskView;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.task.*;
 import com.simple.ai.common.entity.task.Task;
-import com.simple.ai.common.dto.task.PageTaskRequest;
-import com.simple.ai.common.dto.task.PageAggregateTaskRequest;
-import com.simple.ai.common.dto.task.PageAggregateTaskResponse;
-import com.simple.ai.common.dto.task.FindOneTaskRequest;
-import com.simple.ai.common.dto.task.FindAllTaskRequest;
-import com.simple.ai.common.dto.task.DeleteTaskRequest;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
+import com.simple.ai.common.view.task.TaskView;
+import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 任务(task)数据库视图实现
@@ -53,7 +41,7 @@ class MPTaskView implements TaskView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getExecStatus()), Task::getExecStatus, pageRequest.getExecStatus())
                     .like(ObjUtil.isNotEmpty(pageRequest.getFailureReason()), Task::getFailureReason, pageRequest.getFailureReason())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), Task::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), Task::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), Task::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), Task::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(Task.class), queryWrapper);
     }
@@ -90,7 +78,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getExecStatus()), Task::getExecStatus, findAllRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getFailureReason()), Task::getFailureReason, findAllRequest.getFailureReason())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), Task::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), Task::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), Task::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), Task::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), Task::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), Task::getAgentMemoryId, neRequest.getAgentMemoryId())
@@ -105,7 +93,7 @@ class MPTaskView implements TaskView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), Task::getExecStatus, neRequest.getExecStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getFailureReason()), Task::getFailureReason, neRequest.getFailureReason())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), Task::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), Task::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), Task::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), Task::getRemark, neRequest.getRemark());
 
         return repository.selectList(queryWrapper);
@@ -127,7 +115,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getExecStatus()), Task::getExecStatus, findOneRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getFailureReason()), Task::getFailureReason, findOneRequest.getFailureReason())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), Task::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), Task::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), Task::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), Task::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), Task::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), Task::getAgentMemoryId, neRequest.getAgentMemoryId())
@@ -142,7 +130,7 @@ class MPTaskView implements TaskView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), Task::getExecStatus, neRequest.getExecStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getFailureReason()), Task::getFailureReason, neRequest.getFailureReason())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), Task::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), Task::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), Task::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), Task::getRemark, neRequest.getRemark());
 
         List<Task> list = repository.selectList(queryWrapper);
@@ -170,7 +158,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getExecStatus()), Task::getExecStatus, findOneRequest.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getFailureReason()), Task::getFailureReason, findOneRequest.getFailureReason())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), Task::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), Task::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), Task::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), Task::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), Task::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), Task::getAgentMemoryId, neRequest.getAgentMemoryId())
@@ -185,7 +173,7 @@ class MPTaskView implements TaskView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getExecStatus()), Task::getExecStatus, neRequest.getExecStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getFailureReason()), Task::getFailureReason, neRequest.getFailureReason())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), Task::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), Task::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), Task::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), Task::getRemark, neRequest.getRemark());
         return repository.selectCount(queryWrapper);
     }
@@ -242,8 +230,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(request.getReturnParams()), Task::getReturnParams, request.getReturnParams())
                     .eq(ObjUtil.isNotEmpty(request.getExecStatus()), Task::getExecStatus, request.getExecStatus())
                     .eq(ObjUtil.isNotEmpty(request.getFailureReason()), Task::getFailureReason, request.getFailureReason())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), Task::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), Task::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getStatus()), Task::getStatus, request.getStatus()).eq(ObjUtil.isNotEmpty(request.getReserve()), Task::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), Task::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }

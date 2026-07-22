@@ -5,12 +5,7 @@ import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.dto.subAgentRelation.DeleteSubAgentRelationRequest;
-import com.simple.ai.common.dto.subAgentRelation.FindAllSubAgentRelationRequest;
-import com.simple.ai.common.dto.subAgentRelation.FindOneSubAgentRelationRequest;
-import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationRequest;
-import com.simple.ai.common.dto.subAgentRelation.PageAggregateSubAgentRelationResponse;
-import com.simple.ai.common.dto.subAgentRelation.PageSubAgentRelationRequest;
+import com.simple.ai.common.dto.subAgentRelation.*;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.view.subAgentRelation.SubAgentRelationView;
 import com.simple.common.core.utils.AssertUtils;
@@ -37,7 +32,7 @@ class MPSubAgentRelationView implements SubAgentRelationView {
         queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getMainAgentId()), SubAgentRelation::getMainAgentId, pageRequest.getMainAgentId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getSubAgentId()), SubAgentRelation::getSubAgentId, pageRequest.getSubAgentId())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), SubAgentRelation::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), SubAgentRelation::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), SubAgentRelation::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), SubAgentRelation::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(SubAgentRelation.class), queryWrapper);
     }
@@ -128,7 +123,7 @@ class MPSubAgentRelationView implements SubAgentRelationView {
                     .eq(ObjUtil.isNotEmpty(request.getMainAgentId()), SubAgentRelation::getMainAgentId, request.getMainAgentId())
                     .eq(ObjUtil.isNotEmpty(request.getSubAgentId()), SubAgentRelation::getSubAgentId, request.getSubAgentId())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), SubAgentRelation::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), SubAgentRelation::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), SubAgentRelation::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), SubAgentRelation::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
@@ -146,13 +141,13 @@ class MPSubAgentRelationView implements SubAgentRelationView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getMainAgentId()), SubAgentRelation::getMainAgentId, findAllRequest.getMainAgentId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getSubAgentId()), SubAgentRelation::getSubAgentId, findAllRequest.getSubAgentId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), SubAgentRelation::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), SubAgentRelation::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), SubAgentRelation::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), SubAgentRelation::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), SubAgentRelation::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getMainAgentId()), SubAgentRelation::getMainAgentId, neRequest.getMainAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getSubAgentId()), SubAgentRelation::getSubAgentId, neRequest.getSubAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), SubAgentRelation::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), SubAgentRelation::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), SubAgentRelation::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), SubAgentRelation::getRemark, neRequest.getRemark());
         return queryWrapper;
     }
@@ -170,13 +165,13 @@ class MPSubAgentRelationView implements SubAgentRelationView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getMainAgentId()), SubAgentRelation::getMainAgentId, findOneRequest.getMainAgentId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getSubAgentId()), SubAgentRelation::getSubAgentId, findOneRequest.getSubAgentId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), SubAgentRelation::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), SubAgentRelation::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), SubAgentRelation::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), SubAgentRelation::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), SubAgentRelation::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getMainAgentId()), SubAgentRelation::getMainAgentId, neRequest.getMainAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getSubAgentId()), SubAgentRelation::getSubAgentId, neRequest.getSubAgentId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), SubAgentRelation::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), SubAgentRelation::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), SubAgentRelation::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), SubAgentRelation::getRemark, neRequest.getRemark());
         return queryWrapper;
     }

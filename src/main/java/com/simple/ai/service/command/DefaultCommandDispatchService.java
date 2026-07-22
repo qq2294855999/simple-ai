@@ -2,12 +2,14 @@ package com.simple.ai.service.command;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
 import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
+import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
@@ -16,6 +18,7 @@ import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
+import com.simple.ai.common.enums.AgentClientStatusProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.agent.AgentAiClient;
@@ -28,6 +31,7 @@ import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
 import com.simple.ai.service.agent.AgentContextAssembler;
 import com.simple.ai.service.agent.AgentMemoryMatcher;
+import com.simple.ai.view.agentClient.AgentClientRepository;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
@@ -99,6 +103,12 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      */
     @Autowired
     private AgentSessionService agentSessionService;
+
+    /**
+     * 客户端实例仓库，用于按用户查询在线客户端
+     */
+    @Autowired
+    private AgentClientRepository agentClientRepository;
 
     /**
      * 原子命令视图
@@ -227,7 +237,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         task.setExecStatus(AgentExecutionStatusProcess.RUNNING);
         task.setFailureReason("");
         task.setStatus(Status.ON);
-        task.setReserver("");
+        task.setReserve("");
         task.setRemark("智能体命令调度任务");
         taskView.save(task);
         return task;
@@ -1060,7 +1070,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         taskDetail.setReturnParams(JsonUtils.toJsonStr(invokeResponse));
         taskDetail.setExecStatus(resolveDetailStatus(invokeResponse.getSuccess()));
         taskDetail.setStatus(Status.ON);
-        taskDetail.setReserver("");
+        taskDetail.setReserve("");
         taskDetail.setRemark("智能体步骤执行详情");
         taskDetailView.save(taskDetail);
     }
@@ -1090,7 +1100,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         taskDetail.setModelId(aiResponse.getModelId());
         taskDetail.setModelCode(aiResponse.getModelCode());
         taskDetail.setStatus(Status.ON);
-        taskDetail.setReserver("");
+        taskDetail.setReserve("");
         taskDetail.setRemark("AI探索执行详情");
         taskDetailView.save(taskDetail);
     }
@@ -1159,7 +1169,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         taskDetail.setReturnParams(failureReason == null ? "" : failureReason);
         taskDetail.setExecStatus(AgentExecutionStatusProcess.FAILED);
         taskDetail.setStatus(Status.ON);
-        taskDetail.setReserver("");
+        taskDetail.setReserve("");
         taskDetail.setRemark("智能体命令调度失败详情");
         taskDetailView.save(taskDetail);
     }
@@ -1482,9 +1492,23 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         if (request.getClientId() != null && !request.getClientId().isBlank()) {
             return;
         }
-        // TODO: 未指定时自动匹配唯一在线客户端
-        // 1. 查询当前用户下状态为 ACTIVE 且 last_connected_at 在有效期内的客户端列表
-        // 2. 唯一在线时自动绑定，多个在线时暂不绑定由前端指定
+
+        // 根据当前用户ID查询状态为ACTIVE的客户端列表
+        String userId = request.getUserId();
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+
+        // 查询当前用户下所有ACTIVE状态的客户端
+        LambdaQueryWrapper<AgentClient> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AgentClient::getUserId, userId).eq(AgentClient::getStatus, AgentClientStatusProcess.ACTIVE);
+        List<AgentClient> activeClients = agentClientRepository.selectList(queryWrapper);
+
+        // 唯一在线时自动绑定，多个在线时暂不绑定由前端指定
+        if (activeClients.size() == 1) {
+            AgentClient client = activeClients.get(0);
+            request.setClientId(client.getId());
+        }
     }
 
     /**

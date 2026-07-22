@@ -3,11 +3,11 @@
 <mapper namespace="com.simple.ai.view.agentMemory.AgentMemoryRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_memory(id, agent_id, memory_name, step_name, trigger_condition, trigger_action, create_time, update_time, status, reserver, remark)
+        insert into agent_memory(id, agent_id, memory_name, step_name, trigger_condition, trigger_action, create_time, update_time, status, reserve, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
             (#{entity.id}, #{entity.agentId}, #{entity.memoryName}, #{entity.stepName}, #{entity.triggerCondition}, #{entity.triggerAction}, #{entity.createTime}, #{entity.updateTime},
-            #{entity.status}, #{entity.reserver}, #{entity.remark})
+            #{entity.status}, #{entity.reserve}, #{entity.remark})
         </foreach>
     </insert>
     <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryResponse">

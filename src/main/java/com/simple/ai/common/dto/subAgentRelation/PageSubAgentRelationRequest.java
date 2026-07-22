@@ -1,11 +1,8 @@
 package com.simple.ai.common.dto.subAgentRelation;
 
-import java.util.Date;
-
+import com.simple.common.mp.common.enums.Status;
 import com.simple.common.mp.page.PageBase;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.simple.common.mp.common.enums.DeleteState;
-import com.simple.common.mp.common.enums.Status;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -24,7 +21,7 @@ public class PageSubAgentRelationRequest extends PageBase {
     private Status status;
 
     @Schema(description = "扩展")
-    private String reserver;
+    private String reserve;
 
     @Schema(description = "备注")
     private String remark;

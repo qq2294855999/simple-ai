@@ -1,13 +1,11 @@
 package com.simple.ai.common.dto.agentMemoryDetail;
 
-import java.util.Date;
-
-import com.simple.common.mp.page.PageBase;
-import io.swagger.v3.oas.annotations.media.Schema;
-import com.simple.common.mp.common.enums.DeleteState;
 import com.simple.common.mp.common.enums.Status;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
+
+import java.util.Date;
 
 @Data
 @Accessors(chain = true)
@@ -57,7 +55,7 @@ public class FindOneAgentMemoryDetailRequest {
     private Status status;
 
     @Schema(description = "扩展")
-    private String reserver;
+    private String reserve;
 
     @Schema(description = "备注")
     private String remark;

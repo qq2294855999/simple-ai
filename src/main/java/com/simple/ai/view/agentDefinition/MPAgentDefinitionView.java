@@ -5,14 +5,7 @@ import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.dto.agentDefinition.DeleteAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.DeleteCascadeAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.FindAllAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.FindOneAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse;
+import com.simple.ai.common.dto.agentDefinition.*;
 import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
 import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
@@ -52,7 +45,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .like(ObjUtil.isNotEmpty(pageRequest.getCreateBy()), AgentDefinition::getCreateBy, pageRequest.getCreateBy())
                     .like(ObjUtil.isNotEmpty(pageRequest.getUpdateBy()), AgentDefinition::getUpdateBy, pageRequest.getUpdateBy())
                     .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentDefinition::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserver()), AgentDefinition::getReserver, pageRequest.getReserver())
+                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AgentDefinition::getReserve, pageRequest.getReserve())
                     .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentDefinition::getRemark, pageRequest.getRemark());
         return repository.selectPage(pageRequest.getPage(AgentDefinition.class), queryWrapper);
     }
@@ -244,7 +237,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .eq(ObjUtil.isNotEmpty(request.getCreateBy()), AgentDefinition::getCreateBy, request.getCreateBy())
                     .eq(ObjUtil.isNotEmpty(request.getUpdateBy()), AgentDefinition::getUpdateBy, request.getUpdateBy())
                     .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentDefinition::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserver()), AgentDefinition::getReserver, request.getReserver())
+                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentDefinition::getReserve, request.getReserve())
                     .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentDefinition::getRemark, request.getRemark());
         repository.delete(queryWrapper);
     }
@@ -269,7 +262,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getCreateBy()), AgentDefinition::getCreateBy, findAllRequest.getCreateBy())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getUpdateBy()), AgentDefinition::getUpdateBy, findAllRequest.getUpdateBy())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentDefinition::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserver()), AgentDefinition::getReserver, findAllRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AgentDefinition::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentDefinition::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentDefinition::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AgentDefinition::getName, neRequest.getName())
@@ -281,7 +274,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getCreateBy()), AgentDefinition::getCreateBy, neRequest.getCreateBy())
                     .ne(ObjUtil.isNotEmpty(neRequest.getUpdateBy()), AgentDefinition::getUpdateBy, neRequest.getUpdateBy())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentDefinition::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentDefinition::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentDefinition::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentDefinition::getRemark, neRequest.getRemark());
         return queryWrapper;
     }
@@ -306,7 +299,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getCreateBy()), AgentDefinition::getCreateBy, findOneRequest.getCreateBy())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getUpdateBy()), AgentDefinition::getUpdateBy, findOneRequest.getUpdateBy())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentDefinition::getStatus, findOneRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserver()), AgentDefinition::getReserver, findOneRequest.getReserver())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), AgentDefinition::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), AgentDefinition::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentDefinition::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getName()), AgentDefinition::getName, neRequest.getName())
@@ -318,7 +311,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
                     .ne(ObjUtil.isNotEmpty(neRequest.getCreateBy()), AgentDefinition::getCreateBy, neRequest.getCreateBy())
                     .ne(ObjUtil.isNotEmpty(neRequest.getUpdateBy()), AgentDefinition::getUpdateBy, neRequest.getUpdateBy())
                     .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentDefinition::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserver()), AgentDefinition::getReserver, neRequest.getReserver())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentDefinition::getReserve, neRequest.getReserve())
                     .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentDefinition::getRemark, neRequest.getRemark());
         return queryWrapper;
     }

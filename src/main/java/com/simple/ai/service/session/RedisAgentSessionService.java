@@ -32,6 +32,16 @@ class RedisAgentSessionService implements AgentSessionService {
     private static final Duration SESSION_CACHE_TIME = Duration.ofHours(24);
 
     /**
+     * 会话摘要列表缓存前缀
+     */
+    private static final String SUMMARY_LIST_KEY_PREFIX = "simple-ai:agent:session:summary-list:";
+
+    /**
+     * 会话摘要列表最大保留轮数
+     */
+    private static final long MAX_SUMMARY_SIZE = 20L;
+
+    /**
      * 会话消息最大保留数量
      */
     private static final long MAX_MESSAGE_SIZE = 100L;
@@ -59,9 +69,15 @@ class RedisAgentSessionService implements AgentSessionService {
         // 参数校验：会话ID不能为空
         AssertUtils.notEmpty(sessionId, "会话ID不能为空");
 
-        // 保存会话摘要并刷新过期时间
+        // 保留原有覆盖式摘要键，兼容现有读取逻辑
         String summaryKey = buildSummaryKey(sessionId);
         stringRedisTemplate.opsForValue().set(summaryKey, summary, SESSION_CACHE_TIME);
+
+        // 同时追加到摘要列表，保留最近N轮摘要用于拼接多轮上下文
+        String summaryListKey = buildSummaryListKey(sessionId);
+        stringRedisTemplate.opsForList().rightPush(summaryListKey, summary);
+        stringRedisTemplate.opsForList().trim(summaryListKey, -MAX_SUMMARY_SIZE, -1);
+        stringRedisTemplate.expire(summaryListKey, SESSION_CACHE_TIME);
     }
 
     @Override
@@ -90,6 +106,10 @@ class RedisAgentSessionService implements AgentSessionService {
         String summaryKey = buildSummaryKey(sessionId);
         stringRedisTemplate.delete(summaryKey);
 
+        // 删除 Redis 中的会话摘要列表缓存
+        String summaryListKey = buildSummaryListKey(sessionId);
+        stringRedisTemplate.delete(summaryListKey);
+
         // 删除 Redis 中的会话消息缓存
         String messageKey = buildMessageKey(sessionId);
         stringRedisTemplate.delete(messageKey);
@@ -106,6 +126,16 @@ class RedisAgentSessionService implements AgentSessionService {
     }
 
     /**
+     * 构建会话摘要列表缓存键。
+     *
+     * @param sessionId 会话ID
+     * @return 会话摘要列表缓存键
+     */
+    private String buildSummaryListKey(String sessionId) {
+        return SUMMARY_LIST_KEY_PREFIX + sessionId;
+    }
+
+    /**
      * 构建会话消息缓存键。
      *
      * @param sessionId 会话ID
@@ -114,5 +144,4 @@ class RedisAgentSessionService implements AgentSessionService {
     private String buildMessageKey(String sessionId) {
         return MESSAGE_KEY_PREFIX + sessionId;
     }
-
 }

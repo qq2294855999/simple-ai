@@ -56,7 +56,7 @@ public class FindAllTaskDetailRequest {
     private Status status;
 
     @Schema(description = "扩展")
-    private String reserver;
+    private String reserve;
 
     @Schema(description = "备注")
     private String remark;

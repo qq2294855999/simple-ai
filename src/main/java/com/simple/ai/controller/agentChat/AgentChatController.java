@@ -1,10 +1,8 @@
 package com.simple.ai.controller.agentChat;
 
-import com.simple.ai.common.dto.agentChat.AgentChatMessageResponse;
-import com.simple.ai.common.dto.agentChat.AgentChatSessionResponse;
-import com.simple.ai.common.dto.agentChat.CreateAgentChatSessionRequest;
-import com.simple.ai.common.dto.agentChat.SendAgentChatMessageRequest;
+import com.simple.ai.common.dto.agentChat.*;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
+import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
@@ -13,17 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import com.simple.ai.common.entity.taskDetail.TaskDetail;
 
 import java.io.IOException;
 import java.util.List;
@@ -173,12 +162,27 @@ public class AgentChatController {
      *
      * @param sessionId 会话主键
      * @return 任务详情列表
+     * @deprecated 执行轨迹已内嵌到消息气泡中，请使用消息列表查询接口替代
      */
+    @Deprecated
     @GetMapping("trajectory/{sessionId}")
-    @Operation(summary = "查询智能体聊天执行轨迹")
+    @Operation(summary = "查询智能体聊天执行轨迹", deprecated = true)
     @HasAuthority("sys:agent-chat:trajectory")
     public R<List<TaskDetail>> findTrajectory(@PathVariable String sessionId) {
         return R.ok(agentChatService.findTrajectory(sessionId));
+    }
+
+    /**
+     * 查询轮次状态，用于断线重连时判断轮次是否已完成。
+     *
+     * @param turnId 轮次主键
+     * @return 轮次状态响应
+     */
+    @GetMapping("turn/{turnId}/status")
+    @Operation(summary = "查询对话轮次状态")
+    @HasAuthority("sys:agent-chat:turn:status")
+    public R<AgentChatTurnStatusResponse> findTurnStatus(@PathVariable String turnId) {
+        return R.ok(agentChatService.findTurnStatus(turnId));
     }
 
     /**

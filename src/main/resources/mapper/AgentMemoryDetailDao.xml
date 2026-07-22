@@ -4,11 +4,11 @@
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
         insert into agent_memory_detail(id, agent_memory_id, step_name, step_type, exec_content, return_data_format, parent_step_id, next_step_id, branch_condition, branch_route, model, create_time,
-        update_time, status, reserver, remark)
+        update_time, status, reserve, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
             (#{entity.id}, #{entity.agentMemoryId}, #{entity.stepName}, #{entity.stepType}, #{entity.execContent}, #{entity.returnDataFormat}, #{entity.parentStepId}, #{entity.nextStepId},
-            #{entity.branchCondition}, #{entity.branchRoute}, #{entity.model}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
+            #{entity.branchCondition}, #{entity.branchRoute}, #{entity.model}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
         </foreach>
     </insert>
 

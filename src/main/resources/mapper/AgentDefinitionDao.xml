@@ -3,11 +3,12 @@
 <mapper namespace="com.simple.ai.view.agentDefinition.AgentDefinitionRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, model, default_model_id, create_by, update_by, create_time, update_time, status, reserver, remark)
+        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, model, default_model_id, create_by, update_by, create_time, update_time, status, reserve,
+        remark)
         values
         <foreach collection="entities" item="entity" separator=",">
             (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstPrinciple}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.model}, #{entity.defaultModelId}, #{entity.createBy}, #{entity.updateBy},
-            #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserver}, #{entity.remark})
+            #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
         </foreach>
     </insert>
 
@@ -122,7 +123,7 @@
             ask.create_time as createTime,
             ask.update_time as updateTime,
             ask.status,
-            ask.reserver,
+            ask.reserve,
             ask.remark
         from agent_skill ask
         where ask.agent_id = #{agentId}
@@ -140,7 +141,7 @@
             ar.create_time as createTime,
             ar.update_time as updateTime,
             ar.status,
-            ar.reserver,
+            ar.reserve,
             ar.remark
         from agent_rule ar
         where ar.agent_id = #{agentId}
@@ -156,7 +157,7 @@
             sar.create_time as createTime,
             sar.update_time as updateTime,
             sar.status,
-            sar.reserver,
+            sar.reserve,
             sar.remark
         from sub_agent_relation sar
         where sar.main_agent_id = #{agentId} or sar.sub_agent_id = #{agentId}
@@ -175,7 +176,7 @@
             am.create_time as createTime,
             am.update_time as updateTime,
             am.status,
-            am.reserver,
+            am.reserve,
             am.remark
         from agent_memory am
         where am.agent_id = #{agentId}
@@ -199,7 +200,7 @@
             amd.create_time as createTime,
             amd.update_time as updateTime,
             amd.status,
-            amd.reserver,
+            amd.reserve,
             amd.remark
         from agent_memory_detail amd
         inner join agent_memory am on am.id = amd.agent_memory_id
@@ -225,7 +226,7 @@
             t.create_time as createTime,
             t.update_time as updateTime,
             t.status,
-            t.reserver,
+            t.reserve,
             t.remark
         from task t
         where t.agent_id = #{agentId}
@@ -244,7 +245,7 @@
             ac.create_time as createTime,
             ac.update_time as updateTime,
             ac.status,
-            ac.reserver,
+            ac.reserve,
             ac.remark
         from atomic_command ac
         inner join agent_skill ask on ask.id = ac.skill_id

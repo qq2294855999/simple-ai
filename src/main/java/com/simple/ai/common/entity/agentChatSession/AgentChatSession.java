@@ -1,10 +1,6 @@
 package com.simple.ai.common.entity.agentChatSession;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,6 +29,12 @@ public class AgentChatSession {
     @TableField(value = "agent_id")
     private String agentId;
 
+    /**
+     * 用户归属ID，确保会话归属到具体用户
+     */
+    @TableField(value = "user_id")
+    private String userId;
+
     /** 会话名称 */
     @TableField(value = "session_name")
     private String sessionName;
@@ -49,13 +51,21 @@ public class AgentChatSession {
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
+    /**
+     * 创建者用户ID，用于归属校验
+     */
+    @TableField(value = "create_user_id")
+    private String createUserId;
+
     /** 状态 */
     @TableField(value = "status")
     private Status status;
 
-    /** 扩展 */
-    @TableField(value = "reserver")
-    private String reserver;
+    /**
+     * 扩展字段，JSON格式
+     */
+    @TableField(value = "reserve")
+    private String reserve;
 
     /** 备注 */
     @TableField(value = "remark")

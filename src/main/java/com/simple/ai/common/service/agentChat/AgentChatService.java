@@ -1,9 +1,6 @@
 package com.simple.ai.common.service.agentChat;
 
-import com.simple.ai.common.dto.agentChat.AgentChatMessageResponse;
-import com.simple.ai.common.dto.agentChat.AgentChatSessionResponse;
-import com.simple.ai.common.dto.agentChat.CreateAgentChatSessionRequest;
-import com.simple.ai.common.dto.agentChat.SendAgentChatMessageRequest;
+import com.simple.ai.common.dto.agentChat.*;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 
@@ -80,4 +77,12 @@ public interface AgentChatService {
      * @return 任务详情列表
      */
     List<TaskDetail> findTrajectory(String sessionId);
+
+    /**
+     * 查询轮次状态，用于断线重连时判断轮次是否已完成。
+     *
+     * @param turnId 轮次主键
+     * @return 轮次状态响应
+     */
+    AgentChatTurnStatusResponse findTurnStatus(String turnId);
 }

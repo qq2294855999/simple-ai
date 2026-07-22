@@ -38,4 +38,11 @@ public class SendAgentChatMessageRequest {
      */
     @Schema(description = "记忆操作标志")
     private String memoryAction;
+
+    /**
+     * 幂等键，用于防止断线重连后产生重复消息。
+     * 前端每次发送消息时生成唯一值，后端通过 Redis SETNX 去重。
+     */
+    @Schema(description = "幂等键，防止重复消息")
+    private String idempotencyKey;
 }
