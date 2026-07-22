@@ -21,7 +21,7 @@ public enum AgentStepTypeProcess {
     LOOP_END(4, "循环结束");
 
     /**
-     * MyBatis-Plus 数据库映射值（排序依据）
+     * MyBatis-Plus 数据库映射值
      */
     @EnumValue
     private final int code;

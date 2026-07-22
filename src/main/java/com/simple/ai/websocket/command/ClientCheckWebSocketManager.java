@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Date;
 
 /**
@@ -39,6 +41,7 @@ public class ClientCheckWebSocketManager extends DefaultCheckWebSocketManager {
      * @return true 鉴权通过，false 拒绝连接
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean checkToken(String token, String type, String cliKey) {
 
         // 仅处理 agent-executor 类型的连接，其他类型委托父类默认放行

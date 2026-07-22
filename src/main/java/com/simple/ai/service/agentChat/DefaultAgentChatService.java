@@ -429,7 +429,7 @@ class DefaultAgentChatService implements AgentChatService {
      * @return 最终消息
      */
     private AgentChatMessage buildFinalMessage(String sessionId, CommandDispatchResponse response, Long sequenceNo) {
-        boolean success = "SUCCESS".equals(response.getExecStatus());
+        boolean success = AgentExecutionStatusProcess.SUCCESS.equals(response.getExecStatus());
         String content = success ? normalizeRestrictedMarkdown(response.getResponseContent()) : response.getFailureReason();
         AgentChatMessage message = new AgentChatMessage();
         message.setSessionId(sessionId);
@@ -534,7 +534,7 @@ class DefaultAgentChatService implements AgentChatService {
      * @param response      调度响应
      */
     private void publishFinalEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId, AgentChatMessage message, CommandDispatchResponse response) {
-        boolean success = "SUCCESS".equals(response.getExecStatus());
+        boolean success = AgentExecutionStatusProcess.SUCCESS.equals(response.getExecStatus());
         String eventType = success ? "MESSAGE_COMPLETED" : "CHAT_FAILED";
         String eventMessage = success ? "AI 最终回复已保存" : "AI 对话执行失败";
         publishChatEvent(eventConsumer, sessionId, eventType, eventMessage, message.getTaskId(), message.getContent(), true, response.getFailureReason());

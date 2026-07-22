@@ -1,5 +1,6 @@
 package com.simple.ai.view.agentClient;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.dto.agentClient.PageAgentClientRequest;
 import com.simple.ai.common.dto.agentClient.PageAgentClientResponse;
@@ -33,7 +34,7 @@ class MPAgentClientView implements AgentClientView {
 
     @Override
     public AgentClient findByIdWithLock(String id) {
-        return repository.selectByIdWithLock(id);
+        return repository.selectOne(new LambdaQueryWrapper<AgentClient>().eq(AgentClient::getId, id).last("FOR UPDATE"));
     }
 
     @Override

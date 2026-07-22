@@ -23,10 +23,10 @@
             coalesce(task_stat.task_count, 0) as taskCount,
             latest_task.exec_status as latestTaskStatus,
             case latest_task.exec_status
-                when 'WAITING' then '等待执行'
-                when 'RUNNING' then '执行中'
-                when 'SUCCESS' then '执行成功'
-                when 'FAILED' then '执行失败'
+        when 1 then '等待执行'
+        when 2 then '执行中'
+        when 3 then '执行成功'
+        when 4 then '执行失败'
                 else null
             end as latestTaskStatusLabel,
             am.create_time as createTime,

@@ -27,11 +27,4 @@ public interface AgentClientRepository extends BaseMapper<AgentClient> {
      */
     List<PageAgentClientResponse> selectPage(@Param("pageRequest") PageAgentClientRequest pageRequest, Page<PageAgentClientResponse> page);
 
-    /**
-     * 按主键查询客户端实例（带 FOR UPDATE 行锁）。
-     *
-     * @param id 主键
-     * @return 客户端实例实体，不存在返回 null
-     */
-    AgentClient selectByIdWithLock(@Param("id") String id);
 }

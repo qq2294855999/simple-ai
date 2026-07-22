@@ -27,19 +27,19 @@
             next_task.task_name as nextTaskName,
             t.step_type as stepType,
             case t.step_type
-                when 'JUDGE' then '判断'
-                when 'ATOMIC_COMMAND' then '原子命令'
-                when 'LOOP_START' then '循环开始'
-                when 'LOOP_END' then '循环结束'
-                else t.step_type
+        when 1 then '判断'
+        when 2 then '原子命令'
+        when 3 then '循环开始'
+        when 4 then '循环结束'
+        else ''
             end as stepTypeLabel,
             t.exec_status as execStatus,
             case t.exec_status
-                when 'WAITING' then '等待执行'
-                when 'RUNNING' then '执行中'
-                when 'SUCCESS' then '执行成功'
-                when 'FAILED' then '执行失败'
-                else t.exec_status
+        when 1 then '等待执行'
+        when 2 then '执行中'
+        when 3 then '执行成功'
+        when 4 then '执行失败'
+        else ''
             end as execStatusLabel,
             t.failure_reason as failureReason,
             t.create_time as createTime,

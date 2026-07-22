@@ -5,10 +5,10 @@
     <select id="selectSummary" resultType="com.simple.ai.common.dto.agentDashboard.AgentDashboardSummaryResponse">
         select
             (select count(1) from agent_definition) as agentCount,
-            (select count(1) from agent_definition where status = 1) as enabledAgentCount,
+            (select count(1) from agent_definition where status = '1') as enabledAgentCount,
             (select count(1) from agent_skill) as skillCount,
-            (select count(1) from task where exec_status = 'RUNNING') as runningTaskCount,
-            (select count(1) from task where exec_status = 'FAILED') as failedTaskCount
+            (select count(1) from task where exec_status = 2)          as runningTaskCount,
+            (select count(1) from task where exec_status = 4)          as failedTaskCount
     </select>
 
     <select id="selectRecentTasks" resultType="com.simple.ai.common.dto.agentDashboard.AgentDashboardRecentTaskResponse">
@@ -18,11 +18,11 @@
             t.task_name as taskName,
             t.exec_status as execStatus,
             case t.exec_status
-                when 'WAITING' then '等待执行'
-                when 'RUNNING' then '执行中'
-                when 'SUCCESS' then '执行成功'
-                when 'FAILED' then '执行失败'
-                else t.exec_status
+                when 1 then '等待执行'
+                when 2 then '执行中'
+                when 3 then '执行成功'
+                when 4 then '执行失败'
+                else ''
             end as execStatusLabel,
             t.failure_reason as failureReason,
             t.update_time as updateTime

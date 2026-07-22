@@ -22,11 +22,11 @@
             amd.step_name as stepName,
             amd.step_type as stepType,
             case amd.step_type
-                when 'JUDGE' then '判断'
-                when 'ATOMIC_COMMAND' then '原子命令'
-                when 'LOOP_START' then '循环开始'
-                when 'LOOP_END' then '循环结束'
-                else amd.step_type
+        when 1 then '判断'
+        when 2 then '原子命令'
+        when 3 then '循环开始'
+        when 4 then '循环结束'
+        else ''
             end as stepTypeLabel,
             amd.exec_content as execContent,
             amd.return_data_format as returnDataFormat,

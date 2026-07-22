@@ -39,31 +39,4 @@
         ORDER BY c.create_time DESC
     </select>
 
-    <!-- 按主键查询客户端实例（带 FOR UPDATE 行锁） -->
-    <select id="selectByIdWithLock" resultType="com.simple.ai.common.entity.agentClient.AgentClient">
-        SELECT id,
-               user_id              AS userId,
-               executor_id          AS executorId,
-               client_name          AS clientName,
-               client_secret_hash   AS clientSecretHash,
-               status,
-               expire_time          AS expireTime,
-               last_connected_at    AS lastConnectedAt,
-               last_disconnected_at AS lastDisconnectedAt,
-               last_handshake_error AS lastHandshakeError,
-               agent_version        AS agentVersion,
-               machine_name         AS machineName,
-               create_user_id       AS createUserId,
-               create_user_name     AS createUserName,
-               create_time          AS createTime,
-               update_user_id       AS updateUserId,
-               update_user_name     AS updateUserName,
-               update_time          AS updateTime,
-               reserve,
-               remark
-        FROM agent_client
-        WHERE id = #{id}
-            FOR UPDATE
-    </select>
-
 </mapper>

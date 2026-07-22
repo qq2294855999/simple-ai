@@ -19,7 +19,7 @@ public enum AgentMemoryVersionStatusProcess {
     RETIRED(3, "已退役");
 
     /**
-     * MyBatis-Plus 数据库映射值（排序依据）
+     * MyBatis-Plus 数据库映射值
      */
     @EnumValue
     private final int code;

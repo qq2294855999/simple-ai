@@ -21,7 +21,7 @@ public enum AgentExecutionStatusProcess {
     FAILED(4, "执行失败");
 
     /**
-     * MyBatis-Plus 数据库映射值（排序依据）
+     * MyBatis-Plus 数据库映射值
      */
     @EnumValue
     private final int code;
