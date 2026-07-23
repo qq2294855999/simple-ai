@@ -57,6 +57,18 @@ public class AgentChatSession {
     @TableField(value = "create_user_id")
     private String createUserId;
 
+    /**
+     * 模型主键，会话级默认模型
+     */
+    @TableField(value = "model_id")
+    private String modelId;
+
+    /**
+     * 客户端主键，会话级默认执行客户端
+     */
+    @TableField(value = "client_id")
+    private String clientId;
+
     /** 状态 */
     @TableField(value = "status")
     private Status status;

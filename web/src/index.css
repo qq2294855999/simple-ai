@@ -116,8 +116,93 @@ body {
   margin-top: 12px;
 }
 
+/* ===== 受限 Markdown 渲染样式 ===== */
+.restricted-markdown p {
+    margin: 0 0 8px;
+    line-height: 1.7;
+}
+
+.restricted-markdown h1,
+.restricted-markdown h2,
+.restricted-markdown h3,
+.restricted-markdown h4,
+.restricted-markdown h5,
+.restricted-markdown h6 {
+    margin: 16px 0 8px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.restricted-markdown h1 {
+    font-size: 20px;
+}
+
+.restricted-markdown h2 {
+    font-size: 18px;
+}
+
+.restricted-markdown h3 {
+    font-size: 16px;
+}
+
+.restricted-markdown h4 {
+    font-size: 15px;
+}
+
+.restricted-markdown ul,
+.restricted-markdown ol {
+    margin: 0 0 8px;
+    padding-left: 24px;
+}
+
+.restricted-markdown li {
+    margin-bottom: 4px;
+    line-height: 1.6;
+}
+
+.restricted-markdown blockquote {
+    margin: 0 0 8px;
+    padding: 8px 16px;
+    border-left: 4px solid #1677ff;
+    background: #f6f8fa;
+    color: #555;
+}
+
+.restricted-markdown hr {
+    margin: 16px 0;
+    border: none;
+    border-top: 1px solid #d9d9d9;
+}
+
+.restricted-markdown strong {
+    font-weight: 600;
+}
+
+.restricted-markdown a {
+    color: #1677ff;
+    text-decoration: none;
+}
+
+.restricted-markdown a:hover {
+    text-decoration: underline;
+}
+
+.restricted-markdown code:not(pre code) {
+    padding: 2px 6px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #d63384;
+}
+
+.restricted-markdown img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
 .restricted-markdown-table {
   overflow-x: auto;
+    margin-bottom: 8px;
 }
 
 .restricted-markdown table {

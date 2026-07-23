@@ -28,4 +28,14 @@ public class AgentChatSessionResponse {
 
     /** 最后消息时间 */
     private Date lastMessageAt;
+
+    /**
+     * 模型主键
+     */
+    private String modelId;
+
+    /**
+     * 客户端主键
+     */
+    private String clientId;
 }

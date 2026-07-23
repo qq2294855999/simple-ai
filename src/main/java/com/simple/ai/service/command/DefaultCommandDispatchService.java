@@ -785,20 +785,28 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private String executeAiExploration(Task task, CommandDispatchRequest request, AgentContext context,
                                         Consumer<CommandDispatchProgressEvent> progressConsumer) {
         publishProgress(progressConsumer, request, task, "AI_STARTED", "AI 开始生成探索方案", request.getCommandContent(), Boolean.FALSE, "");
-        AgentAiRequest aiRequest = buildAiRequest(request, context);
-        AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, token -> publishAiTokenProgress(progressConsumer, request, task, token));
 
-        // 持久化当前 AI 调用的不可变供应商和模型快照
-        persistRuntimeSnapshot(task, aiResponse);
-        saveAiTaskDetail(task, request, aiRequest, aiResponse);
-        AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
-        publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
+        // 设置会话上下文，供 ToolCallback 在异步线程中获取 sessionId
+        com.simple.ai.service.agent.AgentSessionContext.setCurrentSessionId(request.getSessionId());
+        try {
+            AgentAiRequest aiRequest = buildAiRequest(request, context);
+            AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, token -> publishAiTokenProgress(progressConsumer, request, task, token));
 
-        // 触发记忆沉淀判定：AI 输出的结构化 AgentExecutionPlan 通过校验后，
-        // 由记忆沉淀服务提炼最短执行链并创建 agent_memory_version (DRAFT)
-        triggerMemoryPrecipitation(task, request, aiResponse);
+            // 持久化当前 AI 调用的不可变供应商和模型快照
+            persistRuntimeSnapshot(task, aiResponse);
+            saveAiTaskDetail(task, request, aiRequest, aiResponse);
+            AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
+            publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
 
-        return aiResponse.getResponseContent();
+            // 触发记忆沉淀判定：AI 输出的结构化 AgentExecutionPlan 通过校验后，
+            // 由记忆沉淀服务提炼最短执行链并创建 agent_memory_version (DRAFT)
+            triggerMemoryPrecipitation(task, request, aiResponse);
+
+            return aiResponse.getResponseContent();
+        } finally {
+            // 清理 ThreadLocal，防止内存泄漏
+            com.simple.ai.service.agent.AgentSessionContext.clear();
+        }
     }
 
     /**
@@ -1030,6 +1038,10 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         aiRequest.setPromptContent(context.getPromptContent());
         aiRequest.setCommandContent(request.getCommandContent());
         aiRequest.setSessionSummary(context.getSessionSummary());
+
+        // 传递会话ID和用户ID，供工具回调中获取用户上下文
+        aiRequest.setSessionId(request.getSessionId());
+        aiRequest.setUserId(request.getUserId());
         return aiRequest;
     }
 

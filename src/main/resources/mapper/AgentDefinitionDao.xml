@@ -3,11 +3,12 @@
 <mapper namespace="com.simple.ai.view.agentDefinition.AgentDefinitionRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, model, default_model_id, create_by, update_by, create_time, update_time, status, reserve,
+        insert into agent_definition(id, name, definition_desc, first_principle, second_rule, third_skill, default_model_id, create_by, update_by, create_time, update_time, status, reserve,
         remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstPrinciple}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.model}, #{entity.defaultModelId}, #{entity.createBy}, #{entity.updateBy},
+            (#{entity.id}, #{entity.name}, #{entity.definitionDesc}, #{entity.firstPrinciple}, #{entity.secondRule}, #{entity.thirdSkill}, #{entity.defaultModelId}, #{entity.createBy},
+            #{entity.updateBy},
             #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
         </foreach>
     </insert>
@@ -17,7 +18,6 @@
             ad.id,
             ad.name,
             ad.definition_desc as definitionDesc,
-            ad.model,
             ad.default_model_id as defaultModelId,
             ad.status,
             coalesce(skill_stat.skill_count, 0) as skillCount,
@@ -68,9 +68,6 @@
             <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
                 and (ad.name like concat('%', #{pageRequest.keyword}, '%') or ad.definition_desc like concat('%', #{pageRequest.keyword}, '%'))
             </if>
-            <if test="pageRequest.model != null and pageRequest.model != ''">
-                and ad.model = #{pageRequest.model}
-            </if>
             <if test="pageRequest.status != null">
                 and ad.status = #{pageRequest.status}
             </if>
@@ -86,9 +83,6 @@
             <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
                 and (ad.name like concat('%', #{pageRequest.keyword}, '%') or ad.definition_desc like concat('%', #{pageRequest.keyword}, '%'))
             </if>
-            <if test="pageRequest.model != null and pageRequest.model != ''">
-                and ad.model = #{pageRequest.model}
-            </if>
             <if test="pageRequest.status != null">
                 and ad.status = #{pageRequest.status}
             </if>
@@ -103,7 +97,6 @@
             ad.first_principle as firstPrinciple,
             ad.second_rule as secondRule,
             ad.third_skill as thirdSkill,
-            ad.model,
             ad.default_model_id as defaultModelId,
             ad.status,
             ad.create_time as createTime,

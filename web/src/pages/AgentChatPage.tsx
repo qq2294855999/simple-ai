@@ -17,7 +17,7 @@ import type {AgentDefinitionPageDto} from "../dto/agentDefinition/AgentDefinitio
 import type {AiModelResponseDto} from "../dto/aiModel/AiModelDto";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
 import {ToastUtil} from "../utils/ToastUtil";
-import {appendAssistantToken, replaceFinalMessage, stripProtocolJson} from "../utils/agentChatStreamUtil";
+import {appendAssistantToken, progressEventsToExecutionEvents, replaceFinalMessage, stripProtocolJson} from "../utils/agentChatStreamUtil";
 
 const maxSessionNameLength = 14;
 const messagePageSize = 50;
@@ -51,6 +51,8 @@ export function AgentChatPage() {
   const [aiThinking, setAiThinking] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+    const [progressEvents, setProgressEvents] = useState<AgentChatProgressEventDto[]>([]);
+    const progressEventsRef = useRef<AgentChatProgressEventDto[]>([]);
   const streamAbortControllerRef = useRef<AbortController | undefined>(undefined);
   const messageListRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -93,6 +95,46 @@ export function AgentChatPage() {
     const result = await AgentChatApi.findSessions(agentId);
     setSessions(result);
   }, []);
+
+    /** 根据会话中的 modelId/clientId 回显 Select 值。 */
+    const restoreSessionContext = useCallback((session: AgentChatSessionDto) => {
+        if (session.modelId) {
+            setSelectedModelId(session.modelId);
+        }
+        if (session.clientId) {
+            setSelectedClientId(session.clientId);
+        }
+  }, []);
+
+    /** 渲染会话描述信息（智能体 + 模型 + 客户端）。 */
+    const renderSessionDescription = useCallback((session: AgentChatSessionDto): React.ReactNode => {
+        const parts: string[] = [];
+        if (session.agentName) {
+            parts.push(session.agentName);
+        }
+
+        // 查找模型名称
+        if (session.modelId) {
+            const model = models.find(m => m.id === session.modelId);
+            if (model) {
+                parts.push(`${model.providerName} · ${model.modelName}`);
+            } else {
+                parts.push(`模型: ${session.modelId.substring(0, 8)}...`);
+            }
+        }
+
+        // 查找客户端名称
+        if (session.clientId) {
+            const client = clients.find(c => c.id === session.clientId);
+            if (client) {
+                parts.push(client.clientName);
+            } else {
+                parts.push(`客户端: ${session.clientId.substring(0, 8)}...`);
+            }
+        }
+
+        return parts.length > 0 ? parts.join(" · ") : session.agentName;
+    }, [models, clients]);
 
   const loadMessages = useCallback(async (sessionId: string) => {
     const result = await AgentChatApi.findMessagesPage(sessionId, messagePageSize, Number.MAX_SAFE_INTEGER);
@@ -165,14 +207,32 @@ export function AgentChatPage() {
     setHasMore(true);
     setLoadingMore(false);
     void loadMessages(sessionId).catch(() => setMessages([]));
-  }, [loadMessages]);
+
+      // 回显会话的模型和客户端配置
+      const session = sessions.find(s => s.id === sessionId);
+      if (session) {
+          restoreSessionContext(session);
+      }
+  }, [loadMessages, sessions, restoreSessionContext]);
 
   const { onClick: handleCreateSession, loading: creating } = usePreventDoubleClickHook(async () => {
     if (!selectedAgentId) {
       ToastUtil.error("请先选择智能体");
       return;
     }
-    const session = await AgentChatApi.createSession({ agentId: selectedAgentId });
+      if (!selectedModelId) {
+          ToastUtil.error("请选择模型");
+          return;
+      }
+      if (!selectedClientId) {
+          ToastUtil.error("请选择客户端");
+          return;
+      }
+      const session = await AgentChatApi.createSession({
+          agentId: selectedAgentId,
+          modelId: selectedModelId,
+          clientId: selectedClientId
+      });
     setSessions(previousSessions => [session, ...previousSessions]);
     setSelectedSessionId(session.id);
     setMessages([]);
@@ -227,14 +287,37 @@ export function AgentChatPage() {
   const handleProgress = useCallback((event: AgentChatProgressEventDto) => {
       // token 仅进入对话消息流
     if (event.eventType === "AI_TOKEN") {
-      // 首 token 到达时结束思考动画
       setAiThinking(false);
       setMessages(previousMessages => appendAssistantToken(previousMessages, event));
       return;
     }
+
+      // 收集非 token 的进度事件（实时展示执行过程）
+      if (event.eventType !== "MESSAGE_COMPLETED" && event.eventType !== "CHAT_FAILED") {
+          setProgressEvents(previous => {
+              const updated = [...previous, event];
+              progressEventsRef.current = updated;
+              return updated;
+          });
+      }
+
+      // 消息完成或失败时，将进度事件附加到最终消息
     if (event.eventType === "MESSAGE_COMPLETED" || event.eventType === "CHAT_FAILED") {
       setAiThinking(false);
-      setMessages(previousMessages => replaceFinalMessage(previousMessages, event));
+        setMessages(previousMessages => {
+            // 从 ref 读取最新收集的进度事件，避免闭包过期
+            const executionEvents = progressEventsToExecutionEvents(progressEventsRef.current, event.taskId);
+            const finalMessage = replaceFinalMessage(previousMessages, event);
+            // 将 executionEvents 附加到最后一条消息
+            if (finalMessage.length > 0) {
+                const lastMsg = finalMessage[finalMessage.length - 1];
+                finalMessage[finalMessage.length - 1] = {...lastMsg, executionEvents};
+            }
+            return finalMessage;
+        });
+        // 清空进度事件，为下一轮对话做准备
+        setProgressEvents([]);
+        progressEventsRef.current = [];
     }
   }, []);
 
@@ -256,15 +339,6 @@ export function AgentChatPage() {
 
       const request: SendAgentChatMessageRequestDto = {sessionId: selectedSessionId, content, idempotencyKey};
 
-    // 用户显式选择模型时传递 modelId
-    if (selectedModelId) {
-      request.modelId = selectedModelId;
-    }
-
-      // 用户显式选择客户端时传递 clientId
-      if (selectedClientId) {
-          request.clientId = selectedClientId;
-      }
     try {
         // 使用带断线重连的流式发送，网络断开时自动指数退避重试
         await AgentChatApi.sendStreamWithRetry(
@@ -331,9 +405,8 @@ export function AgentChatPage() {
             options={agents.map(agent => ({ label: agent.name, value: agent.id }))}
           />
           <Select
-            placeholder="选择模型（可选）"
+              placeholder="选择模型"
             value={selectedModelId}
-            allowClear
             style={{ width: 260, height: 36 }}
             onChange={setSelectedModelId}
             disabled={!selectedAgentId || models.length === 0}
@@ -342,21 +415,17 @@ export function AgentChatPage() {
               value: model.id
             }))}
           />
-          <Button type="primary" icon={<PlusOutlined />} loading={creating} disabled={!selectedAgentId} onClick={handleCreateSession}>新建对话</Button>
-        </Space>
-      </div>
-        <div className="simple-search-panel" style={{marginTop: 12}}>
-            <Space wrap>
-                <Select
-                    placeholder="选择客户端（可选）"
-                    value={selectedClientId}
-                    allowClear
-                    style={{width: 220, height: 36}}
-                    onChange={setSelectedClientId}
-                    options={clients.map(c => ({label: c.clientName, value: c.id}))}
-                    showSearch
-                    filterOption={(input, option) => (option?.label as string || "").includes(input)}
-                />
+            <Select
+                placeholder="选择客户端"
+                value={selectedClientId}
+                style={{width: 220, height: 36}}
+                onChange={setSelectedClientId}
+                options={clients.map(c => ({label: c.clientName, value: c.id}))}
+                showSearch
+                filterOption={(input, option) => (option?.label as string || "").includes(input)}
+            />
+            <Button type="primary" icon={<PlusOutlined/>} loading={creating} disabled={!selectedAgentId || !selectedModelId || !selectedClientId}
+                    onClick={handleCreateSession}>新建对话</Button>
         </Space>
       </div>
       <div className="agent-chat-layout">
@@ -418,7 +487,7 @@ export function AgentChatPage() {
                           <Tooltip title={session.sessionName}>
                             <List.Item.Meta
                               title={truncateSessionName(session.sessionName)}
-                              description={session.agentName}
+                              description={renderSessionDescription(session)}
                             />
                           </Tooltip>
                         </div>
@@ -477,10 +546,60 @@ export function AgentChatPage() {
               </div>
             ))}
             {aiThinking && (
-              <div className="agent-chat-message agent-chat-message-assistant" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Spin indicator={<LoadingOutlined style={{ fontSize: 20, color: "#52c41a" }} spin />} />
+                <div className="agent-chat-message agent-chat-message-assistant" style={{display: "flex", alignItems: "center", gap: 10}}>
+                    <Spin indicator={<LoadingOutlined style={{fontSize: 20, color: "#52c41a"}} spin/>}/>
                 <Typography.Text type="secondary">AI 正在思考中…</Typography.Text>
               </div>
+            )}
+              {/* 实时执行进度面板（流式展示） */}
+              {aiThinking && progressEvents.length > 0 && (
+                  <div className="agent-chat-message agent-chat-message-assistant" style={{marginTop: 8}}>
+                      <Collapse
+                          ghost
+                          size="small"
+                          defaultActiveKey={["progress"]}
+                          expandIcon={({isActive}) => <RightOutlined rotate={isActive ? 90 : 0}/>}
+                          items={[{
+                              key: "progress",
+                              label: (
+                                  <Space>
+                                      <Spin indicator={<LoadingOutlined style={{fontSize: 14}} spin/>}/>
+                                      <Typography.Text type="secondary" style={{fontSize: 12}}>
+                                          执行中 ({progressEvents.length} 步)
+                                      </Typography.Text>
+                                  </Space>
+                              ),
+                              children: (
+                                  <div style={{paddingLeft: 4}}>
+                                      {progressEvents.map((event, idx) => {
+                                          const isFailed = event.eventType.includes("FAILED") || event.failureReason;
+                                          const color = isFailed ? "red" : event.eventType.includes("AI") ? "purple" : "blue";
+                                          return (
+                                              <div key={`${event.taskId}-${idx}`}
+                                                   style={{display: "flex", alignItems: "center", padding: "3px 0", fontSize: 12}}>
+                                                  <Tag color={color} style={{fontSize: 11, marginRight: 8, minWidth: 100, textAlign: "center"}}>
+                                                      {event.stepName || event.message || event.eventType}
+                                                  </Tag>
+                                                  {event.payload && (
+                                                      <Tooltip title={event.payload}>
+                                                          <Typography.Text type="secondary" style={{
+                                                              maxWidth: 200,
+                                                              overflow: "hidden",
+                                                              textOverflow: "ellipsis",
+                                                              whiteSpace: "nowrap"
+                                                          }}>
+                                                              {event.payload.length > 30 ? event.payload.substring(0, 30) + "..." : event.payload}
+                                                          </Typography.Text>
+                                                      </Tooltip>
+                                                  )}
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              )
+                          }]}
+                      />
+                  </div>
             )}
           </div>
           <Input.TextArea

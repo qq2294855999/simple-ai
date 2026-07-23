@@ -19,9 +19,6 @@ public class PageAggregateAgentDefinitionRequest extends PageBase {
     @Schema(description = "关键字，匹配名称和定义描述")
     private String keyword;
 
-    @Schema(description = "模型")
-    private String model;
-
     @Schema(description = "状态")
     private Status status;
 }

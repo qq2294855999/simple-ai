@@ -33,6 +33,9 @@ class SpringAiAgentAiClient implements AgentAiClient {
     @Autowired
     private List<ToolCallback> toolCallbacks;
 
+    @Autowired
+    private AgentSessionContextHolder agentSessionContextHolder;
+
     @Override
     public AgentAiResponse chat(AgentAiRequest request) {
 
@@ -118,18 +121,46 @@ class SpringAiAgentAiClient implements AgentAiClient {
         String userContent = buildUserContent(request);
         StringBuilder contentBuilder = new StringBuilder();
 
-        // 构建 Spring AI 流式请求，保留原生 token 输出能力
-        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
-        ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
-        // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
-        ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks);
-        ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
-        Flux<String> contentFlux = streamSpec.content();
+        // 将完整会话上下文存入 Redis，供 ToolCallback 在异步线程中获取
+        if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
+            agentSessionContextHolder.putContext(request.getSessionId(), request.getUserId(), request.getAgentId());
+        }
 
-        // 消费模型输出片段，同时聚合完整响应用于任务最终落库
-        Flux<String> consumedFlux = contentFlux.doOnNext(token -> acceptStreamToken(tokenConsumer, contentBuilder, token));
-        consumedFlux.blockLast();
-        return contentBuilder.toString();
+        // 用 SessionAwareToolCallback 包装所有工具回调，
+        // 在 boundedElastic 执行线程上设置 AgentSessionContext ThreadLocal，
+        // 使 ToolCallback 能通过 resolveUserIdFromSession() 获取会话上下文
+        String sessionId = request.getSessionId() != null && !request.getSessionId().isBlank() ? request.getSessionId() : null;
+        List<ToolCallback> wrappedCallbacks = new java.util.ArrayList<>();
+        for (ToolCallback tc : toolCallbacks) {
+            wrappedCallbacks.add(new SessionAwareToolCallback(tc, sessionId));
+        }
+
+        try {
+            // 构建 Spring AI 流式请求，保留原生 token 输出能力
+            ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
+            ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
+
+            // 构建工具上下文，传递 sessionId 供工具回调获取用户上下文
+            java.util.Map<String, Object> toolContext = new java.util.HashMap<>();
+            if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
+                toolContext.put("sessionId", request.getSessionId());
+            }
+
+            // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
+            ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(wrappedCallbacks).toolContext(toolContext);
+            ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
+            Flux<String> contentFlux = streamSpec.content();
+
+            // 消费模型输出片段，同时聚合完整响应用于任务最终落库
+            Flux<String> consumedFlux = contentFlux.doOnNext(token -> acceptStreamToken(tokenConsumer, contentBuilder, token));
+            consumedFlux.blockLast();
+            return contentBuilder.toString();
+        } finally {
+            // 清理 Redis 中的会话上下文，防止数据残留
+            if (request.getSessionId() != null) {
+                agentSessionContextHolder.remove(request.getSessionId());
+            }
+        }
     }
 
     /**

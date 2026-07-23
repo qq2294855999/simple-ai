@@ -337,6 +337,12 @@ public class AgentContextAssembler {
     private void appendAgentDefinition(StringBuilder builder, AgentDefinition agentDefinition) {
         builder.append("# 系统铁律\n");
         builder.append(AgentIronRuleConstant.SYSTEM_IRON_RULE);
+        builder.append("\n\n# 当前智能体\n");
+
+        // 告知AI自己的身份信息，避免AI通过工具查询未知的"当前智能体"名称
+        builder.append("名称：").append(agentDefinition.getName());
+        builder.append("\n");
+        builder.append("ID：").append(agentDefinition.getId());
         builder.append("\n\n# 智能体定义\n");
         builder.append(agentDefinition.getDefinitionDesc());
         builder.append("\n\n# 第一铁律\n");

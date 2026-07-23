@@ -1,12 +1,15 @@
-import { Button, Form, Input, Modal, Select, Space, Table, Tooltip, Typography, Popconfirm } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
-import { ToastUtil } from "../utils/ToastUtil";
-import { SubAgentRelationApi } from "../api/subAgentRelationApi";
-import { AgentDefinitionApi } from "../api/agentDefinitionApi";
-import type { SubAgentRelationPageResponseDto } from "../dto/subAgentRelation/SubAgentRelationDto";
-import type { CreateSubAgentRelationRequestDto, UpdateSubAgentRelationRequestDto } from "../dto/subAgentRelation/SubAgentRelationDto";
+import {Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import type {ColumnsType} from "antd/es/table";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {ToastUtil} from "../utils/ToastUtil";
+import {SubAgentRelationApi} from "../api/subAgentRelationApi";
+import {AgentDefinitionApi} from "../api/agentDefinitionApi";
+import type {
+    CreateSubAgentRelationRequestDto,
+    SubAgentRelationPageResponseDto,
+    UpdateSubAgentRelationRequestDto
+} from "../dto/subAgentRelation/SubAgentRelationDto";
 
 /**
  * 获取状态中文标签。
@@ -146,7 +149,12 @@ export function SubAgentRelationManagementPage() {
   const columns = useMemo<ColumnsType<SubAgentRelationPageResponseDto>>(() => [
     { title: "主智能体", dataIndex: "mainAgentName", width: 140 },
     { title: "子智能体", dataIndex: "subAgentName", width: 140 },
-    { title: "状态", dataIndex: "status", width: 80, render: (s: string) => <Tooltip title={getStatusLabel(s)}>{getStatusLabel(s)}</Tooltip> },
+      {
+          title: "状态",
+          dataIndex: "status",
+          width: 80,
+          render: (s: string) => <Tag color={getStatusLabel(s) === "启用" ? "green" : "red"}>{getStatusLabel(s)}</Tag>
+      },
     { title: "备注", dataIndex: "remark", ellipsis: true, render: v => <Tooltip title={v}>{v || "-"}</Tooltip> },
     { title: "修改时间", dataIndex: "updateTime", width: 160 },
     {

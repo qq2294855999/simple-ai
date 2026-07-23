@@ -1,4 +1,4 @@
-import type {AgentChatMessageDto, AgentChatProgressEventDto} from "../dto/agentChat/AgentChatDto";
+import type {AgentChatExecutionEventDto, AgentChatMessageDto, AgentChatProgressEventDto} from "../dto/agentChat/AgentChatDto";
 
 const messageEventTypes = new Set(["MESSAGE_ACCEPTED", "AI_TOKEN", "MESSAGE_COMPLETED", "CHAT_FAILED"]);
 
@@ -163,4 +163,30 @@ export function stripProtocolJson(content: string): string {
     result = result.trim();
 
     return result;
+}
+
+/**
+ * 将进度事件列表转换为执行事件列表。
+ *
+ * @param progressEvents 进度事件列表
+ * @param taskId 任务ID
+ * @returns 执行事件列表
+ */
+export function progressEventsToExecutionEvents(
+    progressEvents: AgentChatProgressEventDto[],
+    taskId: string
+): AgentChatExecutionEventDto[] {
+    return progressEvents.map((event, idx) => ({
+        id: `${taskId}-${idx}`,
+        eventType: event.eventType,
+        stepName: event.stepName || event.message,
+        commandName: "",
+        responseContent: event.payload || "",
+        failureReason: event.failureReason || "",
+        sequenceNo: idx + 1,
+        startedAt: "",
+        finishedAt: "",
+        providerName: "",
+        modelCode: ""
+    }));
 }

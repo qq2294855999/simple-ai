@@ -17,4 +17,18 @@ public class CreateAgentChatSessionRequest {
     @NotEmpty(message = "智能体主键不能为空")
     @Schema(description = "智能体主键")
     private String agentId;
+
+    /**
+     * 模型主键
+     */
+    @NotEmpty(message = "模型主键不能为空")
+    @Schema(description = "模型主键")
+    private String modelId;
+
+    /**
+     * 客户端主键
+     */
+    @NotEmpty(message = "客户端主键不能为空")
+    @Schema(description = "客户端主键")
+    private String clientId;
 }

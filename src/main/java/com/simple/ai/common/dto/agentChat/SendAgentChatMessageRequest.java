@@ -23,16 +23,6 @@ public class SendAgentChatMessageRequest {
     @Schema(description = "用户消息")
     private String content;
 
-    /** 显式模型主键 */
-    @Schema(description = "显式模型主键")
-    private String modelId;
-
-    /**
-     * 客户端ID（指定执行目标客户端）
-     */
-    @Schema(description = "客户端ID")
-    private String clientId;
-
     /**
      * 记忆操作标志（create/revise，空表示不操作记忆）
      */

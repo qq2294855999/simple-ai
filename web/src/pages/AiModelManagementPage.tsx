@@ -1,12 +1,12 @@
-import { Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tooltip, Typography, Popconfirm, Tag } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
-import { ToastUtil } from "../utils/ToastUtil";
-import { AiModelApi } from "../api/aiModelApi";
-import { AiModelProviderApi } from "../api/aiModelProviderApi";
-import type { AiModelProviderModelDto, AiModelResponseDto, AiModelSaveRequestDto } from "../dto/aiModel/AiModelDto";
-import type { AiModelProviderResponseDto } from "../dto/aiModelProvider/AiModelProviderDto";
+import {Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import type {ColumnsType} from "antd/es/table";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {ToastUtil} from "../utils/ToastUtil";
+import {AiModelApi} from "../api/aiModelApi";
+import {AiModelProviderApi} from "../api/aiModelProviderApi";
+import type {AiModelProviderModelDto, AiModelResponseDto, AiModelSaveRequestDto} from "../dto/aiModel/AiModelDto";
+import type {AiModelProviderResponseDto} from "../dto/aiModelProvider/AiModelProviderDto";
 
 /**
  * 获取状态中文标签。
@@ -162,7 +162,7 @@ export function AiModelManagementPage() {
     },
     {
       title: "状态", dataIndex: "status", width: 70,
-      render: (status: number) => <Tooltip title={getStatusLabel(status)}>{getStatusLabel(status)}</Tooltip>
+        render: (status: number) => <Tag color={getStatusLabel(status) === "启用" ? "green" : "red"}>{getStatusLabel(status)}</Tag>
     },
     { title: "备注", dataIndex: "remark", ellipsis: true, render: value => <Tooltip title={value}>{value || "-"}</Tooltip> },
     { title: "修改时间", dataIndex: "updateTime", width: 160 },

@@ -44,9 +44,6 @@ public class InfoAggregateAgentDefinitionResponse {
     @Schema(description = "第三技能")
     private String thirdSkill;
 
-    @Schema(description = "模型")
-    private String model;
-
     @Schema(description = "默认模型主键")
     private String defaultModelId;
 

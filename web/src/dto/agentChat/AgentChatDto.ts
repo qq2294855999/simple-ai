@@ -4,6 +4,10 @@ export interface AgentChatSessionDto {
   agentName: string;
   sessionName: string;
   lastMessageAt: string;
+    /** 模型主键，会话级默认模型 */
+    modelId: string;
+    /** 客户端主键，会话级默认执行客户端 */
+    clientId: string;
 }
 
 export interface AgentChatMessageDto {
@@ -26,15 +30,15 @@ export interface AgentChatMessageDto {
 
 export interface CreateAgentChatSessionRequestDto {
   agentId: string;
+    /** 模型主键，必填 */
+    modelId: string;
+    /** 客户端主键，必填 */
+    clientId: string;
 }
 
 export interface SendAgentChatMessageRequestDto {
   sessionId: string;
   content: string;
-  /** 显式模型主键 */
-  modelId?: string;
-    /** 客户端ID（指定执行目标客户端） */
-    clientId?: string;
     /** 记忆操作标志（create/revise，空表示不操作记忆） */
     memoryAction?: string;
     /** 幂等键，防止断线重连后产生重复消息 */

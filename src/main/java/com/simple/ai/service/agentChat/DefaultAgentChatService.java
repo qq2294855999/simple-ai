@@ -149,12 +149,14 @@ class DefaultAgentChatService implements AgentChatService {
     @Override
     public AgentChatSessionResponse createSession(CreateAgentChatSessionRequest request) {
         AssertUtils.notEmpty(request.getAgentId(), "智能体主键不能为空");
+        AssertUtils.notEmpty(request.getModelId(), "模型主键不能为空");
+        AssertUtils.notEmpty(request.getClientId(), "客户端主键不能为空");
 
         // 校验会话绑定的智能体存在并已启用
         AgentDefinition agentDefinition = loadEnabledAgent(request.getAgentId());
 
-        // 创建持久化会话
-        AgentChatSession session = createSessionEntity(agentDefinition);
+        // 创建持久化会话，保存完整上下文配置
+        AgentChatSession session = createSessionEntity(agentDefinition, request.getModelId(), request.getClientId());
         transactionTemplate.executeWithoutResult(status -> agentChatSessionView.save(session));
         return buildSessionResponse(session, agentDefinition);
     }
@@ -463,9 +465,11 @@ class DefaultAgentChatService implements AgentChatService {
      * 创建会话实体。
      *
      * @param agentDefinition 智能体实体
+     * @param modelId         模型主键
+     * @param clientId        客户端主键
      * @return 会话实体
      */
-    private AgentChatSession createSessionEntity(AgentDefinition agentDefinition) {
+    private AgentChatSession createSessionEntity(AgentDefinition agentDefinition, String modelId, String clientId) {
         AgentChatSession session = new AgentChatSession();
         session.setAgentId(agentDefinition.getId());
         session.setSessionName("新对话");
@@ -479,6 +483,10 @@ class DefaultAgentChatService implements AgentChatService {
         AssertUtils.notEmpty(currentUserId, "当前登录用户身份为空");
         session.setCreateUserId(currentUserId);
         session.setUserId(currentUserId);
+
+        // 保存会话级模型和客户端配置
+        session.setModelId(modelId);
+        session.setClientId(clientId);
         return session;
     }
 
@@ -528,7 +536,7 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 调用既有命令调度服务。
      *
-     * <p>透传 clientId 用于点对点下发命令，透传 memoryAction 用于记忆操作。</p>
+     * <p>从会话实体获取 userId、modelId、clientId，避免依赖 ThreadLocal 导致异步线程丢失上下文。</p>
      *
      * @param session       会话实体
      * @param request       发送消息请求
@@ -541,12 +549,13 @@ class DefaultAgentChatService implements AgentChatService {
         dispatchRequest.setCommandName("人机对话");
         dispatchRequest.setCommandContent(request.getContent());
         dispatchRequest.setSessionId(session.getId());
-        dispatchRequest.setModelId(request.getModelId());
-        dispatchRequest.setClientId(request.getClientId());
 
-        // 从登录上下文获取当前用户ID并注入调度请求，确保AI按用户过滤资产
-        String currentUserId = LoginUserUtils.getUserTemporary().getUserId();
-        dispatchRequest.setUserId(currentUserId);
+        // 从会话实体获取模型和客户端配置，避免前端重复传递
+        dispatchRequest.setModelId(session.getModelId());
+        dispatchRequest.setClientId(session.getClientId());
+
+        // 从会话实体获取用户ID，避免 ThreadLocal 在异步线程中丢失
+        dispatchRequest.setUserId(session.getUserId());
         return commandDispatchService.dispatchStream(dispatchRequest, eventConsumer);
     }
 
@@ -805,6 +814,8 @@ class DefaultAgentChatService implements AgentChatService {
         response.setAgentName(agentDefinition.getName());
         response.setSessionName(session.getSessionName());
         response.setLastMessageAt(session.getLastMessageAt());
+        response.setModelId(session.getModelId());
+        response.setClientId(session.getClientId());
         return response;
     }
 

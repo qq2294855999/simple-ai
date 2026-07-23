@@ -12,8 +12,6 @@ export interface AgentDefinitionPageDto {
   name: string;
   /** 定义描述 */
   definitionDesc: string;
-  /** 模型 */
-  model: string;
   /** 默认模型主键 */
   defaultModelId?: string;
   /** 状态码（1=启用/0=停用） */
@@ -54,8 +52,6 @@ export interface AgentDefinitionInfoDto {
   secondRule?: string;
   /** 第三技能 */
   thirdSkill?: string;
-  /** 模型 */
-  model?: string;
   /** 默认模型主键 */
   defaultModelId?: string;
   /** 状态码（1=启用/0=停用） */

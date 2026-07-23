@@ -1,5 +1,6 @@
 package com.simple.ai.service.agentClient;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.copy.agentClient.AgentClientCopyMapper;
@@ -23,7 +24,7 @@ import java.util.List;
 /**
  * 客户端实例(agent_client)服务默认实现。
  * <p>创建客户端时自动生成随机密钥（UUID），BCrypt 哈希后落库，明文仅创建时返回一次。
- * 过期时间支持 DAY / WEEK / MONTH / YEAR 四种单位。</p>
+ * 过期时间支持 DAY/DAYS、WEEK/WEEKS、MONTH/MONTHS、YEAR/YEARS 八种单位（单数和复数形式）。</p>
  *
  * @author qty
  */
@@ -142,22 +143,27 @@ class DefaultAgentClientService implements AgentClientService {
 
         Calendar calendar = Calendar.getInstance();
 
-        // 按时间单位累加
+        // 按时间单位累加，支持单数和复数形式（DAY/DAYS, WEEK/WEEKS, MONTH/MONTHS, YEAR/YEARS）
         switch (unit.toUpperCase()) {
         case "DAY":
+        case "DAYS":
             calendar.add(Calendar.DAY_OF_YEAR, duration);
             break;
         case "WEEK":
+        case "WEEKS":
             calendar.add(Calendar.WEEK_OF_YEAR, duration);
             break;
         case "MONTH":
+        case "MONTHS":
             calendar.add(Calendar.MONTH, duration);
             break;
         case "YEAR":
+        case "YEARS":
             calendar.add(Calendar.YEAR, duration);
             break;
         default:
-            AssertUtils.error("不支持的过期时间单位[{}]", unit);
+            // 先格式化消息模板，避免 AssertUtils 方法重载导致的未格式化问题
+            AssertUtils.error(StrUtil.format("不支持的过期时间单位[{}]，仅支持 DAY/DAYS/WEEK/WEEKS/MONTH/MONTHS/YEAR/YEARS", unit));
         }
 
         return calendar.getTime();

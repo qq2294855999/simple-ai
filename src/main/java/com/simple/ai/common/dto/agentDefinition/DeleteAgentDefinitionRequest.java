@@ -1,13 +1,11 @@
 package com.simple.ai.common.dto.agentDefinition;
 
-import java.util.Date;
-
-import com.simple.common.mp.page.PageBase;
-import io.swagger.v3.oas.annotations.media.Schema;
-import com.simple.common.mp.common.enums.DeleteState;
 import com.simple.common.mp.common.enums.Status;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
+
+import java.util.Date;
 
 @Data
 @Accessors(chain = true)
@@ -31,9 +29,6 @@ public class DeleteAgentDefinitionRequest {
 
     @Schema(description = "第三技能")
     private String thirdSkill;
-
-    @Schema(description = "模型")
-    private String model;
 
     @Schema(description = "创建人")
     private String createBy;

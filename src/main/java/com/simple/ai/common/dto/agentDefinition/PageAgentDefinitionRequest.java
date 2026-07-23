@@ -26,9 +26,6 @@ public class PageAgentDefinitionRequest extends PageBase {
     @Schema(description = "第三技能")
     private String thirdSkill;
 
-    @Schema(description = "模型")
-    private String model;
-
     @Schema(description = "创建人")
     private String createBy;
 

@@ -45,4 +45,16 @@ public class AgentAiRequest {
     @Schema(description = "会话摘要")
     private String sessionSummary;
 
+    /**
+     * 会话ID，用于工具回调中获取用户上下文
+     */
+    @Schema(description = "会话ID")
+    private String sessionId;
+
+    /**
+     * 用户ID，用于工具回调中按用户过滤资产
+     */
+    @Schema(description = "用户ID")
+    private String userId;
+
 }
