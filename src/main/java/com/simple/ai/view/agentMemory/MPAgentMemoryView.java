@@ -5,7 +5,10 @@ import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.simple.ai.common.dto.agentMemory.*;
+import com.simple.ai.common.dto.agentMemory.DeleteAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.FindOneAgentMemoryRequest;
+import com.simple.ai.common.dto.agentMemory.PageAgentMemoryRequest;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.common.core.utils.AssertUtils;
@@ -16,7 +19,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Agent memory view implementation.
+ * 智能体记忆(agent_memory)数据库视图实现
  *
  * @author qty
  */
@@ -28,32 +31,14 @@ class MPAgentMemoryView implements AgentMemoryView {
 
     @Override
     public IPage<AgentMemory> findAll(PageAgentMemoryRequest pageRequest) {
-        LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getAgentId()), AgentMemory::getAgentId, pageRequest.getAgentId())
-                .like(ObjUtil.isNotEmpty(pageRequest.getMemoryName()), AgentMemory::getMemoryName, pageRequest.getMemoryName())
-                .like(ObjUtil.isNotEmpty(pageRequest.getStepName()), AgentMemory::getStepName, pageRequest.getStepName())
-                .like(ObjUtil.isNotEmpty(pageRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, pageRequest.getTriggerCondition())
-                .like(ObjUtil.isNotEmpty(pageRequest.getTriggerAction()), AgentMemory::getTriggerAction, pageRequest.getTriggerAction())
-                .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemory::getStatus, pageRequest.getStatus())
-                    .like(ObjUtil.isNotEmpty(pageRequest.getReserve()), AgentMemory::getReserve, pageRequest.getReserve())
-                .like(ObjUtil.isNotEmpty(pageRequest.getRemark()), AgentMemory::getRemark, pageRequest.getRemark());
-        return repository.selectPage(pageRequest.getPage(AgentMemory.class), queryWrapper);
-    }
-
-    @Override
-    public IPage<PageAggregateAgentMemoryResponse> findAggregateAll(PageAggregateAgentMemoryRequest pageRequest) {
-
-        // Build page boundary
-        Page<AgentMemory> page = pageRequest.getPage(AgentMemory.class);
-        Long offset = (page.getCurrent() - 1) * page.getSize();
-
-        // Query aggregate records and count
-        List<PageAggregateAgentMemoryResponse> records = repository.selectAggregatePage(pageRequest, offset, page.getSize());
-        Long total = repository.selectAggregateCount(pageRequest);
-
-        Page<PageAggregateAgentMemoryResponse> result = new Page<>(page.getCurrent(), page.getSize(), total);
-        result.setRecords(records);
-        return result;
+        Page<AgentMemory> page = new Page<>(pageRequest.getCurrent(), pageRequest.getSize());
+        LambdaQueryWrapper<AgentMemory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ObjUtil.isNotEmpty(pageRequest.getAgentId()), AgentMemory::getAgentId, pageRequest.getAgentId())
+               .like(ObjUtil.isNotEmpty(pageRequest.getMemoryName()), AgentMemory::getMemoryName, pageRequest.getMemoryName())
+               .eq(ObjUtil.isNotEmpty(pageRequest.getVersionStatus()), AgentMemory::getVersionStatus, pageRequest.getVersionStatus())
+               .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemory::getStatus, pageRequest.getStatus())
+               .orderByDesc(AgentMemory::getCreateTime);
+        return repository.selectPage(page, wrapper);
     }
 
     @Override
@@ -63,31 +48,25 @@ class MPAgentMemoryView implements AgentMemoryView {
     }
 
     @Override
+    public AgentMemory findById(String id) {
+        return repository.selectById(id);
+    }
+
+    @Override
     public AgentMemory findOne(FindOneAgentMemoryRequest findOneRequest, FindOneAgentMemoryRequest neRequest) {
         LambdaQueryWrapper<AgentMemory> queryWrapper = buildFindOneWrapper(findOneRequest, neRequest);
         List<AgentMemory> list = repository.selectList(queryWrapper);
 
-        // Return null when no record exists
+        // 空结果直接返回空对象引用
         if (list.isEmpty()) {
             return null;
         }
 
-        // Validate unique result for single query
+        // 校验条件单查结果唯一性
         if (list.size() > 1) {
-            AssertUtils.error("data error", "single query returned multiple records: {}", JsonUtils.toJsonStr(findOneRequest));
+            AssertUtils.error("数据异常", "参数为[{}]查询只需要一条数据，但是查询出来多条", JsonUtils.toJsonStr(findOneRequest));
         }
         return list.get(0);
-    }
-
-    @Override
-    public Long findCount(FindOneAgentMemoryRequest findOneRequest, FindOneAgentMemoryRequest neRequest) {
-        LambdaQueryWrapper<AgentMemory> queryWrapper = buildFindOneWrapper(findOneRequest, neRequest);
-        return repository.selectCount(queryWrapper);
-    }
-
-    @Override
-    public AgentMemory findById(String id) {
-        return repository.selectById(id);
     }
 
     @Override
@@ -101,14 +80,9 @@ class MPAgentMemoryView implements AgentMemoryView {
     }
 
     @Override
-    public void updateById(List<AgentMemory> list) {
-        repository.updateById(list);
-    }
-
-    @Override
     public void saves(List<AgentMemory> list) {
 
-        // Skip empty batch insert
+        // 空集合不执行批量新增
         if (CollectionUtil.isNotEmpty(list)) {
             repository.insert(list);
         }
@@ -123,76 +97,46 @@ class MPAgentMemoryView implements AgentMemoryView {
     public void delete(DeleteAgentMemoryRequest request) {
         LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentMemory::getId, request.getId())
-                .eq(ObjUtil.isNotEmpty(request.getAgentId()), AgentMemory::getAgentId, request.getAgentId())
-                .eq(ObjUtil.isNotEmpty(request.getMemoryName()), AgentMemory::getMemoryName, request.getMemoryName())
-                .eq(ObjUtil.isNotEmpty(request.getStepName()), AgentMemory::getStepName, request.getStepName())
-                .eq(ObjUtil.isNotEmpty(request.getTriggerCondition()), AgentMemory::getTriggerCondition, request.getTriggerCondition())
-                .eq(ObjUtil.isNotEmpty(request.getTriggerAction()), AgentMemory::getTriggerAction, request.getTriggerAction())
-                .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemory::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentMemory::getReserve, request.getReserve())
-                .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentMemory::getRemark, request.getRemark());
+                    .eq(ObjUtil.isNotEmpty(request.getAgentId()), AgentMemory::getAgentId, request.getAgentId())
+                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemory::getStatus, request.getStatus());
         repository.delete(queryWrapper);
     }
 
     /**
-     * Build list query wrapper.
+     * 构建列表查询条件。
      *
-     * @param findAllRequest query condition
-     * @param neRequest exclude condition
-     * @return query wrapper
+     * @param findAllRequest 查询条件
+     * @param neRequest 排除条件
+     * @return 查询包装器
      */
     private LambdaQueryWrapper<AgentMemory> buildFindAllWrapper(FindAllAgentMemoryRequest findAllRequest, FindAllAgentMemoryRequest neRequest) {
         LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), AgentMemory::getId, findAllRequest.getId())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentId()), AgentMemory::getAgentId, findAllRequest.getAgentId())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getMemoryName()), AgentMemory::getMemoryName, findAllRequest.getMemoryName())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getStepName()), AgentMemory::getStepName, findAllRequest.getStepName())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, findAllRequest.getTriggerCondition())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getTriggerAction()), AgentMemory::getTriggerAction, findAllRequest.getTriggerAction())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemory::getStatus, findAllRequest.getStatus())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), AgentMemory::getReserve, findAllRequest.getReserve())
-                .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), AgentMemory::getRemark, findAllRequest.getRemark())
-                .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
-                .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId())
-                .ne(ObjUtil.isNotEmpty(neRequest.getMemoryName()), AgentMemory::getMemoryName, neRequest.getMemoryName())
-                .ne(ObjUtil.isNotEmpty(neRequest.getStepName()), AgentMemory::getStepName, neRequest.getStepName())
-                .ne(ObjUtil.isNotEmpty(neRequest.getTriggerCondition()), AgentMemory::getTriggerCondition, neRequest.getTriggerCondition())
-                .ne(ObjUtil.isNotEmpty(neRequest.getTriggerAction()), AgentMemory::getTriggerAction, neRequest.getTriggerAction())
-                .ne(ObjUtil.isNotEmpty(neRequest.getStatus()), AgentMemory::getStatus, neRequest.getStatus())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getReserve()), AgentMemory::getReserve, neRequest.getReserve())
-                .ne(ObjUtil.isNotEmpty(neRequest.getRemark()), AgentMemory::getRemark, neRequest.getRemark());
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentId()), AgentMemory::getAgentId, findAllRequest.getAgentId())
+                    .like(ObjUtil.isNotEmpty(findAllRequest.getMemoryName()), AgentMemory::getMemoryName, findAllRequest.getMemoryName())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getVersionStatus()), AgentMemory::getVersionStatus, findAllRequest.getVersionStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemory::getStatus, findAllRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId());
         return queryWrapper;
     }
 
     /**
-     * Build single query wrapper.
+     * 构建单条查询条件。
      *
-     * @param findOneRequest query condition
-     * @param neRequest exclude condition
-     * @return query wrapper
+     * @param findOneRequest 查询条件
+     * @param neRequest 排除条件
+     * @return 查询包装器
      */
     private LambdaQueryWrapper<AgentMemory> buildFindOneWrapper(FindOneAgentMemoryRequest findOneRequest, FindOneAgentMemoryRequest neRequest) {
-        LambdaQueryWrapper<AgentMemory> queryWrapper = buildFindAllWrapper(toFindAllRequest(findOneRequest), toFindAllRequest(neRequest));
+        LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentMemory::getId, findOneRequest.getId())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentId()), AgentMemory::getAgentId, findOneRequest.getAgentId())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getMemoryName()), AgentMemory::getMemoryName, findOneRequest.getMemoryName())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getVersionStatus()), AgentMemory::getVersionStatus, findOneRequest.getVersionStatus())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemory::getStatus, findOneRequest.getStatus())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId());
         return queryWrapper;
-    }
-
-    /**
-     * Convert single query request to list query request.
-     *
-     * @param request single query request
-     * @return list query request
-     */
-    private FindAllAgentMemoryRequest toFindAllRequest(FindOneAgentMemoryRequest request) {
-        FindAllAgentMemoryRequest result = new FindAllAgentMemoryRequest();
-        result.setId(request.getId());
-        result.setAgentId(request.getAgentId());
-        result.setMemoryName(request.getMemoryName());
-        result.setStepName(request.getStepName());
-        result.setTriggerCondition(request.getTriggerCondition());
-        result.setTriggerAction(request.getTriggerAction());
-        result.setStatus(request.getStatus());
-        result.setReserve(request.getReserve());
-        result.setRemark(request.getRemark());
-        return result;
     }
 }

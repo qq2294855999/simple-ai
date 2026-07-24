@@ -27,12 +27,14 @@ public interface AgentChatSessionView {
     AgentChatSession findByIdForUpdate(String id);
 
     /**
-     * 查询智能体下的会话。
+     * 查询智能体下的会话，支持按模型和客户端过滤。
      *
-     * @param agentId 智能体主键
+     * @param agentId  智能体主键
+     * @param modelId  模型主键（可选，不传则不过滤）
+     * @param clientId 客户端主键（可选，不传则不过滤）
      * @return 会话列表
      */
-    List<AgentChatSession> findAllByAgentId(String agentId);
+    List<AgentChatSession> findAllByAgentId(String agentId, String modelId, String clientId);
 
     /**
      * 更新会话。

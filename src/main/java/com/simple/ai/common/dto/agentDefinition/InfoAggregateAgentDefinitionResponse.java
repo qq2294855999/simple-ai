@@ -2,7 +2,6 @@ package com.simple.ai.common.dto.agentDefinition;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
 import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandResponse;
@@ -70,9 +69,6 @@ public class InfoAggregateAgentDefinitionResponse {
 
     @Schema(description = "记忆列表")
     private List<PageAgentMemoryResponse> memories = new ArrayList<>();
-
-    @Schema(description = "记忆详情列表")
-    private List<PageAgentMemoryDetailResponse> memoryDetails = new ArrayList<>();
 
     @Schema(description = "任务列表")
     private List<PageTaskResponse> tasks = new ArrayList<>();

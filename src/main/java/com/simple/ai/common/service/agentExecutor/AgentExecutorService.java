@@ -67,4 +67,13 @@ public interface AgentExecutorService {
      * @return 切换后的状态
      */
     String toggleStatus(String id);
+
+    /**
+     * 获取执行器关联的协议内容。
+     * <p>AI 在执行任务时，通过此接口获取执行器关联的协议，根据协议定义的规则确定如何获取原子命令、如何请求执行。</p>
+     *
+     * @param executorId 执行器ID
+     * @return 协议内容（JSON格式），如果执行器未关联协议则返回 null
+     */
+    String getExecutorProtocol(String executorId);
 }

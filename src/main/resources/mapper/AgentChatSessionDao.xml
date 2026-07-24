@@ -7,7 +7,9 @@
                update_time as updateTime,
                status,
                reserve,
-               remark
+               remark,
+               model_id  as modelId,
+               client_id as clientId
         from agent_chat_session
         where id = #{id}
         for update
@@ -19,9 +21,21 @@
                update_time as updateTime,
                status,
                reserve,
-               remark
+        remark,
+        model_id as modelId,
+        client_id as clientId
         from agent_chat_session
         where agent_id = #{agentId}
+
+        <!-- 按模型主键过滤，可选参数 -->
+        <if test="modelId != null and modelId != ''">
+            and model_id = #{modelId}
+        </if>
+
+        <!-- 按客户端主键过滤，可选参数 -->
+        <if test="clientId != null and clientId != ''">
+            and client_id = #{clientId}
+        </if>
         order by last_message_at desc
         limit 100
     </select>

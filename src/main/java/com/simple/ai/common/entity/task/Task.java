@@ -40,10 +40,16 @@ public class Task {
     private String id;
 
     /**
-     * 智能体记忆主键
+     * 关联记忆ID
      */
-    @TableField(value = "agent_memory_id")
-    private String agentMemoryId;
+    @TableField(value = "memory_id")
+    private String memoryId;
+
+    /**
+     * 执行时的记忆版本号快照
+     */
+    @TableField(value = "memory_version_no")
+    private Integer memoryVersionNo;
 
     /**
      * 智能体主键。
@@ -160,4 +166,3 @@ public class Task {
     private String remark;
 
 }
-

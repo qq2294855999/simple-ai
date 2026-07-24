@@ -355,34 +355,56 @@ VALUES ('2079542278239834112', 'win_rpa', 'WinRPA执行器', 'Win10的RPA执行�
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_memory";
 CREATE TABLE "public"."agent_memory" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "memory_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "step_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "trigger_condition" text COLLATE "pg_catalog"."default" NOT NULL,
-  "trigger_action" text COLLATE "pg_catalog"."default" NOT NULL,
+                                         "id"                varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+                                         "agent_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+                                         "memory_name"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+                                         "params_definition" jsonb,
+                                         "version_no"        int4                                        NOT NULL DEFAULT 1,
+                                         "version_status"    int2                                        NOT NULL DEFAULT 1,
+                                         "source_task_id"    varchar(32) COLLATE "pg_catalog"."default",
+                                         "summary"           text COLLATE "pg_catalog"."default",
+                                         "create_reason"     varchar(64) COLLATE "pg_catalog"."default",
+                                         "client_id"         varchar(32) COLLATE "pg_catalog"."default",
+                                         "user_id"           varchar(32) COLLATE "pg_catalog"."default",
+                                         "create_user_id"    varchar(32) COLLATE "pg_catalog"."default",
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
-  "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id" varchar(255) COLLATE "pg_catalog"."default"
+                                         "remark"            varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
 )
 ;
-COMMENT ON COLUMN "public"."agent_memory"."id" IS '主键';
-COMMENT ON COLUMN "public"."agent_memory"."agent_id" IS '智能体ID';
-COMMENT ON COLUMN "public"."agent_memory"."memory_name" IS '记忆名称';
-COMMENT ON COLUMN "public"."agent_memory"."step_name" IS '步骤名称';
-COMMENT ON COLUMN "public"."agent_memory"."trigger_condition" IS '触发条件';
-COMMENT ON COLUMN "public"."agent_memory"."trigger_action" IS '触发动作';
+COMMENT
+ON COLUMN "public"."agent_memory"."id" IS '记忆主键';
+COMMENT
+ON COLUMN "public"."agent_memory"."agent_id" IS '所属智能体ID';
+COMMENT
+ON COLUMN "public"."agent_memory"."memory_name" IS '记忆名称模板，支持{param}占位符';
+COMMENT
+ON COLUMN "public"."agent_memory"."params_definition" IS '参数定义JSON，描述每个占位符的类型和含义';
+COMMENT
+ON COLUMN "public"."agent_memory"."version_no" IS '版本号，从1递增';
+COMMENT
+ON COLUMN "public"."agent_memory"."version_status" IS '1-DRAFT / 2-PUBLISHED / 3-RETIRED';
+COMMENT
+ON COLUMN "public"."agent_memory"."source_task_id" IS '来源任务ID';
+COMMENT
+ON COLUMN "public"."agent_memory"."summary" IS 'AI生成的记忆摘要';
+COMMENT
+ON COLUMN "public"."agent_memory"."create_reason" IS 'AI_EXPLORATION / MEMORY_REVISE';
+COMMENT
+ON COLUMN "public"."agent_memory"."client_id" IS '关联客户端ID';
+COMMENT
+ON COLUMN "public"."agent_memory"."user_id" IS '用户归属ID';
+COMMENT
+ON COLUMN "public"."agent_memory"."create_user_id" IS '创建人用户ID';
 COMMENT ON COLUMN "public"."agent_memory"."create_time" IS '创建时间';
 COMMENT ON COLUMN "public"."agent_memory"."update_time" IS '修改时间';
-COMMENT ON COLUMN "public"."agent_memory"."status" IS '状态';
+COMMENT
+ON COLUMN "public"."agent_memory"."status" IS 'ON(启用) / DISABLE(停用)';
 COMMENT
 ON COLUMN "public"."agent_memory"."reserve" IS '扩展字段，JSON格式';
 COMMENT ON COLUMN "public"."agent_memory"."remark" IS '备注';
-COMMENT
-ON COLUMN "public"."agent_memory"."user_id" IS '用户归属ID，确保每个用户的记忆私域隔离';
 COMMENT ON TABLE "public"."agent_memory" IS '智能体记忆';
 
 -- ----------------------------
@@ -390,157 +412,63 @@ COMMENT ON TABLE "public"."agent_memory" IS '智能体记忆';
 -- ----------------------------
 
 -- ----------------------------
--- Table structure for agent_memory_detail
+-- Table structure for agent_memory_step
 -- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_detail";
-CREATE TABLE "public"."agent_memory_detail" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_memory_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "step_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "step_type" int2 NOT NULL DEFAULT 1,
-  "exec_content" text COLLATE "pg_catalog"."default" NOT NULL,
-  "return_data_format" text COLLATE "pg_catalog"."default" NOT NULL,
-  "parent_step_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "next_step_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "branch_condition" text COLLATE "pg_catalog"."default" NOT NULL,
-  "branch_route" text COLLATE "pg_catalog"."default" NOT NULL,
-  "model" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "status" int2 NOT NULL DEFAULT 1,
-  "reserve" text COLLATE "pg_catalog"."default",
-  "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
-)
-;
-COMMENT ON COLUMN "public"."agent_memory_detail"."id" IS '主键';
-COMMENT ON COLUMN "public"."agent_memory_detail"."agent_memory_id" IS '智能体记忆ID';
-COMMENT ON COLUMN "public"."agent_memory_detail"."step_name" IS '步骤名称';
-COMMENT ON COLUMN "public"."agent_memory_detail"."step_type" IS '步骤类型：智能体记忆步骤类型';
-COMMENT ON COLUMN "public"."agent_memory_detail"."exec_content" IS '执行内容';
-COMMENT ON COLUMN "public"."agent_memory_detail"."return_data_format" IS '返回的数据格式';
-COMMENT ON COLUMN "public"."agent_memory_detail"."parent_step_id" IS '父步骤ID';
-COMMENT ON COLUMN "public"."agent_memory_detail"."next_step_id" IS '下一个步骤ID';
-COMMENT ON COLUMN "public"."agent_memory_detail"."branch_condition" IS '分支条件';
-COMMENT ON COLUMN "public"."agent_memory_detail"."branch_route" IS '分支路由';
-COMMENT ON COLUMN "public"."agent_memory_detail"."model" IS '模型';
-COMMENT ON COLUMN "public"."agent_memory_detail"."create_time" IS '创建时间';
-COMMENT ON COLUMN "public"."agent_memory_detail"."update_time" IS '修改时间';
-COMMENT ON COLUMN "public"."agent_memory_detail"."status" IS '状态';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."reserve" IS '扩展字段，JSON格式';
-COMMENT ON COLUMN "public"."agent_memory_detail"."remark" IS '备注';
-COMMENT ON TABLE "public"."agent_memory_detail" IS '智能体记忆详情';
-
--- ----------------------------
--- Records of agent_memory_detail
--- ----------------------------
-
--- ----------------------------
--- Table structure for agent_memory_version
--- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_version";
-CREATE TABLE "public"."agent_memory_version"
-(
-    "id"                varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
-    "memory_id"         varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
-    "version_no"        int4                                       NOT NULL DEFAULT 1,
-    "version_status"    int2                                       NOT NULL DEFAULT 1,
-    "source_task_id"    varchar(32) COLLATE "pg_catalog"."default",
-    "success_assertion" text COLLATE "pg_catalog"."default",
-    "summary"           text COLLATE "pg_catalog"."default",
-    "create_reason"     text COLLATE "pg_catalog"."default",
-    "create_user_id"    varchar(32) COLLATE "pg_catalog"."default",
-    "create_time"       timestamp(6),
-    "update_time"       timestamp(6)
-)
-;
-COMMENT
-ON COLUMN "public"."agent_memory_version"."id" IS '主键';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."memory_id" IS '关联的记忆主键，对应 agent_memory.id';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."version_no" IS '版本号，同一记忆下递增，从1开始';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."version_status" IS '版本状态: 1-DRAFT(草稿) / 2-PUBLISHED(已发布) / 3-RETIRED(已淘汰)';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."source_task_id" IS '来源任务主键，记录该版本由哪个任务产生';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."success_assertion" IS '成功判定规则，用于验证记忆执行是否成功的条件';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."summary" IS '版本摘要，AI生成的该版本简要描述';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."create_reason" IS '创建原因: AI_EXPLORATION(AI探索沉淀) / MEMORY_REVISE(失败修订)';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."create_user_id" IS '创建人用户ID';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."create_time" IS '创建时间';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."update_time" IS '修改时间';
-COMMENT
-ON TABLE "public"."agent_memory_version" IS '记忆版本';
-
--- ----------------------------
--- Records of agent_memory_version
--- ----------------------------
-
--- ----------------------------
--- Table structure for agent_memory_version_detail
--- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_version_detail";
-CREATE TABLE "public"."agent_memory_version_detail"
+DROP TABLE IF EXISTS "public"."agent_memory_step";
+CREATE TABLE "public"."agent_memory_step"
 (
     "id"                  varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-    "version_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "memory_id"           varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
     "sequence_no"         int4                                        NOT NULL,
     "atomic_command_id"   varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
     "atomic_command_code" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
-    "args_template"       text COLLATE "pg_catalog"."default",
+    "step_name"           varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+    "args_template"       jsonb,
     "delay_min_ms"        int4                                                 DEFAULT 100,
     "delay_max_ms"        int4                                                 DEFAULT 500,
     "timeout_ms"          int4                                                 DEFAULT 30000,
-    "idempotency_key"     varchar(256) COLLATE "pg_catalog"."default",
     "success_assertion"   text COLLATE "pg_catalog"."default",
     "failure_strategy"    varchar(32) COLLATE "pg_catalog"."default"           DEFAULT 'STOP'::character varying,
     "status"              varchar(16) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT 'ON'::character varying,
-    "create_time"         timestamp(6),
-    "update_time"         timestamp(6)
+    "create_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "update_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 ;
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."id" IS '主键';
+ON COLUMN "public"."agent_memory_step"."id" IS '步骤主键';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."version_id" IS '关联的记忆版本主键，对应 agent_memory_version.id';
+ON COLUMN "public"."agent_memory_step"."memory_id" IS '关联的记忆ID';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."sequence_no" IS '步骤序号，同一版本内从10开始递增，决定执行顺序';
+ON COLUMN "public"."agent_memory_step"."sequence_no" IS '步骤序号，从10递增';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."atomic_command_id" IS '原子命令主键，对应 atomic_command.id';
+ON COLUMN "public"."agent_memory_step"."atomic_command_id" IS '原子命令主键';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."atomic_command_code" IS '原子命令编码，冗余字段，如 window.find';
+ON COLUMN "public"."agent_memory_step"."atomic_command_code" IS '原子命令编码（冗余）';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."args_template" IS '参数模板JSON，运行时变量替换后传给执行器';
+ON COLUMN "public"."agent_memory_step"."step_name" IS '步骤名称';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."delay_min_ms" IS '执行前随机延迟最小值（毫秒），默认100';
+ON COLUMN "public"."agent_memory_step"."args_template" IS '参数模板JSON，支持{param}占位符';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."delay_max_ms" IS '执行前随机延迟最大值（毫秒），默认500';
+ON COLUMN "public"."agent_memory_step"."delay_min_ms" IS '执行前延迟最小值';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."timeout_ms" IS '命令超时时间（毫秒），默认30000';
+ON COLUMN "public"."agent_memory_step"."delay_max_ms" IS '执行前延迟最大值';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."idempotency_key" IS '幂等键，同一任务+步骤序号固定值，防止重复执行';
+ON COLUMN "public"."agent_memory_step"."timeout_ms" IS '命令超时时间';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."success_assertion" IS '成功断言规则，用于判断该步骤是否执行成功';
+ON COLUMN "public"."agent_memory_step"."success_assertion" IS '成功断言规则';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."failure_strategy" IS '失败处理策略: STOP(停止) / RETRY(重试) / SKIP(跳过)';
+ON COLUMN "public"."agent_memory_step"."failure_strategy" IS 'STOP / RETRY / SKIP';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."status" IS '状态: ON(启用) / OFF(停用)';
+ON COLUMN "public"."agent_memory_step"."status" IS 'ON(启用) / OFF(停用)';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."create_time" IS '创建时间';
+ON COLUMN "public"."agent_memory_step"."create_time" IS '创建时间';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."update_time" IS '修改时间';
+ON COLUMN "public"."agent_memory_step"."update_time" IS '修改时间';
 COMMENT
-ON TABLE "public"."agent_memory_version_detail" IS '记忆版本步骤';
+ON TABLE "public"."agent_memory_step" IS '记忆步骤';
 
 -- ----------------------------
--- Records of agent_memory_version_detail
+-- Records of agent_memory_step
 -- ----------------------------
 
 -- ----------------------------
@@ -1022,45 +950,6 @@ VALUES ('2080240536452915200', '2080240362850672640', '2080240362880032768', '',
         '2026-07-23 18:36:07.547', '2026-07-23 18:36:07.547', NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-23 18:36:07.547', 1);
 
 -- ----------------------------
--- Table structure for memory_evidence
--- ----------------------------
-DROP TABLE IF EXISTS "public"."memory_evidence";
-CREATE TABLE "public"."memory_evidence"
-(
-    "id"                varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-    "turn_id"           varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
-    "memory_version_id" varchar(64) COLLATE "pg_catalog"."default",
-    "evidence_type"     varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
-    "evidence_content"  jsonb                                       NOT NULL,
-    "quality_score"     numeric(3, 2),
-    "create_time"       timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status"            int2                                        NOT NULL DEFAULT 1
-)
-;
-COMMENT
-ON COLUMN "public"."memory_evidence"."id" IS '证据主键，UUID';
-COMMENT
-ON COLUMN "public"."memory_evidence"."turn_id" IS '轮次主键，关联 chat_turn.id';
-COMMENT
-ON COLUMN "public"."memory_evidence"."memory_version_id" IS '记忆版本主键，关联 agent_memory_version.id';
-COMMENT
-ON COLUMN "public"."memory_evidence"."evidence_type" IS '证据类型: EXECUTION_TRACE/REASONING_SUMMARY';
-COMMENT
-ON COLUMN "public"."memory_evidence"."evidence_content" IS '证据内容: 原子命令调用链+结果摘要';
-COMMENT
-ON COLUMN "public"."memory_evidence"."quality_score" IS '质量评分 0.00-1.00';
-COMMENT
-ON COLUMN "public"."memory_evidence"."create_time" IS '创建时间';
-COMMENT
-ON COLUMN "public"."memory_evidence"."status" IS '状态: ON/DISABLE';
-COMMENT
-ON TABLE "public"."memory_evidence" IS '记忆证据';
-
--- ----------------------------
--- Records of memory_evidence
--- ----------------------------
-
--- ----------------------------
 -- Table structure for sub_agent_relation
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."sub_agent_relation";
@@ -1097,7 +986,8 @@ COMMENT ON TABLE "public"."sub_agent_relation" IS '子智能体关联';
 DROP TABLE IF EXISTS "public"."task";
 CREATE TABLE "public"."task" (
   "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_memory_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "memory_id"         varchar(32) COLLATE "pg_catalog"."default",
+  "memory_version_no" int4,
   "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "task_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "parent_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
@@ -1120,12 +1010,14 @@ CREATE TABLE "public"."task" (
   "model_code"  varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "user_id"     varchar(255) COLLATE "pg_catalog"."default",
   "client_id"   varchar(255) COLLATE "pg_catalog"."default",
-  "memory_version_id" varchar(255) COLLATE "pg_catalog"."default",
   "dispatch_id" varchar(255) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."task"."id" IS '主键';
-COMMENT ON COLUMN "public"."task"."agent_memory_id" IS '智能体记忆主键';
+COMMENT
+ON COLUMN "public"."task"."memory_id" IS '关联记忆ID';
+COMMENT
+ON COLUMN "public"."task"."memory_version_no" IS '执行时的记忆版本号快照';
 COMMENT ON COLUMN "public"."task"."agent_id" IS '智能体主键';
 COMMENT ON COLUMN "public"."task"."task_name" IS '任务名称';
 COMMENT ON COLUMN "public"."task"."parent_task_id" IS '父任务ID';
@@ -1157,9 +1049,7 @@ ON COLUMN "public"."task"."user_id" IS '用户归属ID，确保任务归属到�
 COMMENT
 ON COLUMN "public"."task"."client_id" IS '执行客户端主键，关联 agent_client.id，记录由哪个客户端执行';
 COMMENT
-ON COLUMN "public"."task"."memory_version_id" IS '记忆版本主键，关联 agent_memory_version.id，记录命中哪个记忆版本';
-COMMENT
-ON COLUMN "public"."task"."dispatch_id" IS '下发批次标识，服务端雪花ID，关联一次 WebSocket 批量命令下发';
+ON COLUMN "public"."task"."dispatch_id" IS '下发批次标识';
 COMMENT ON TABLE "public"."task" IS '任务';
 
 -- ----------------------------
@@ -1380,49 +1270,18 @@ CREATE INDEX "idx_agent_memory_agent_status" ON "public"."agent_memory" USING bt
 ALTER TABLE "public"."agent_memory" ADD CONSTRAINT "agent_memory_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
--- Indexes structure for table agent_memory_detail
+-- Indexes structure for table agent_memory_step
 -- ----------------------------
-CREATE INDEX "idx_agent_memory_detail_memory_status" ON "public"."agent_memory_detail" USING btree (
-  "agent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
-  "status" "pg_catalog"."int2_ops" ASC NULLS LAST
-);
-CREATE INDEX "idx_agent_memory_detail_next_step" ON "public"."agent_memory_detail" USING btree (
-  "next_step_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-);
-CREATE INDEX "idx_agent_memory_detail_parent_step" ON "public"."agent_memory_detail" USING btree (
-  "parent_step_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-);
-
--- ----------------------------
--- Primary Key structure for table agent_memory_detail
--- ----------------------------
-ALTER TABLE "public"."agent_memory_detail" ADD CONSTRAINT "agent_memory_detail_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
--- Uniques structure for table agent_memory_version
--- ----------------------------
-ALTER TABLE "public"."agent_memory_version"
-    ADD CONSTRAINT "agent_memory_version_memory_id_version_no_key" UNIQUE ("memory_id", "version_no");
-
--- ----------------------------
--- Primary Key structure for table agent_memory_version
--- ----------------------------
-ALTER TABLE "public"."agent_memory_version"
-    ADD CONSTRAINT "agent_memory_version_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
--- Indexes structure for table agent_memory_version_detail
--- ----------------------------
-CREATE INDEX "idx_mvd_version" ON "public"."agent_memory_version_detail" USING btree (
-    "version_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+CREATE INDEX "idx_ams_memory_sequence" ON "public"."agent_memory_step" USING btree (
+    "memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
     "sequence_no" "pg_catalog"."int4_ops" ASC NULLS LAST
     );
 
 -- ----------------------------
--- Primary Key structure for table agent_memory_version_detail
+-- Primary Key structure for table agent_memory_step
 -- ----------------------------
-ALTER TABLE "public"."agent_memory_version_detail"
-    ADD CONSTRAINT "agent_memory_version_detail_pkey" PRIMARY KEY ("id");
+ALTER TABLE "public"."agent_memory_step"
+    ADD CONSTRAINT "agent_memory_step_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table agent_rule
@@ -1560,22 +1419,6 @@ ALTER TABLE "public"."execution_event"
     ADD CONSTRAINT "execution_event_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
--- Indexes structure for table memory_evidence
--- ----------------------------
-CREATE INDEX "idx_memory_evidence_turn" ON "public"."memory_evidence" USING btree (
-    "turn_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-    );
-CREATE INDEX "idx_memory_evidence_version" ON "public"."memory_evidence" USING btree (
-    "memory_version_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-    );
-
--- ----------------------------
--- Primary Key structure for table memory_evidence
--- ----------------------------
-ALTER TABLE "public"."memory_evidence"
-    ADD CONSTRAINT "memory_evidence_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
 -- Indexes structure for table sub_agent_relation
 -- ----------------------------
 CREATE INDEX "idx_sub_agent_relation_main_status" ON "public"."sub_agent_relation" USING btree (
@@ -1596,7 +1439,7 @@ CREATE INDEX "idx_task_agent_update" ON "public"."task" USING btree (
   "update_time" "pg_catalog"."timestamp_ops" DESC NULLS FIRST
 );
 CREATE INDEX "idx_task_memory_status" ON "public"."task" USING btree (
-  "agent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+    "memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
     "exec_status" "pg_catalog"."int2_ops" ASC NULLS LAST
 );
 CREATE INDEX "idx_task_model_snapshot" ON "public"."task" USING btree (

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.simple.ai.view.agentMemoryStep.AgentMemoryStepRepository">
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into agent_memory_step(id, memory_id, step_no, step_name, atomic_command_id, args_template, step_type, parent_step_id, next_step_id, branch_condition, branch_route, create_time,
+        update_time, status, reserve, remark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.id}, #{entity.memoryId}, #{entity.stepNo}, #{entity.stepName}, #{entity.atomicCommandId}, #{entity.argsTemplate}, #{entity.stepType}, #{entity.parentStepId},
+            #{entity.nextStepId}, #{entity.branchCondition}, #{entity.branchRoute}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
+        </foreach>
+    </insert>
+
+</mapper>

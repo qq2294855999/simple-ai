@@ -1,6 +1,5 @@
 package com.simple.ai.common.dto.command;
 
-import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.entity.task.Task;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,12 +33,6 @@ public class SubAgentDispatchContext {
      */
     @Schema(description = "子智能体关系")
     private SubAgentRelation relation;
-
-    /**
-     * 当前记忆详情
-     */
-    @Schema(description = "当前记忆详情")
-    private AgentMemoryDetail memoryDetail;
 
     /**
      * 进度事件消费者

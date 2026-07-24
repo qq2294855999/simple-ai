@@ -27,8 +27,8 @@ public class DeleteCascadeAgentDefinitionResponse {
     @Schema(description = "删除记忆数量")
     private Long memoryCount;
 
-    @Schema(description = "删除记忆详情数量")
-    private Long memoryDetailCount;
+    @Schema(description = "删除记忆步骤数量")
+    private Long memoryStepCount;
 
     @Schema(description = "删除任务数量")
     private Long taskCount;

@@ -24,10 +24,12 @@ public interface AgentChatSessionRepository extends BaseMapper<AgentChatSession>
     AgentChatSession selectByIdForUpdate(@Param("id") String id);
 
     /**
-     * 查询智能体会话。
+     * 查询智能体会话，支持按模型和客户端过滤。
      *
-     * @param agentId 智能体主键
+     * @param agentId  智能体主键
+     * @param modelId  模型主键（可选，不传则不过滤）
+     * @param clientId 客户端主键（可选，不传则不过滤）
      * @return 会话列表
      */
-    List<AgentChatSession> selectAllByAgentId(@Param("agentId") String agentId);
+    List<AgentChatSession> selectAllByAgentId(@Param("agentId") String agentId, @Param("modelId") String modelId, @Param("clientId") String clientId);
 }

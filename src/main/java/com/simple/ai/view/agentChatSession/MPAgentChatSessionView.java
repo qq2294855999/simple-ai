@@ -30,8 +30,8 @@ class MPAgentChatSessionView implements AgentChatSessionView {
     }
 
     @Override
-    public List<AgentChatSession> findAllByAgentId(String agentId) {
-        return repository.selectAllByAgentId(agentId);
+    public List<AgentChatSession> findAllByAgentId(String agentId, String modelId, String clientId) {
+        return repository.selectAllByAgentId(agentId, modelId, clientId);
     }
 
     @Override

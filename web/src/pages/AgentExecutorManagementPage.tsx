@@ -13,6 +13,7 @@ import type {
     CreateAgentExecutorRequestDto,
     UpdateAgentExecutorRequestDto
 } from "../dto/agentExecutor/AgentExecutorDto";
+import type {ProtocolPageResponseDto} from "../dto/protocol/ProtocolDto";
 
 /**
  * 获取状态中文标签。
@@ -21,8 +22,8 @@ import type {
  * @returns 状态中文
  */
 function getStatusLabel(status: number | string): string {
-    if (status === 1 || status === "ENABLE") return "启用";
-    if (status === 2 || status === "DISABLE") return "停用";
+    if (status === 1 || status === "ON") return "启用";
+    if (status === 2 || status === "OFF") return "停用";
     return String(status) || "-";
 }
 
@@ -53,6 +54,9 @@ export function AgentExecutorManagementPage() {
     const [showProtocolModal, setShowProtocolModal] = useState(false);
     const [protocolData, setProtocolData] = useState<AgentExecutorProtocolResponse | null>(null);
     const [protocolLoading, setProtocolLoading] = useState(false);
+
+    // 协议下拉列表（用于创建/编辑时选择）
+    const [protocolOptions, setProtocolOptions] = useState<ProtocolPageResponseDto[]>([]);
 
     // 打开协议说明弹窗
     const handleOpenProtocol = useCallback(async () => {
@@ -107,9 +111,18 @@ export function AgentExecutorManagementPage() {
     }, []);
 
     // 打开创建弹窗
-    const openCreateModal = useCallback(() => {
+    const openCreateModal = useCallback(async () => {
         setEditingId(null);
         form.resetFields();
+
+        // 加载协议下拉列表
+        try {
+            const result = await AgentExecutorApi.findAllProtocols();
+            setProtocolOptions(result.records || []);
+        } catch {
+            setProtocolOptions([]);
+        }
+
         setShowModal(true);
     }, [form]);
 
@@ -117,7 +130,7 @@ export function AgentExecutorManagementPage() {
     const handleToggleStatus = useCallback(async (id: string, currentStatus: string) => {
         try {
             const newStatus = await AgentExecutorApi.toggleStatus(id);
-            ToastUtil.success(`执行器已${newStatus === "ENABLE" ? "启用" : "停用"}`);
+            ToastUtil.success(`执行器已${newStatus === "ON" ? "启用" : "停用"}`);
             loadDataRef.current?.();
         } catch {
             ToastUtil.error("状态切换失败");
@@ -127,12 +140,22 @@ export function AgentExecutorManagementPage() {
     // 打开编辑弹窗
     const openEditModal = useCallback(async (id: string) => {
         setEditingId(id);
+
+        // 加载协议下拉列表
+        try {
+            const result = await AgentExecutorApi.findAllProtocols();
+            setProtocolOptions(result.records || []);
+        } catch {
+            setProtocolOptions([]);
+        }
+
         try {
             const record = await AgentExecutorApi.findOne(id);
             form.setFieldsValue({
                 executorCode: record.executorCode,
                 executorName: record.executorName,
                 description: record.description,
+                protocolId: record.protocolId,
                 status: record.status,
                 remark: record.remark
             });
@@ -181,6 +204,7 @@ export function AgentExecutorManagementPage() {
     const columns = useMemo<ColumnsType<AgentExecutorPageResponseDto>>(() => [
         {title: "执行器编码", dataIndex: "executorCode", width: 140},
         {title: "执行器名称", dataIndex: "executorName", width: 160},
+        {title: "协议名称", dataIndex: "protocolName", width: 160, render: value => value || "-"},
         {title: "描述", dataIndex: "description", width: 200, ellipsis: true, render: value => <Tooltip title={value}>{value || "-"}</Tooltip>},
         {
             title: "状态",
@@ -188,7 +212,12 @@ export function AgentExecutorManagementPage() {
             width: 80,
             render: (status: string) => <Tag color={getStatusLabel(status) === "启用" ? "green" : "red"}>{getStatusLabel(status)}</Tag>
         },
-        {title: "备注", dataIndex: "remark", ellipsis: true, render: value => <Tooltip title={value}>{value || "-"}</Tooltip>},
+        {
+            title: "备注",
+            dataIndex: "remark",
+            ellipsis: true,
+            render: (value: string) => <Tooltip title={value}>{value && value.length > 15 ? value.slice(0, 15) + "..." : (value || "-")}</Tooltip>
+        },
         {title: "创建时间", dataIndex: "createTime", width: 160},
         {title: "修改时间", dataIndex: "updateTime", width: 160},
         {
@@ -243,7 +272,7 @@ export function AgentExecutorManagementPage() {
                         onChange={setFilterStatus}
                         style={{width: 120, height: 36}}
                         allowClear
-                        options={[{label: "启用", value: "ENABLE"}, {label: "停用", value: "DISABLE"}]}
+                        options={[{label: "启用", value: "ON"}, {label: "停用", value: "OFF"}]}
                     />
                     <Button type="primary" onClick={handleSearch}>搜索</Button>
                     <Button onClick={handleReset}>重置</Button>
@@ -317,13 +346,28 @@ export function AgentExecutorManagementPage() {
                         <Form.Item label="描述" name="description" style={{marginBottom: 16}}>
                             <Input.TextArea rows={3}/>
                         </Form.Item>
+                        <Form.Item label="对接协议" name="protocolId" style={{marginBottom: 16}}>
+                            <Select
+                                placeholder="请选择对接协议（可选）"
+                                style={{height: 36}}
+                                showSearch
+                                allowClear
+                                filterOption={(input, option) =>
+                                    String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                                }
+                                options={protocolOptions.map(p => ({
+                                    label: `${p.protocolName} (${p.protocolVersion})`,
+                                    value: p.id
+                                }))}
+                            />
+                        </Form.Item>
                         <Form.Item label="状态" name="status" style={{marginBottom: 16}}>
                             <Select
                                 placeholder="请选择状态"
                                 style={{height: 36}}
                                 options={[
-                                    {label: "启用", value: "ENABLE"},
-                                    {label: "停用", value: "DISABLE"}
+                                    {label: "启用", value: "ON"},
+                                    {label: "停用", value: "OFF"}
                                 ]}
                             />
                         </Form.Item>

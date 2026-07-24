@@ -30,6 +30,10 @@ export interface AgentExecutorPageResponseDto {
     executorName: string;
     /** 执行器描述 */
     description?: string;
+    /** 协议外键 */
+    protocolId?: string;
+    /** 协议名称 */
+    protocolName?: string;
     /** 状态 */
     status: string;
     /** 创建时间 */
@@ -52,6 +56,8 @@ export interface CreateAgentExecutorRequestDto {
     executorName: string;
     /** 执行器描述 */
     description?: string;
+    /** 协议外键 */
+    protocolId?: string;
     /** 备注 */
     remark?: string;
 }

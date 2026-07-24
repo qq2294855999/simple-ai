@@ -53,16 +53,18 @@ public class AgentChatController {
     }
 
     /**
-     * 查询智能体聊天会话。
+     * 查询智能体聊天会话，支持按模型和客户端过滤。
      *
-     * @param agentId 智能体主键
+     * @param agentId  智能体主键
+     * @param modelId  模型主键（可选，不传则不过滤）
+     * @param clientId 客户端主键（可选，不传则不过滤）
      * @return 会话列表
      */
     @GetMapping("session-list")
     @Operation(summary = "查询智能体聊天会话")
     @HasAuthority("sys:agent-chat:session-list")
-    public R<List<AgentChatSessionResponse>> findSessions(@RequestParam String agentId) {
-        return R.ok(agentChatService.findSessions(agentId));
+    public R<List<AgentChatSessionResponse>> findSessions(@RequestParam String agentId, @RequestParam(required = false) String modelId, @RequestParam(required = false) String clientId) {
+        return R.ok(agentChatService.findSessions(agentId, modelId, clientId));
     }
 
     /**

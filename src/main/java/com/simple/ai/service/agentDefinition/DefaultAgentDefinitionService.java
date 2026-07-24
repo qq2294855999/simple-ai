@@ -2,18 +2,9 @@ package com.simple.ai.service.agentDefinition;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.simple.ai.common.copy.agentDefinition.AgentDefinitionCopyMapper;
-import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.DeleteCascadeAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.FindOneAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.InfoAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.UpdateAgentDefinitionRequest;
-import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
+import com.simple.ai.common.dto.agentDefinition.*;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
+import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.mp.common.enums.Status;
@@ -176,9 +167,6 @@ class DefaultAgentDefinitionService implements AgentDefinitionService {
         // 查询并设置记忆列表
         response.setMemories(agentDefinitionView.findMemoriesByAgentId(id));
 
-        // 查询并设置记忆详情列表
-        response.setMemoryDetails(agentDefinitionView.findMemoryDetailsByAgentId(id));
-
         // 查询并设置任务列表
         response.setTasks(agentDefinitionView.findTasksByAgentId(id));
 
@@ -233,8 +221,8 @@ class DefaultAgentDefinitionService implements AgentDefinitionService {
         agentDefinitionView.deleteTaskDetailByAgentIds(ids);
         agentDefinitionView.deleteTaskByAgentIds(ids);
 
-        // 清理记忆详情与记忆主表
-        agentDefinitionView.deleteMemoryDetailByAgentIds(ids);
+        // 清理记忆步骤与记忆主表
+        agentDefinitionView.deleteMemoryStepByAgentIds(ids);
         agentDefinitionView.deleteMemoryByAgentIds(ids);
 
         // 清理双向子智能体关系、规则与技能

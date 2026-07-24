@@ -163,42 +163,17 @@
             am.id,
             am.agent_id as agentId,
             am.memory_name as memoryName,
-            am.step_name as stepName,
-            am.trigger_condition as triggerCondition,
-            am.trigger_action as triggerAction,
+            am.version_no     as versionNo,
+            am.version_status as versionStatus,
+            am.summary,
+            am.create_reason  as createReason,
             am.create_time as createTime,
             am.update_time as updateTime,
             am.status,
-            am.reserve,
             am.remark
         from agent_memory am
         where am.agent_id = #{agentId}
         order by am.update_time desc nulls last, am.create_time desc nulls last
-        limit 1000
-    </select>
-
-    <select id="selectMemoryDetailsByAgentId" resultType="com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse">
-        select
-            amd.id,
-            amd.agent_memory_id as agentMemoryId,
-            amd.step_name as stepName,
-            amd.step_type as stepType,
-            amd.exec_content as execContent,
-            amd.return_data_format as returnDataFormat,
-            amd.parent_step_id as parentStepId,
-            amd.next_step_id as nextStepId,
-            amd.branch_condition as branchCondition,
-            amd.branch_route as branchRoute,
-            amd.model,
-            amd.create_time as createTime,
-            amd.update_time as updateTime,
-            amd.status,
-            amd.reserve,
-            amd.remark
-        from agent_memory_detail amd
-        inner join agent_memory am on am.id = amd.agent_memory_id
-        where am.agent_id = #{agentId}
-        order by amd.update_time desc nulls last, amd.create_time desc nulls last
         limit 1000
     </select>
 
@@ -254,7 +229,8 @@
             (select count(1) from agent_rule where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as ruleCount,
             (select count(1) from sub_agent_relation where main_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach> or sub_agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as subAgentRelationCount,
             (select count(1) from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as memoryCount,
-            (select count(1) from agent_memory_detail where agent_memory_id in (select id from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as memoryDetailCount,
+        (select count(1) from agent_memory_step where memory_id in (select id from agent_memory where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>))
+        as memoryStepCount,
             (select count(1) from task where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as taskCount,
             (select count(1) from task_detail where task_id in (select id from task where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskDetailCount,
             (select count(1) from atomic_command where skill_id in (select id from agent_skill where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as atomicCommandUnlinkCount
@@ -282,9 +258,9 @@
         where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
     </delete>
 
-    <delete id="deleteMemoryDetailByAgentIds">
-        delete from agent_memory_detail
-        where agent_memory_id in (
+    <delete id="deleteMemoryStepByAgentIds">
+        delete from agent_memory_step
+        where memory_id in (
             select id from agent_memory
             where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
         )

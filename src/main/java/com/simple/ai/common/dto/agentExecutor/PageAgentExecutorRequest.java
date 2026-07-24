@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.agentExecutor;
 
+import com.simple.common.mp.common.enums.Status;
 import com.simple.common.mp.page.PageBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -21,8 +22,11 @@ public class PageAgentExecutorRequest extends PageBase {
     @Schema(description = "执行器名称")
     private String executorName;
 
+    @Schema(description = "协议外键")
+    private String protocolId;
+
     @Schema(description = "状态")
-    private String status;
+    private Status status;
 
     @Schema(description = "备注")
     private String remark;

@@ -1,6 +1,7 @@
 package com.simple.ai.common.entity.agentMemory;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -10,23 +11,16 @@ import lombok.experimental.Accessors;
 import java.util.Date;
 
 /**
- * 智能体记忆(agent_memory)实体类
- * 注解@JSONField(serialize = false)，表示不返回这个字段
- * 注解@TableField，用于标志属性
- * value = "数据库字段"，用于标志数据库对应字段
- * exist = false，表示数据库没有这个字段
- * typeHandler = JacksonTypeHandler.class，表示对象JSON转化为实例，需要类上开启@TableName(autoResultMap = true)
- * fill = FieldFill.INSERT，表示添加操作时要做的事情
- * 注解@TableLogic添加在属性上，结合配置文件，可设置逻辑删除
- * 注解@EqualsAndHashCode是为类生成Equals和HashCode方法
- * callSuper = false 代表方法不调用父类继承的属性，只匹配子类本身是否相同
- * callSuper = true 代表方法需要调用父类继承的属性，同时匹配本身和父类的属性
+ * 智能体记忆(agent_memory)实体类。
+ *
+ * <p>记忆是智能体探索成功路径的沉淀，包含参数化名称模板和步骤序列。
+ * 用户再次发起相同意图时，可直接按记忆步骤执行而无需 AI 探索。</p>
  *
  * @author qty
  */
-@Data //提供读写属性, 此外还提供了 equals()、hashCode()、toString() 方法
-@JsonIgnoreProperties(ignoreUnknown = true) //json转换时，字段少了也可以转换
-@Accessors(chain = true) //开启链式调用
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Accessors(chain = true)
 @TableName(value = "agent_memory", autoResultMap = true)
 @Schema(title = "智能体记忆(agent_memory)实体类")
 public class AgentMemory {
@@ -44,28 +38,64 @@ public class AgentMemory {
     private String agentId;
 
     /**
-     * 记忆名称
+     * 记忆名称模板，支持{param}占位符
      */
     @TableField(value = "memory_name")
     private String memoryName;
 
     /**
-     * 步骤名称
+     * 参数定义JSON，描述每个占位符的类型和含义
      */
-    @TableField(value = "step_name")
-    private String stepName;
+    @TableField(value = "params_definition", typeHandler = JacksonTypeHandler.class)
+    private String paramsDefinition;
 
     /**
-     * 触发条件
+     * 当前版本号
      */
-    @TableField(value = "trigger_condition")
-    private String triggerCondition;
+    @TableField(value = "version_no")
+    private Integer versionNo;
 
     /**
-     * 触发动作
+     * 版本状态：1=DRAFT, 2=PUBLISHED
      */
-    @TableField(value = "trigger_action")
-    private String triggerAction;
+    @TableField(value = "version_status")
+    private Integer versionStatus;
+
+    /**
+     * 来源任务ID（首次沉淀时的任务）
+     */
+    @TableField(value = "source_task_id")
+    private String sourceTaskId;
+
+    /**
+     * 记忆摘要
+     */
+    @TableField(value = "summary")
+    private String summary;
+
+    /**
+     * 创建原因：MANUAL/AUTO_EXPLORE/AUTO_FIX
+     */
+    @TableField(value = "create_reason")
+    private String createReason;
+
+    /**
+     * 客户端ID
+     */
+    @TableField(value = "client_id")
+    private String clientId;
+
+    /**
+     * 用户ID
+     */
+    @TableField(value = "user_id")
+    private String userId;
+
+    /**
+     * 创建人ID
+     */
+    @TableField(value = "create_user_id")
+    private String createUserId;
 
     /**
      * 创建时间
@@ -74,7 +104,7 @@ public class AgentMemory {
     private Date createTime;
 
     /**
-     * 修改时间
+     * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
@@ -86,7 +116,7 @@ public class AgentMemory {
     private Status status;
 
     /**
-     * 扩展
+     * 预留字段
      */
     @TableField(value = "reserve")
     private String reserve;
@@ -96,6 +126,4 @@ public class AgentMemory {
      */
     @TableField(value = "remark")
     private String remark;
-
 }
-

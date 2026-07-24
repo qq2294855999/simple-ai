@@ -6,8 +6,6 @@ import com.simple.ai.common.dto.agentClient.CreateAgentClientRequest;
 import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
 import com.simple.ai.common.dto.agentExecutor.CreateAgentExecutorRequest;
 import com.simple.ai.common.dto.agentExecutor.InfoAgentExecutorResponse;
-import com.simple.ai.common.dto.agentMemory.CreateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemoryVersion.CreateAgentMemoryVersionRequest;
 import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
 import com.simple.ai.common.dto.atomicCommand.CreateAtomicCommandRequest;
@@ -16,8 +14,6 @@ import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.service.agentClient.AgentClientService;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
-import com.simple.ai.common.service.agentMemory.AgentMemoryService;
-import com.simple.ai.common.service.agentMemoryVersion.AgentMemoryVersionService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
 import com.simple.ai.common.service.atomicCommand.AtomicCommandService;
@@ -53,22 +49,6 @@ public class AgentToolRegistry {
     private AgentChatSessionRepository agentChatSessionRepository;
 
     // ──────────────────────────── CREATE 工具（8个）────────────────────────────
-
-    /**
-     * 创建智能体记忆工具。
-     *
-     * @param agentMemoryService 智能体记忆服务
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback createMemory(AgentMemoryService agentMemoryService) {
-        return FunctionToolCallback.builder("createMemory", agentMemoryService::save)
-                                   .description("创建新的智能体记忆。参数：agentId（智能体定义主键ID，必填，注意：不是执行器ID，" + "可通过 queryAgentDefinition 查询已有智能体获取）、memoryName（记忆名称，必填）、"
-                                                + "stepName（步骤名称，必填）、triggerCondition（触发条件，必填）、"
-                                                + "triggerAction（触发动作，必填）、remark（备注，可选）")
-                                   .inputType(CreateAgentMemoryRequest.class)
-                                   .build();
-    }
 
     /**
      * 创建智能体规则工具。
@@ -173,37 +153,7 @@ public class AgentToolRegistry {
                                    .build();
     }
 
-    /**
-     * 创建记忆版本工具。
-     *
-     * @param agentMemoryVersionService 记忆版本服务
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback createMemoryVersion(AgentMemoryVersionService agentMemoryVersionService) {
-        return FunctionToolCallback.builder("createMemoryVersion", agentMemoryVersionService::save)
-                                   .description("创建新的记忆版本。参数：memoryId（记忆主键ID，必填，注意：不是智能体ID，" + "是 createMemory 返回的记忆ID）、versionNo（版本号，必填）、"
-                                                + "versionStatus（版本状态，可选）、sourceTaskId（来源任务ID，可选）、"
-                                                + "successAssertion（成功判定规则，可选）、summary（版本摘要，可选）、createReason（创建原因，可选）")
-                                   .inputType(CreateAgentMemoryVersionRequest.class)
-                                   .build();
-    }
-
-    // ──────────────────────────── READ 工具（7个）────────────────────────────
-
-    /**
-     * 查询智能体记忆工具。
-     *
-     * @param agentMemoryService 智能体记忆服务
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback queryMemory(AgentMemoryService agentMemoryService) {
-        return FunctionToolCallback.builder("queryMemory", (ToolQueryByIdRequest req) -> agentMemoryService.findById(req.getId()))
-                                   .description("根据ID查询智能体记忆的详细信息。参数：id（主键ID，必填）")
-                                   .inputType(ToolQueryByIdRequest.class)
-                                   .build();
-    }
+    // ──────────────────────────── READ 工具（6个）────────────────────────────
 
     /**
      * 查询智能体规则工具。

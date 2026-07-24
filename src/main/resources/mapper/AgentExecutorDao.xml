@@ -9,6 +9,8 @@
         e.executor_code AS executorCode,
         e.executor_name AS executorName,
         e.description,
+        e.protocol_id AS protocolId,
+        p.protocol_name AS protocolName,
         e.status,
         e.create_user_id AS createUserId,
         e.create_user_name AS createUserName,
@@ -19,6 +21,7 @@
         e.reserve,
         e.remark
         FROM agent_executor e
+        LEFT JOIN agent_protocol p ON e.protocol_id = p.id
         <where>
             <if test="pageRequest.executorCode != null and pageRequest.executorCode != ''">
                 AND e.executor_code LIKE CONCAT('%', #{pageRequest.executorCode}, '%')
@@ -26,7 +29,10 @@
             <if test="pageRequest.executorName != null and pageRequest.executorName != ''">
                 AND e.executor_name LIKE CONCAT('%', #{pageRequest.executorName}, '%')
             </if>
-            <if test="pageRequest.status != null and pageRequest.status != ''">
+            <if test="pageRequest.protocolId != null and pageRequest.protocolId != ''">
+                AND e.protocol_id = #{pageRequest.protocolId}
+            </if>
+            <if test="pageRequest.status != null">
                 AND e.status = #{pageRequest.status}
             </if>
         </where>

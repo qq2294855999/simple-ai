@@ -1,16 +1,8 @@
 package com.simple.ai.common.view.agentDefinition;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentDefinition.DeleteAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.DeleteCascadeAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.FindAllAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.FindOneAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse;
+import com.simple.ai.common.dto.agentDefinition.*;
 import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
 import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandResponse;
@@ -101,14 +93,6 @@ public interface AgentDefinitionView {
     List<PageAgentMemoryResponse> findMemoriesByAgentId(String agentId);
 
     /**
-     * 查询智能体记忆详情。
-     *
-     * @param agentId 智能体主键
-     * @return 记忆详情列表
-     */
-    List<PageAgentMemoryDetailResponse> findMemoryDetailsByAgentId(String agentId);
-
-    /**
      * 查询智能体任务。
      *
      * @param agentId 智能体主键
@@ -157,20 +141,20 @@ public interface AgentDefinitionView {
     int deleteTaskByAgentIds(List<String> ids);
 
     /**
-     * 删除记忆详情。
-     *
-     * @param ids 智能体主键列表
-     * @return 影响行数
-     */
-    int deleteMemoryDetailByAgentIds(List<String> ids);
-
-    /**
      * 删除记忆。
      *
      * @param ids 智能体主键列表
      * @return 影响行数
      */
     int deleteMemoryByAgentIds(List<String> ids);
+
+    /**
+     * 删除记忆步骤。
+     *
+     * @param ids 智能体主键列表
+     * @return 影响行数
+     */
+    int deleteMemoryStepByAgentIds(List<String> ids);
 
     /**
      * 删除子智能体关系。

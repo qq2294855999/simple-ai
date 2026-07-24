@@ -11,8 +11,8 @@ import lombok.experimental.Accessors;
 @Schema(title = "任务(task)列表请求参数")
 public class PageTaskRequest extends PageBase {
 
-    @Schema(description = "智能体记忆主键")
-    private String agentMemoryId;
+    @Schema(description = "关联记忆ID")
+    private String memoryId;
 
     @Schema(description = "任务名称")
     private String taskName;
@@ -53,4 +53,3 @@ public class PageTaskRequest extends PageBase {
     @Schema(description = "备注")
     private String remark;
 }
-

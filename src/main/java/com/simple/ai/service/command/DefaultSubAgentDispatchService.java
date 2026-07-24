@@ -1,10 +1,9 @@
 package com.simple.ai.service.command;
 
+import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.command.CommandDispatchResponse;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.SubAgentDispatchContext;
-import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.service.command.SubAgentDispatchService;
@@ -57,18 +56,14 @@ class DefaultSubAgentDispatchService implements SubAgentDispatchService {
      */
     private CommandDispatchRequest buildSubAgentRequest(SubAgentDispatchContext context) {
         SubAgentRelation relation = context.getRelation();
-        AgentMemoryDetail detail = context.getMemoryDetail();
         CommandDispatchRequest parentRequest = context.getParentRequest();
         AssertUtils.notEmpty(relation, "子智能体关系不能为空");
-        AssertUtils.notEmpty(detail, "子智能体步骤不能为空");
         AssertUtils.notEmpty(parentRequest, "父命令调度请求不能为空");
         AssertUtils.notEmpty(relation.getSubAgentId(), "子智能体ID不能为空");
-        AssertUtils.notEmpty(detail.getStepName(), "子智能体步骤名称不能为空");
-        AssertUtils.notEmpty(detail.getExecContent(), "子智能体执行内容不能为空");
         CommandDispatchRequest subRequest = new CommandDispatchRequest();
         subRequest.setAgentId(relation.getSubAgentId());
-        subRequest.setCommandName(detail.getStepName());
-        subRequest.setCommandContent(detail.getExecContent());
+        subRequest.setCommandName(parentRequest.getCommandName());
+        subRequest.setCommandContent(parentRequest.getCommandContent());
         subRequest.setSessionId(parentRequest.getSessionId());
         subRequest.setRequestParams(parentRequest.getRequestParams());
         return subRequest;

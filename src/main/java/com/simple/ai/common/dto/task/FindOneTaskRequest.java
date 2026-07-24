@@ -15,8 +15,8 @@ public class FindOneTaskRequest {
     @Schema(description = "主键")
     private String id;
 
-    @Schema(description = "智能体记忆主键")
-    private String agentMemoryId;
+    @Schema(description = "关联记忆ID")
+    private String memoryId;
 
     @Schema(description = "任务名称")
     private String taskName;
@@ -64,4 +64,3 @@ public class FindOneTaskRequest {
     private String remark;
 
 }
-

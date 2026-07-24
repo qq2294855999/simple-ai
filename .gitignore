@@ -3,6 +3,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+.trae/**
 
 ### STS ###
 .apt_generated
@@ -33,3 +34,4 @@ build/
 .vscode/
 /web/dist/
 /web/node_modules/
+

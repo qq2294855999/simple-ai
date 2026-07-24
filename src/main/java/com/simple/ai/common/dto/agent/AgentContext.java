@@ -3,7 +3,6 @@ package com.simple.ai.common.dto.agent;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
-import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
@@ -52,16 +51,10 @@ public class AgentContext {
     private List<SubAgentRelation> subAgentRelations;
 
     /**
-     * 候选记忆列表
+     * 已发布记忆列表（供AI意图识别参考）
      */
-    @Schema(description = "候选记忆列表")
+    @Schema(description = "已发布记忆列表")
     private List<AgentMemory> memories;
-
-    /**
-     * 候选记忆详情列表
-     */
-    @Schema(description = "候选记忆详情列表")
-    private List<AgentMemoryDetail> memoryDetails;
 
     /**
      * 会话摘要

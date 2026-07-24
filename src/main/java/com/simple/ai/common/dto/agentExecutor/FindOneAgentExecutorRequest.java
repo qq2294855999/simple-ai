@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.agentExecutor;
 
+import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -24,7 +25,7 @@ public class FindOneAgentExecutorRequest {
     private String executorName;
 
     @Schema(description = "状态")
-    private String status;
+    private Status status;
 
     @Schema(description = "备注")
     private String remark;

@@ -1,36 +1,36 @@
 package com.simple.ai.service.command;
 
 import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
-import com.simple.ai.common.dto.command.*;
+import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
+import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
+import com.simple.ai.common.dto.command.CommandDispatchRequest;
+import com.simple.ai.common.dto.command.CommandDispatchResponse;
 import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
 import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
-import com.simple.ai.common.entity.agentMemory.AgentMemory;
-import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
-import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentClientStatusProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.agent.AgentAiClient;
-import com.simple.ai.common.service.command.AtomicCommandExecutor;
 import com.simple.ai.common.service.command.CommandDispatchService;
 import com.simple.ai.common.service.command.SubAgentDispatchService;
+import com.simple.ai.common.service.memory.MemoryDistiller;
+import com.simple.ai.common.service.memory.MemoryExecutor;
+import com.simple.ai.common.service.memory.MemoryMatcher;
 import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
 import com.simple.ai.service.agent.AgentContextAssembler;
-import com.simple.ai.service.agent.AgentMemoryMatcher;
 import com.simple.ai.view.agentClient.AgentClientRepository;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
@@ -75,10 +75,22 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private AgentContextAssembler agentContextAssembler;
 
     /**
-     * 智能体记忆匹配器
+     * 记忆匹配器（AI意图识别）
      */
     @Autowired
-    private AgentMemoryMatcher agentMemoryMatcher;
+    private MemoryMatcher memoryMatcher;
+
+    /**
+     * 记忆执行器（按记忆步骤直接执行）
+     */
+    @Autowired
+    private MemoryExecutor memoryExecutor;
+
+    /**
+     * 记忆蒸馏器（AI探索成功后提炼记忆）
+     */
+    @Autowired
+    private MemoryDistiller memoryDistiller;
 
     /**
      * 智能体 AI 调用客户端
@@ -187,13 +199,13 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             AgentContext context = agentContextAssembler.assemble(request);
             publishContextTraceProgress(progressConsumer, request, task, context);
 
-            // 匹配候选记忆
+            // AI意图识别匹配已发布记忆
             publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
-            List<AgentMemory> memories = agentMemoryMatcher.match(request);
-            publishMemoryMatchProgress(progressConsumer, request, task, memories);
+            String matchedMemoryId = memoryMatcher.match(request.getCommandContent(), context);
+            publishMemoryMatchProgress(progressConsumer, request, task, matchedMemoryId);
 
             // 执行智能体命令流程
-            String responseContent = executeCommand(task, request, context, memories, progressConsumer, recursionDepth);
+            String responseContent = executeCommand(task, request, context, matchedMemoryId, progressConsumer, recursionDepth);
 
             // 标记任务执行成功
             markTaskSuccess(task, responseContent);
@@ -224,7 +236,8 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      */
     private Task createRunningTask(CommandDispatchRequest request, String parentTaskId) {
         Task task = new Task();
-        task.setAgentMemoryId("");
+        task.setMemoryId("");
+        task.setMemoryVersionNo(null);
         task.setAgentId(request.getAgentId());
         task.setTaskName(request.getCommandName());
         task.setParentTaskId(parentTaskId == null ? "" : parentTaskId);
@@ -249,17 +262,20 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param task 任务主记录
      * @param request 命令调度请求
      * @param context 智能体上下文
-     * @param memories 候选记忆
+     * @param matchedMemoryId 命中的记忆ID，为空表示未命中
      * @param progressConsumer 进度事件消费者
      * @param recursionDepth 当前递归深度
      * @return 响应内容
      */
-    private String executeCommand(Task task, CommandDispatchRequest request, AgentContext context, List<AgentMemory> memories,
+    private String executeCommand(Task task, CommandDispatchRequest request, AgentContext context, String matchedMemoryId,
                                   Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
 
-        // 命中记忆时按记忆详情步骤链执行
-        if (!memories.isEmpty()) {
-            return executeMemorySteps(task, request, context, memories, progressConsumer, recursionDepth);
+        // 命中记忆时由 MemoryExecutor 直接按记忆步骤创建任务并下发客户端
+        if (matchedMemoryId != null && !matchedMemoryId.isBlank()) {
+            task.setMemoryId(matchedMemoryId);
+            taskView.updateById(task);
+            publishProgress(progressConsumer, request, task, "MEMORY_EXECUTING", "按记忆直接执行", matchedMemoryId, Boolean.FALSE, "");
+            return executeMemoryDirectly(task, request, context, matchedMemoryId, progressConsumer);
         }
 
         // 未命中记忆时调用 AI 生成探索响应
@@ -267,507 +283,27 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     }
 
     /**
-     * 执行命中的记忆步骤链。
+     * 按记忆直接执行：加载记忆步骤 → 替换参数占位符 → 创建 task_detail → 下发客户端。
      *
      * @param task 任务主记录
      * @param request 命令调度请求
      * @param context 智能体上下文
-     * @param memories 命中的记忆列表
+     * @param memoryId 命中的记忆ID
      * @param progressConsumer 进度事件消费者
-     * @param recursionDepth 当前递归深度
-     * @return 最后一个步骤响应内容
-     */
-    private String executeMemorySteps(Task task, CommandDispatchRequest request, AgentContext context, List<AgentMemory> memories,
-                                      Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
-
-        // 选取匹配优先级最高的记忆作为本次任务执行依据
-        AgentMemory memory = memories.get(0);
-
-        // 将任务主记录绑定到命中的智能体记忆，便于后续追踪复用来源
-        task.setAgentMemoryId(memory.getId());
-
-        // 从上下文中过滤当前记忆可执行的启用步骤详情
-        List<AgentMemoryDetail> details = filterMemoryDetails(context, memory);
-        AssertUtils.notEmpty(details, "命中记忆[{}]缺少步骤详情", memory.getId());
-
-        // 构建步骤主键索引，支持后续按 nextStepId 或 branchRoute 快速跳转
-        Map<String, AgentMemoryDetail> detailMap = buildMemoryDetailMap(details);
-
-        // 查找步骤链入口，优先使用没有父步骤的记忆详情
-        AgentMemoryDetail currentDetail = findStartDetail(details);
-
-        // 预加载当前智能体技能对应的原子命令列表，避免步骤循环中重复访问数据库
-        List<AtomicCommand> atomicCommands = loadEnabledAtomicCommands(context);
-
-        // 记录循环步骤执行次数，防止循环配置错误导致重复回跳
-        Map<String, Integer> loopExecuteCountMap = new HashMap<>();
-
-        // 计算步骤链最大执行次数，使用详情数量和循环上限组成整体安全边界
-        int maxStepCount = details.size() * MAX_LOOP_COUNT;
-        int executedStepCount = 0;
-        String responseContent = "";
-
-        // 按步骤游标推进执行，并用最大步数防止配置错误导致死循环
-        while (currentDetail != null) {
-
-            // 校验整体步骤执行次数，避免非循环链路配置成环后无限执行
-            AssertUtils.isTrue(executedStepCount < maxStepCount, "记忆步骤链执行超过安全上限");
-
-            // 校验循环开始步骤执行次数，避免循环体超过安全阈值
-            assertLoopExecutionAllowed(currentDetail, loopExecuteCountMap);
-            executedStepCount++;
-
-            // 发布步骤开始事件，通知调用方当前即将执行的记忆详情
-            publishProgress(progressConsumer, request, task, "STEP_STARTED", currentDetail.getStepName(), currentDetail.getExecContent(), Boolean.FALSE, "");
-
-            // 执行当前记忆详情，并保存该步骤对应的任务详情记录
-            responseContent = executeMemoryDetail(task, request, context, currentDetail, progressConsumer, recursionDepth, atomicCommands);
-
-            // 发布步骤完成事件，携带当前步骤返回内容供前端或 WebSocket 消费
-            publishProgress(progressConsumer, request, task, "STEP_COMPLETED", currentDetail.getStepName(), responseContent, Boolean.FALSE, "");
-
-            // 根据当前步骤类型、分支条件和返回内容计算下一执行步骤
-            currentDetail = findNextDetail(detailMap, currentDetail, responseContent, loopExecuteCountMap);
-        }
-        return responseContent;
-    }
-
-    /**
-     * 构建记忆详情索引。
-     *
-     * @param details 记忆详情列表
-     * @return 记忆详情索引
-     */
-    private Map<String, AgentMemoryDetail> buildMemoryDetailMap(List<AgentMemoryDetail> details) {
-        Map<String, AgentMemoryDetail> detailMap = new HashMap<>();
-
-        // 遍历记忆详情列表，按主键建立后续步骤查找索引
-        for (AgentMemoryDetail detail : details) {
-            detailMap.put(detail.getId(), detail);
-        }
-        return detailMap;
-    }
-
-    /**
-     * 查找步骤链入口。
-     *
-     * @param details 记忆详情列表
-     * @return 起始步骤
-     */
-    private AgentMemoryDetail findStartDetail(List<AgentMemoryDetail> details) {
-        AgentMemoryDetail startDetail = null;
-
-        // 优先使用没有父步骤的详情作为入口，多个入口表示记忆链路不确定
-        for (AgentMemoryDetail detail : details) {
-            if (detail.getParentStepId() == null || detail.getParentStepId().isBlank()) {
-                AssertUtils.isTrue(startDetail == null, "记忆步骤链存在多个入口步骤，无法确定执行起点");
-                startDetail = detail;
-            }
-        }
-
-        // 没有声明入口时沿用查询结果首条，保持历史数据兼容
-        if (startDetail == null) {
-            return details.get(0);
-        }
-        return startDetail;
-    }
-
-    /**
-     * 查找下一步骤。
-     *
-     * @param detailMap 记忆详情索引
-     * @param currentDetail 当前步骤
-     * @param responseContent 当前步骤响应内容
-     * @param loopExecuteCountMap 循环步骤执行次数索引
-     * @return 下一步骤
-     */
-    private AgentMemoryDetail findNextDetail(Map<String, AgentMemoryDetail> detailMap, AgentMemoryDetail currentDetail, String responseContent,
-                                             Map<String, Integer> loopExecuteCountMap) {
-
-        // 判断步骤根据分支条件决定后续路由
-        if (AgentStepTypeProcess.JUDGE.equals(currentDetail.getStepType())) {
-            return findNextDetailForJudge(detailMap, currentDetail, responseContent);
-        }
-
-        // 循环结束步骤根据退出条件和次数决定是否回跳
-        if (AgentStepTypeProcess.LOOP_END.equals(currentDetail.getStepType())) {
-            return findNextDetailForLoopEnd(detailMap, currentDetail, responseContent, loopExecuteCountMap);
-        }
-        return findNextDetailByNextStepId(detailMap, currentDetail);
-    }
-
-    /**
-     * 查找判断步骤的下一步骤。
-     *
-     * @param detailMap 记忆详情索引
-     * @param currentDetail 当前步骤
-     * @param responseContent 当前步骤响应内容
-     * @return 下一步骤
-     */
-    private AgentMemoryDetail findNextDetailForJudge(Map<String, AgentMemoryDetail> detailMap, AgentMemoryDetail currentDetail, String responseContent) {
-
-        // 分支条件命中时使用分支路由
-        if (isBranchConditionMatched(currentDetail, responseContent)) {
-            return findNextDetailByRoute(detailMap, currentDetail.getBranchRoute());
-        }
-        return findNextDetailByNextStepId(detailMap, currentDetail);
-    }
-
-    /**
-     * 查找循环结束步骤的下一步骤。
-     *
-     * @param detailMap 记忆详情索引
-     * @param currentDetail 当前步骤
-     * @param responseContent 当前步骤响应内容
-     * @param loopExecuteCountMap 循环步骤执行次数索引
-     * @return 下一步骤
-     */
-    private AgentMemoryDetail findNextDetailForLoopEnd(Map<String, AgentMemoryDetail> detailMap, AgentMemoryDetail currentDetail, String responseContent,
-                                                       Map<String, Integer> loopExecuteCountMap) {
-
-        // 退出条件命中时结束当前循环并进入下一步骤
-        if (isBranchConditionMatched(currentDetail, responseContent)) {
-            return findNextDetailByNextStepId(detailMap, currentDetail);
-        }
-        String loopRoute = resolveLoopRoute(currentDetail);
-        increaseLoopRouteCount(loopRoute, loopExecuteCountMap);
-        return findNextDetailByRoute(detailMap, loopRoute);
-    }
-
-    /**
-     * 判断分支条件是否命中。
-     *
-     * @param currentDetail 当前步骤
-     * @param responseContent 当前步骤响应内容
-     * @return 是否命中
-     */
-    private boolean isBranchConditionMatched(AgentMemoryDetail currentDetail, String responseContent) {
-        String branchCondition = currentDetail.getBranchCondition();
-
-        // 分支条件为空时不触发分支路由
-        if (branchCondition == null || branchCondition.isBlank()) {
-            return false;
-        }
-
-        // 响应内容包含分支条件时视为命中
-        if (responseContent != null && responseContent.contains(branchCondition)) {
-            return true;
-        }
-        String execContent = currentDetail.getExecContent();
-        return execContent != null && execContent.contains(branchCondition);
-    }
-
-    /**
-     * 解析循环回跳路由。
-     *
-     * @param currentDetail 当前步骤
-     * @return 循环回跳步骤ID
-     */
-    private String resolveLoopRoute(AgentMemoryDetail currentDetail) {
-
-        // 循环结束优先使用分支路由作为回跳目标
-        if (currentDetail.getBranchRoute() != null && !currentDetail.getBranchRoute().isBlank()) {
-            return currentDetail.getBranchRoute();
-        }
-        return currentDetail.getParentStepId();
-    }
-
-    /**
-     * 增加循环路由执行次数并校验安全上限。
-     *
-     * @param loopRoute 循环回跳步骤ID
-     * @param loopExecuteCountMap 循环步骤执行次数索引
-     */
-    private void increaseLoopRouteCount(String loopRoute, Map<String, Integer> loopExecuteCountMap) {
-
-        // 循环回跳目标为空时表示配置错误
-        AssertUtils.notEmpty(loopRoute, "循环步骤缺少回跳路由");
-        Integer executeCount = loopExecuteCountMap.get(loopRoute);
-        int nextExecuteCount = executeCount == null ? 1 : executeCount + 1;
-        AssertUtils.isTrue(nextExecuteCount <= MAX_LOOP_COUNT, "循环步骤执行超过安全次数");
-        loopExecuteCountMap.put(loopRoute, nextExecuteCount);
-    }
-
-    /**
-     * 校验循环步骤执行次数。
-     *
-     * @param currentDetail 当前步骤
-     * @param loopExecuteCountMap 循环步骤执行次数索引
-     */
-    private void assertLoopExecutionAllowed(AgentMemoryDetail currentDetail, Map<String, Integer> loopExecuteCountMap) {
-
-        // 非循环开始步骤不执行循环次数校验
-        if (!AgentStepTypeProcess.LOOP_START.equals(currentDetail.getStepType())) {
-            return;
-        }
-        Integer executeCount = loopExecuteCountMap.get(currentDetail.getId());
-        AssertUtils.isTrue(executeCount == null || executeCount < MAX_LOOP_COUNT, "循环步骤执行超过安全次数");
-    }
-
-    /**
-     * 按普通下一步骤查找详情。
-     *
-     * @param detailMap 记忆详情索引
-     * @param currentDetail 当前步骤
-     * @return 下一步骤
-     */
-    private AgentMemoryDetail findNextDetailByNextStepId(Map<String, AgentMemoryDetail> detailMap, AgentMemoryDetail currentDetail) {
-
-        // 普通下一步骤为空时表示步骤链结束
-        if (currentDetail.getNextStepId() == null || currentDetail.getNextStepId().isBlank()) {
-            return null;
-        }
-        AgentMemoryDetail nextDetail = detailMap.get(currentDetail.getNextStepId());
-        AssertUtils.notEmpty(nextDetail, "记忆步骤[{}]引用的下一步骤[{}]不存在", currentDetail.getId(), currentDetail.getNextStepId());
-        return nextDetail;
-    }
-
-    /**
-     * 按路由查找详情。
-     *
-     * @param detailMap 记忆详情索引
-     * @param routeId 路由步骤ID
-     * @return 下一步骤
-     */
-    private AgentMemoryDetail findNextDetailByRoute(Map<String, AgentMemoryDetail> detailMap, String routeId) {
-
-        // 路由为空时表示无后续步骤
-        if (routeId == null || routeId.isBlank()) {
-            return null;
-        }
-        AgentMemoryDetail nextDetail = detailMap.get(routeId);
-        AssertUtils.notEmpty(nextDetail, "记忆步骤路由引用的目标步骤[{}]不存在", routeId);
-        return nextDetail;
-    }
-
-    /**
-     * 过滤当前记忆对应的详情列表。
-     *
-     * @param context 智能体上下文
-     * @param memory 命中的智能体记忆
-     * @return 当前记忆详情列表
-     */
-    private List<AgentMemoryDetail> filterMemoryDetails(AgentContext context, AgentMemory memory) {
-        List<AgentMemoryDetail> result = new ArrayList<>();
-
-        // 遍历上下文中的记忆详情，保留当前记忆的启用步骤
-        for (AgentMemoryDetail detail : context.getMemoryDetails()) {
-            if (isEnabledMemoryDetail(memory, detail)) {
-                result.add(detail);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * 判断记忆详情是否属于当前记忆且已启用。
-     *
-     * @param memory 命中的智能体记忆
-     * @param detail 记忆详情
-     * @return 是否可执行
-     */
-    private boolean isEnabledMemoryDetail(AgentMemory memory, AgentMemoryDetail detail) {
-
-        // 只执行当前命中记忆下的启用步骤
-        if (!memory.getId().equals(detail.getAgentMemoryId())) {
-            return false;
-        }
-        return Status.ON.equals(detail.getStatus());
-    }
-
-    /**
-     * 执行单条记忆详情。
-     *
-     * @param task 任务主记录
-     * @param request 命令调度请求
-     * @param context 智能体上下文
-     * @param detail 记忆详情
-     * @param progressConsumer 进度事件消费者
-     * @param recursionDepth 当前递归深度
-     * @return 步骤响应内容
-     */
-    private String executeMemoryDetail(Task task, CommandDispatchRequest request, AgentContext context, AgentMemoryDetail detail,
-                                       Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth,
-                                       List<AtomicCommand> atomicCommands) {
-
-        // 子智能体步骤转交给子智能体递归调度
-        if (isSubAgentStep(context, detail)) {
-            return executeSubAgentStep(task, request, context, detail, progressConsumer, recursionDepth);
-        }
-
-        // 原子命令步骤使用预加载的原子命令列表执行，避免循环内重复查询数据库
-        if (AgentStepTypeProcess.ATOMIC_COMMAND.equals(detail.getStepType())) {
-            return executeAtomicCommand(task, request, detail, atomicCommands);
-        }
-
-        // 判断和循环步骤先记录为成功详情，后续由专用执行器扩展
-        AtomicCommandInvokeResponse response = buildStepRecordResponse(detail);
-        saveTaskDetail(task, request, detail, detail.getExecContent(), response);
-        return response.getResponseContent();
-    }
-
-    /**
-     * 判断当前步骤是否需要交给子智能体执行。
-     *
-     * @param context 智能体上下文
-     * @param detail 记忆详情
-     * @return 是否为子智能体步骤
-     */
-    private boolean isSubAgentStep(AgentContext context, AgentMemoryDetail detail) {
-
-        // 没有可用子智能体关系时不触发递归调度
-        if (context.getSubAgentRelations() == null || context.getSubAgentRelations().isEmpty()) {
-            return false;
-        }
-        AtomicCommandInvokeRequest invokeRequest = buildAtomicCommandRequestForStepDetect(detail);
-        AtomicCommandExecutor executor = atomicCommandExecutorRegistry.findExecutor(invokeRequest);
-        return executor instanceof SubAgentAtomicCommandExecutor;
-    }
-
-    /**
-     * 构建步骤识别用原子命令请求。
-     *
-     * @param detail 记忆详情
-     * @return 原子命令调用请求
-     */
-    private AtomicCommandInvokeRequest buildAtomicCommandRequestForStepDetect(AgentMemoryDetail detail) {
-        AtomicCommandInvokeRequest invokeRequest = new AtomicCommandInvokeRequest();
-        invokeRequest.setTaskId("STEP_DETECT");
-        invokeRequest.setTaskDetailId("");
-        invokeRequest.setAtomicCommandId("");
-        invokeRequest.setAtomicCommandRole("");
-        invokeRequest.setCommandContent(detail.getExecContent());
-        invokeRequest.setRequestParams(new HashMap<>());
-        return invokeRequest;
-    }
-
-    /**
-     * 执行子智能体步骤。
-     *
-     * @param task 父任务主记录
-     * @param request 父命令调度请求
-     * @param context 智能体上下文
-     * @param detail 记忆详情
-     * @param progressConsumer 进度事件消费者
-     * @param recursionDepth 当前递归深度
-     * @return 子智能体响应内容
-     */
-    private String executeSubAgentStep(Task task, CommandDispatchRequest request, AgentContext context, AgentMemoryDetail detail,
-                                       Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
-        SubAgentRelation relation = findMatchedSubAgentRelation(context, detail);
-        SubAgentDispatchContext dispatchContext = buildSubAgentDispatchContext(task, request, relation, detail, progressConsumer, recursionDepth);
-        publishProgress(progressConsumer, request, task, "SUB_AGENT_STARTED", detail.getStepName(), detail.getExecContent(), Boolean.FALSE, "");
-        CommandDispatchResponse subResponse = subAgentDispatchService.dispatch(dispatchContext);
-        linkParentTaskToSubTask(task, subResponse);
-        AtomicCommandInvokeResponse recordResponse = buildSubAgentRecordResponse(subResponse);
-        saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(dispatchContext), recordResponse);
-        AssertUtils.isTrue(AgentExecutionStatusProcess.SUCCESS.equals(subResponse.getExecStatus()), subResponse.getFailureReason());
-        publishProgress(progressConsumer, request, task, "SUB_AGENT_COMPLETED", detail.getStepName(), subResponse.getResponseContent(), Boolean.FALSE, "");
-        return subResponse.getResponseContent();
-    }
-
-    /**
-     * 构建子智能体调度上下文。
-     *
-     * @param task 父任务主记录
-     * @param request 父命令调度请求
-     * @param relation 子智能体关系
-     * @param detail 记忆详情
-     * @param progressConsumer 进度事件消费者
-     * @param recursionDepth 当前递归深度
-     * @return 子智能体调度上下文
-     */
-    private SubAgentDispatchContext buildSubAgentDispatchContext(Task task, CommandDispatchRequest request, SubAgentRelation relation,
-                                                                 AgentMemoryDetail detail,
-                                                                 Consumer<CommandDispatchProgressEvent> progressConsumer,
-                                                                 int recursionDepth) {
-        SubAgentDispatchContext context = new SubAgentDispatchContext();
-        context.setParentTask(task);
-        context.setParentRequest(request);
-        context.setRelation(relation);
-        context.setMemoryDetail(detail);
-        context.setProgressConsumer(progressConsumer);
-        context.setRecursionDepth(recursionDepth);
-        return context;
-    }
-
-    /**
-     * 查找当前步骤匹配的子智能体关系。
-     *
-     * @param context 智能体上下文
-     * @param detail 记忆详情
-     * @return 子智能体关系
-     */
-    private SubAgentRelation findMatchedSubAgentRelation(AgentContext context, AgentMemoryDetail detail) {
-
-        // 遍历子智能体关系，优先匹配执行内容中声明的子智能体ID
-        for (SubAgentRelation relation : context.getSubAgentRelations()) {
-            if (isSubAgentRelationMatched(relation, detail)) {
-                return relation;
-            }
-        }
-        return context.getSubAgentRelations().get(0);
-    }
-
-    /**
-     * 判断子智能体关系是否匹配当前步骤。
-     *
-     * @param relation 子智能体关系
-     * @param detail 记忆详情
-     * @return 是否匹配
-     */
-    private boolean isSubAgentRelationMatched(SubAgentRelation relation, AgentMemoryDetail detail) {
-        String subAgentId = relation.getSubAgentId();
-        String execContent = detail.getExecContent();
-
-        // 子智能体ID或执行内容为空时不能精确匹配
-        if (subAgentId == null || subAgentId.isBlank() || execContent == null || execContent.isBlank()) {
-            return false;
-        }
-        return execContent.contains(subAgentId);
-    }
-
-    /**
-     * 将父任务链路指向子任务。
-     *
-     * @param task 父任务主记录
-     * @param subResponse 子智能体调度响应
-     */
-    private void linkParentTaskToSubTask(Task task, CommandDispatchResponse subResponse) {
-        task.setNextTaskId(subResponse.getTaskId());
-        taskView.updateById(task);
-    }
-
-    /**
-     * 构建子智能体步骤记录响应。
-     *
-     * @param subResponse 子智能体调度响应
-     * @return 步骤记录响应
-     */
-    private AtomicCommandInvokeResponse buildSubAgentRecordResponse(CommandDispatchResponse subResponse) {
-        AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
-        response.setSuccess(AgentExecutionStatusProcess.SUCCESS.equals(subResponse.getExecStatus()));
-        response.setResponseContent(subResponse.getResponseContent());
-        response.setFailureReason(subResponse.getFailureReason());
-        return response;
-    }
-
-    /**
-     * 执行默认安全原子命令。
-     *
-     * @param task 任务主记录
-     * @param request 命令调度请求
-     * @param detail 记忆详情
      * @return 响应内容
      */
-    private String executeAtomicCommand(Task task, CommandDispatchRequest request, AgentMemoryDetail detail,
-                                        List<AtomicCommand> atomicCommands) {
-        AtomicCommandInvokeRequest invokeRequest = buildAtomicCommandRequest(task, request, detail.getExecContent(), atomicCommands);
-        AtomicCommandExecutor executor = atomicCommandExecutorRegistry.findExecutor(invokeRequest);
-        AtomicCommandInvokeResponse invokeResponse = executor.execute(invokeRequest);
-        saveTaskDetail(task, request, detail, JsonUtils.toJsonStr(invokeRequest), invokeResponse);
-        AssertUtils.isTrue(Boolean.TRUE.equals(invokeResponse.getSuccess()), invokeResponse.getFailureReason());
-        return invokeResponse.getResponseContent();
+    private String executeMemoryDirectly(Task task, CommandDispatchRequest request, AgentContext context, String memoryId, Consumer<CommandDispatchProgressEvent> progressConsumer) {
+
+        // 委托 MemoryExecutor 按记忆步骤直接执行
+        String result = memoryExecutor.execute(task, request, memoryId, progressConsumer);
+
+        // 标记任务执行完成
+        if (result != null && !result.contains("失败")) {
+            markTaskSuccess(task, result);
+        } else {
+            markTaskFailed(task, result != null ? result : "记忆执行失败");
+        }
+        return result;
     }
 
     /**
@@ -1046,48 +582,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     }
 
     /**
-     * 构建非原子命令步骤记录响应。
-     *
-     * @param detail 记忆详情
-     * @return 原子命令调用响应
-     */
-    private AtomicCommandInvokeResponse buildStepRecordResponse(AgentMemoryDetail detail) {
-        AtomicCommandInvokeResponse response = new AtomicCommandInvokeResponse();
-        response.setSuccess(Boolean.TRUE);
-        response.setResponseContent("已记录步骤：" + detail.getStepName());
-        response.setFailureReason("");
-        return response;
-    }
-
-    /**
-     * 保存原子命令任务详情。
-     *
-     * @param task 任务主记录
-     * @param request 命令调度请求
-     * @param detail 记忆详情
-     * @param requestParams 请求参数
-     * @param invokeResponse 原子命令调用响应
-     */
-    private void saveTaskDetail(Task task, CommandDispatchRequest request, AgentMemoryDetail detail, String requestParams,
-                                AtomicCommandInvokeResponse invokeResponse) {
-        TaskDetail taskDetail = new TaskDetail();
-        taskDetail.setTaskId(task.getId());
-        taskDetail.setTaskName(resolveTaskDetailName(request, detail));
-        taskDetail.setParentTaskId(resolveParentStepId(detail));
-        taskDetail.setNextTaskId(resolveNextStepId(detail));
-        taskDetail.setStepType(resolveStepType(detail));
-        taskDetail.setBranchCondition(resolveBranchCondition(detail));
-        taskDetail.setBranchRoute(resolveBranchRoute(detail));
-        taskDetail.setRequestParams(requestParams);
-        taskDetail.setReturnParams(JsonUtils.toJsonStr(invokeResponse));
-        taskDetail.setExecStatus(resolveDetailStatus(invokeResponse.getSuccess()));
-        taskDetail.setStatus(Status.ON);
-        taskDetail.setReserve("");
-        taskDetail.setRemark("智能体步骤执行详情");
-        taskDetailView.save(taskDetail);
-    }
-
-    /**
      * 保存 AI 探索任务详情。
      *
      * @param task 任务主记录
@@ -1192,17 +686,16 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param progressConsumer 进度事件消费者
      * @param request 命令调度请求
      * @param task 任务主记录
-     * @param memories 候选记忆
+     * @param matchedMemoryId 命中的记忆ID，为空表示未命中
      */
-    private void publishMemoryMatchProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request,
-                                            Task task, List<AgentMemory> memories) {
+    private void publishMemoryMatchProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request, Task task, String matchedMemoryId) {
 
-        // 候选记忆为空时发布未命中事件
-        if (memories.isEmpty()) {
+        // 未命中记忆时发布未命中事件
+        if (matchedMemoryId == null || matchedMemoryId.isBlank()) {
             publishProgress(progressConsumer, request, task, "MEMORY_MISSED", "未命中候选记忆，转入 AI 探索", "", Boolean.FALSE, "");
             return;
         }
-        publishProgress(progressConsumer, request, task, "MEMORY_MATCHED", "已命中候选记忆", buildCountPayload("memory", memories.size()), Boolean.FALSE, "");
+        publishProgress(progressConsumer, request, task, "MEMORY_MATCHED", "已命中候选记忆", matchedMemoryId, Boolean.FALSE, "");
     }
 
     /**
@@ -1341,97 +834,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     }
 
     /**
-     * 解析任务详情名称。
-     *
-     * @param request 命令调度请求
-     * @param detail 记忆详情
-     * @return 任务详情名称
-     */
-    private String resolveTaskDetailName(CommandDispatchRequest request, AgentMemoryDetail detail) {
-
-        // 记忆详情为空时使用命令名称
-        if (detail == null || detail.getStepName() == null || detail.getStepName().isBlank()) {
-            return request.getCommandName();
-        }
-        return detail.getStepName();
-    }
-
-    /**
-     * 解析父步骤主键。
-     *
-     * @param detail 记忆详情
-     * @return 父步骤主键
-     */
-    private String resolveParentStepId(AgentMemoryDetail detail) {
-
-        // 记忆详情为空时父步骤为空
-        if (detail == null) {
-            return "";
-        }
-        return detail.getParentStepId();
-    }
-
-    /**
-     * 解析下一步骤主键。
-     *
-     * @param detail 记忆详情
-     * @return 下一步骤主键
-     */
-    private String resolveNextStepId(AgentMemoryDetail detail) {
-
-        // 记忆详情为空时下一步骤为空
-        if (detail == null) {
-            return "";
-        }
-        return detail.getNextStepId();
-    }
-
-    /**
-     * 解析步骤类型。
-     *
-     * @param detail 记忆详情
-     * @return 步骤类型
-     */
-    private AgentStepTypeProcess resolveStepType(AgentMemoryDetail detail) {
-
-        // 记忆详情为空时按原子命令记录
-        if (detail == null || detail.getStepType() == null || ObjUtil.isEmpty(detail.getStepType())) {
-            return AgentStepTypeProcess.ATOMIC_COMMAND;
-        }
-        return detail.getStepType();
-    }
-
-    /**
-     * 解析分支条件。
-     *
-     * @param detail 记忆详情
-     * @return 分支条件
-     */
-    private String resolveBranchCondition(AgentMemoryDetail detail) {
-
-        // 记忆详情为空时分支条件为空
-        if (detail == null) {
-            return "";
-        }
-        return detail.getBranchCondition();
-    }
-
-    /**
-     * 解析分支路由。
-     *
-     * @param detail 记忆详情
-     * @return 分支路由
-     */
-    private String resolveBranchRoute(AgentMemoryDetail detail) {
-
-        // 记忆详情为空时分支路由为空
-        if (detail == null) {
-            return "";
-        }
-        return detail.getBranchRoute();
-    }
-
-    /**
      * 解析任务详情执行状态。
      *
      * @param success 是否成功
@@ -1524,21 +926,25 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     }
 
     /**
-     * 触发记忆沉淀判定。
-     * <p>AI 探索成功后，按规则判断是否需要将执行结果沉淀为记忆版本。
-     * 沉淀流程：AI 提炼最短执行链 → 创建 agent_memory_version (DRAFT)。</p>
+     * 触发记忆沉淀。
+     *
+     * <p>AI 探索成功后，由 MemoryDistiller 从 task + task_details 提炼记忆。
+     * 复用当前会话的 AI 模型识别参数占位符，创建 agent_memory (DRAFT) + agent_memory_step × N。</p>
      *
      * @param task       任务主记录
      * @param request    命令调度请求
      * @param aiResponse AI 响应
      */
     private void triggerMemoryPrecipitation(Task task, CommandDispatchRequest request, AgentAiResponse aiResponse) {
-        // TODO: 实现记忆沉淀逻辑
-        // 1. 判断 AI 输出是否为结构化 AgentExecutionPlan JSON
-        // 2. 校验计划中命令归属技能 + 客户端支持 executor_type + argsSchema 合规
-        // 3. AI 提炼最短执行链 → 创建 agent_memory_version (DRAFT)
-        // 4. 关联到当前任务的 task.memory_version_id
-        log.debug("记忆沉淀待实现：taskId={}, agentId={}", task.getId(), request.getAgentId());
+
+        // AI 探索成功后，由 MemoryDistiller 从 task + task_details 提炼记忆
+        try {
+            memoryDistiller.distill(task.getId());
+        } catch (RuntimeException e) {
+
+            // 沉淀失败不影响主流程
+            log.warn("记忆沉淀失败，taskId={}", task.getId(), e);
+        }
     }
 
     /**

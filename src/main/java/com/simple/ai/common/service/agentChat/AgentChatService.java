@@ -23,12 +23,14 @@ public interface AgentChatService {
     AgentChatSessionResponse createSession(CreateAgentChatSessionRequest request);
 
     /**
-     * 查询智能体下的会话列表。
+     * 查询智能体下的会话列表，支持按模型和客户端过滤。
      *
-     * @param agentId 智能体主键
+     * @param agentId  智能体主键
+     * @param modelId  模型主键（可选，不传则不过滤）
+     * @param clientId 客户端主键（可选，不传则不过滤）
      * @return 会话列表
      */
-    List<AgentChatSessionResponse> findSessions(String agentId);
+    List<AgentChatSessionResponse> findSessions(String agentId, String modelId, String clientId);
 
     /**
      * 查询会话历史消息（全量）。

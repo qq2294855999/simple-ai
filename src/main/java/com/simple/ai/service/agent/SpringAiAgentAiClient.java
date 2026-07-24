@@ -184,7 +184,7 @@ class SpringAiAgentAiClient implements AgentAiClient {
     /**
      * 构建发送给模型的用户内容。
      *
-     * <p>将系统提示词、会话摘要和用户命令拼接为结构化上下文。</p>
+     * <p>将系统提示词、会话摘要和用户命令拼接为 XML 结构化上下文。</p>
      *
      * @param request AI 调用请求
      * @return 用户内容
@@ -196,11 +196,13 @@ class SpringAiAgentAiClient implements AgentAiClient {
         // 注入会话摘要，帮助AI理解历史对话脉络
         String sessionSummary = request.getSessionSummary();
         if (sessionSummary != null && !sessionSummary.isBlank()) {
-            builder.append("\n\n## 会话历史\n");
+            builder.append("<session_summary>\n");
             builder.append(sessionSummary);
+            builder.append("\n</session_summary>\n\n");
         }
-        builder.append("\n\n## 当前命令\n");
+        builder.append("<current_command>\n");
         builder.append(request.getCommandContent());
+        builder.append("\n</current_command>\n");
         return builder.toString();
     }
 

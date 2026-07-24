@@ -6,9 +6,6 @@ import com.simple.ai.common.dto.agentClient.InfoAgentClientResponse;
 import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
 import com.simple.ai.common.dto.agentDefinition.UpdateAgentDefinitionRequest;
 import com.simple.ai.common.dto.agentExecutor.CreateAgentExecutorRequest;
-import com.simple.ai.common.dto.agentMemory.CreateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.UpdateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemoryVersion.CreateAgentMemoryVersionRequest;
 import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
 import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
@@ -20,8 +17,6 @@ import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
 import com.simple.ai.common.service.agentClient.AgentClientService;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
-import com.simple.ai.common.service.agentMemory.AgentMemoryService;
-import com.simple.ai.common.service.agentMemoryVersion.AgentMemoryVersionService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
 import com.simple.ai.common.service.atomicCommand.AtomicCommandService;
@@ -29,6 +24,7 @@ import com.simple.ai.common.service.command.AtomicCommandExecutor;
 import com.simple.common.auth.client.util.LoginUserUtils;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
+import com.simple.common.mp.common.enums.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,11 +74,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
     private static final String WRITE_NAME = "写入";
 
     /**
-     * 创建记忆关键字
-     */
-    private static final String CREATE_MEMORY_KEY = "创建记忆";
-
-    /**
      * 创建规则关键字
      */
     private static final String CREATE_RULE_KEY = "创建规则";
@@ -113,16 +104,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
     private static final String CREATE_CLIENT_KEY = "创建客户端";
 
     /**
-     * 创建记忆版本关键字
-     */
-    private static final String CREATE_MEMORY_VERSION_KEY = "创建记忆版本";
-
-    /**
-     * 更新记忆关键字
-     */
-    private static final String UPDATE_MEMORY_KEY = "更新记忆";
-
-    /**
      * 更新规则关键字
      */
     private static final String UPDATE_RULE_KEY = "更新规则";
@@ -141,11 +122,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
      * 更新原子命令关键字
      */
     private static final String UPDATE_COMMAND_KEY = "更新原子命令";
-
-    /**
-     * 删除记忆关键字
-     */
-    private static final String DELETE_MEMORY_KEY = "删除记忆";
 
     /**
      * 删除规则关键字
@@ -168,9 +144,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
     private static final String DELETE_COMMAND_KEY = "删除原子命令";
 
     @Autowired
-    private AgentMemoryService agentMemoryService;
-
-    @Autowired
     private AgentRuleService agentRuleService;
 
     @Autowired
@@ -187,9 +160,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
 
     @Autowired
     private AgentClientService agentClientService;
-
-    @Autowired
-    private AgentMemoryVersionService agentMemoryVersionService;
 
     @Override
     public boolean supports(AtomicCommandInvokeRequest request) {
@@ -243,9 +213,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
     private AtomicCommandInvokeResponse dispatchWrite(AtomicCommandInvokeRequest request, String writeType,
                                                        Map<String, Object> writeParams) {
         try {
-            if (CREATE_MEMORY_KEY.equals(writeType)) {
-                return handleCreateMemory(request, writeParams);
-            }
             if (CREATE_RULE_KEY.equals(writeType)) {
                 return handleCreateRule(request, writeParams);
             }
@@ -263,9 +230,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
             }
             if (CREATE_CLIENT_KEY.equals(writeType)) {
                 return handleCreateClient(request, writeParams);
-            }
-            if (CREATE_MEMORY_VERSION_KEY.equals(writeType)) {
-                return handleCreateMemoryVersion(request, writeParams);
             }
 
             // type 不在白名单内则阻断
@@ -287,9 +251,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
      */
     private AtomicCommandInvokeResponse dispatchUpdate(AtomicCommandInvokeRequest request, String writeType, Map<String, Object> writeParams) {
         try {
-            if (UPDATE_MEMORY_KEY.equals(writeType)) {
-                return handleUpdateMemory(request, writeParams);
-            }
             if (UPDATE_RULE_KEY.equals(writeType)) {
                 return handleUpdateRule(request, writeParams);
             }
@@ -322,9 +283,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
      */
     private AtomicCommandInvokeResponse dispatchDelete(AtomicCommandInvokeRequest request, String writeType, Map<String, Object> writeParams) {
         try {
-            if (DELETE_MEMORY_KEY.equals(writeType)) {
-                return handleDeleteByIds(request, writeType, writeParams, agentMemoryService);
-            }
             if (DELETE_RULE_KEY.equals(writeType)) {
                 return handleDeleteByIds(request, writeType, writeParams, agentRuleService);
             }
@@ -344,27 +302,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
             log.error("执行删除命令失败 [taskId={}]", request.getTaskId(), e);
             return buildBlockedWriteResponse(request, "删除执行失败：" + e.getMessage());
         }
-    }
-
-    /**
-     * 处理创建记忆。
-     *
-     * @param request 原子命令调用请求
-     * @param writeParams 写入参数
-     * @return 原子命令调用响应
-     */
-    private AtomicCommandInvokeResponse handleCreateMemory(AtomicCommandInvokeRequest request,
-                                                            Map<String, Object> writeParams) {
-        CreateAgentMemoryRequest createRequest = new CreateAgentMemoryRequest();
-        createRequest.setAgentId((String) writeParams.get("agentId"));
-        createRequest.setMemoryName((String) writeParams.get("memoryName"));
-        createRequest.setStepName((String) writeParams.getOrDefault("stepName", ""));
-        createRequest.setTriggerCondition((String) writeParams.get("triggerCondition"));
-        createRequest.setTriggerAction((String) writeParams.get("triggerAction"));
-        createRequest.setRemark((String) writeParams.getOrDefault("remark", "AI对话创建"));
-
-        String memoryId = agentMemoryService.save(createRequest);
-        return buildSuccessResponse(request, "记忆创建成功", memoryId);
     }
 
     /**
@@ -465,7 +402,11 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
         createRequest.setExecutorCode((String) writeParams.get("executorCode"));
         createRequest.setExecutorName((String) writeParams.get("executorName"));
         createRequest.setDescription((String) writeParams.getOrDefault("description", ""));
-        createRequest.setStatus((String) writeParams.getOrDefault("status", null));
+        // 处理状态参数，将字符串转为 Status 枚举
+        String statusStr = (String) writeParams.get("status");
+        if (statusStr != null) {
+            createRequest.setStatus(Status.valueOf(statusStr));
+        }
         createRequest.setRemark((String) writeParams.getOrDefault("remark", "AI对话创建"));
 
         // 调用执行器服务保存
@@ -502,52 +443,6 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
         // 调用客户端服务保存，返回含密钥的详情
         InfoAgentClientResponse clientInfo = agentClientService.save(createRequest, userId);
         return buildSuccessResponse(request, "客户端创建成功", clientInfo.getId());
-    }
-
-    /**
-     * 处理创建记忆版本。
-     *
-     * @param request     原子命令调用请求
-     * @param writeParams 写入参数
-     * @return 原子命令调用响应
-     * @author qty
-     */
-    private AtomicCommandInvokeResponse handleCreateMemoryVersion(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
-        CreateAgentMemoryVersionRequest createRequest = new CreateAgentMemoryVersionRequest();
-        createRequest.setMemoryId((String) writeParams.get("memoryId"));
-        createRequest.setVersionNo((Integer) writeParams.get("versionNo"));
-        createRequest.setVersionStatus((String) writeParams.getOrDefault("versionStatus", null));
-        createRequest.setSourceTaskId((String) writeParams.getOrDefault("sourceTaskId", request.getTaskId()));
-        createRequest.setSuccessAssertion((String) writeParams.getOrDefault("successAssertion", null));
-        createRequest.setSummary((String) writeParams.getOrDefault("summary", null));
-        createRequest.setCreateReason((String) writeParams.getOrDefault("createReason", "AI对话创建"));
-
-        // 调用记忆版本服务保存
-        String versionId = agentMemoryVersionService.save(createRequest);
-        return buildSuccessResponse(request, "记忆版本创建成功", versionId);
-    }
-
-    /**
-     * 处理更新记忆。
-     *
-     * @param request     原子命令调用请求
-     * @param writeParams 更新参数
-     * @return 原子命令调用响应
-     * @author qty
-     */
-    private AtomicCommandInvokeResponse handleUpdateMemory(AtomicCommandInvokeRequest request, Map<String, Object> writeParams) {
-        UpdateAgentMemoryRequest updateRequest = new UpdateAgentMemoryRequest();
-        updateRequest.setId((String) writeParams.get("id"));
-        updateRequest.setAgentId((String) writeParams.get("agentId"));
-        updateRequest.setMemoryName((String) writeParams.get("memoryName"));
-        updateRequest.setStepName((String) writeParams.get("stepName"));
-        updateRequest.setTriggerCondition((String) writeParams.get("triggerCondition"));
-        updateRequest.setTriggerAction((String) writeParams.get("triggerAction"));
-        updateRequest.setRemark((String) writeParams.getOrDefault("remark", null));
-
-        // 调用记忆服务更新
-        String memoryId = agentMemoryService.updateById(updateRequest);
-        return buildSuccessResponse(request, "记忆更新成功", memoryId);
     }
 
     /**
@@ -659,9 +554,7 @@ public class WriteAtomicCommandExecutor implements AtomicCommandExecutor {
         List<String> ids = Arrays.asList(idsStr.split(","));
 
         // 按目标类型分发到对应服务执行删除
-        if (service instanceof AgentMemoryService) {
-            ((AgentMemoryService) service).deleteByIds(ids);
-        } else if (service instanceof AgentRuleService) {
+        if (service instanceof AgentRuleService) {
             ((AgentRuleService) service).deleteByIds(ids);
         } else if (service instanceof AgentSkillService) {
             ((AgentSkillService) service).deleteByIds(ids);

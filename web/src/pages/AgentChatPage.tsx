@@ -91,8 +91,8 @@ export function AgentChatPage() {
         }
     }, []);
 
-  const loadSessions = useCallback(async (agentId: string) => {
-    const result = await AgentChatApi.findSessions(agentId);
+    const loadSessions = useCallback(async (agentId: string, modelId?: string, clientId?: string) => {
+        const result = await AgentChatApi.findSessions(agentId, modelId, clientId);
     setSessions(result);
   }, []);
 
@@ -182,6 +182,7 @@ export function AgentChatPage() {
       void loadClients().catch(() => setClients([]));
   }, [loadAgents, loadClients]);
 
+    // 切换智能体时重置模型和会话，并加载新智能体的可用模型
   useEffect(() => {
     setSessions([]);
     setMessages([]);
@@ -190,12 +191,17 @@ export function AgentChatPage() {
     setModels([]);
     setSelectedModelId(undefined);
 
-    // 切换智能体后加载其持久化会话历史和可用模型
     if (selectedAgentId) {
-      void loadSessions(selectedAgentId).catch(() => setSessions([]));
       void loadModels(selectedAgentId).catch(() => setModels([]));
     }
-  }, [loadSessions, loadModels, selectedAgentId]);
+  }, [loadModels, selectedAgentId]);
+
+    // 智能体、模型或客户端变化时重新加载会话列表
+    useEffect(() => {
+        if (selectedAgentId) {
+            void loadSessions(selectedAgentId, selectedModelId, selectedClientId).catch(() => setSessions([]));
+        }
+    }, [loadSessions, selectedAgentId, selectedModelId, selectedClientId]);
 
   // 消息或思考状态变化时自动滚动到底部
   useEffect(() => {
@@ -363,7 +369,7 @@ export function AgentChatPage() {
       }
       await loadMessages(selectedSessionId);
       if (selectedAgentId) {
-        await loadSessions(selectedAgentId);
+          await loadSessions(selectedAgentId, selectedModelId, selectedClientId);
       }
 
         // 结束后聚焦输入框

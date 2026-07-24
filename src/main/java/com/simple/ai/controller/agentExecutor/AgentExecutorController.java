@@ -70,4 +70,10 @@ public class AgentExecutorController {
         agentExecutorService.deleteByIds(List.of(id));
         return R.ok();
     }
+
+    @Operation(summary = "获取执行器关联的协议内容")
+    @GetMapping("{executorId}/protocol")
+    public R<String> getExecutorProtocol(@PathVariable String executorId) {
+        return R.ok(agentExecutorService.getExecutorProtocol(executorId));
+    }
 }

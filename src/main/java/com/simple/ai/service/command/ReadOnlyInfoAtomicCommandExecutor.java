@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simple.ai.common.dto.agentClient.InfoAgentClientResponse;
 import com.simple.ai.common.dto.agentDefinition.InfoAgentDefinitionResponse;
 import com.simple.ai.common.dto.agentExecutor.InfoAgentExecutorResponse;
-import com.simple.ai.common.dto.agentMemory.InfoAgentMemoryResponse;
 import com.simple.ai.common.dto.agentRule.InfoAgentRuleResponse;
 import com.simple.ai.common.dto.agentSkill.InfoAgentSkillResponse;
 import com.simple.ai.common.dto.atomicCommand.InfoAtomicCommandResponse;
@@ -13,7 +12,6 @@ import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
 import com.simple.ai.common.service.agentClient.AgentClientService;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
-import com.simple.ai.common.service.agentMemory.AgentMemoryService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
 import com.simple.ai.common.service.atomicCommand.AtomicCommandService;
@@ -57,11 +55,6 @@ public class ReadOnlyInfoAtomicCommandExecutor implements AtomicCommandExecutor 
     private static final String INFO_ROLE = "INFO";
 
     /**
-     * 查询记忆关键字
-     */
-    private static final String QUERY_MEMORY_KEY = "查询记忆";
-
-    /**
      * 查询规则关键字
      */
     private static final String QUERY_RULE_KEY = "查询规则";
@@ -90,9 +83,6 @@ public class ReadOnlyInfoAtomicCommandExecutor implements AtomicCommandExecutor 
      * 查询客户端关键字
      */
     private static final String QUERY_CLIENT_KEY = "查询客户端";
-
-    @Autowired
-    private AgentMemoryService agentMemoryService;
 
     @Autowired
     private AgentRuleService agentRuleService;
@@ -154,9 +144,6 @@ public class ReadOnlyInfoAtomicCommandExecutor implements AtomicCommandExecutor 
      */
     private AtomicCommandInvokeResponse dispatchRead(AtomicCommandInvokeRequest request, String readType, Map<String, Object> readParams) {
         try {
-            if (QUERY_MEMORY_KEY.equals(readType)) {
-                return handleQueryMemory(request, readParams);
-            }
             if (QUERY_RULE_KEY.equals(readType)) {
                 return handleQueryRule(request, readParams);
             }
@@ -182,26 +169,6 @@ public class ReadOnlyInfoAtomicCommandExecutor implements AtomicCommandExecutor 
             log.error("执行查询命令失败 [taskId={}]", request.getTaskId(), e);
             return buildReadOnlyResponse(request, "查询执行失败：" + e.getMessage());
         }
-    }
-
-    /**
-     * 处理查询记忆。
-     *
-     * @param request    原子命令调用请求
-     * @param readParams 查询参数
-     * @return 原子命令调用响应
-     */
-    private AtomicCommandInvokeResponse handleQueryMemory(AtomicCommandInvokeRequest request, Map<String, Object> readParams) {
-        String id = (String) readParams.get("id");
-
-        // 按 id 查询单条记忆
-        if (id != null && !id.isBlank()) {
-            InfoAgentMemoryResponse info = agentMemoryService.findById(id);
-            return buildReadSuccessResponse(request, "记忆查询成功", JsonUtils.toJsonStr(info));
-        }
-
-        // 未提供 id 时返回提示
-        return buildReadSuccessResponse(request, "查询记忆需要提供 id 参数", "");
     }
 
     /**

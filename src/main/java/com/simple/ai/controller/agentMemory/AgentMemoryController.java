@@ -1,33 +1,21 @@
 package com.simple.ai.controller.agentMemory;
 
-import java.util.Date;
-
-import com.simple.common.core.response.R;
-
-import java.util.Arrays;
-import java.util.List;
-
-import org.springframework.transaction.annotation.Transactional;
-import org.springdoc.core.annotations.ParameterObject;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.simple.ai.common.dto.agentMemory.*;
+import com.simple.ai.common.service.agentMemory.AgentMemoryService;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
-import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemory.InfoAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemory.CreateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.UpdateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.PageAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryRequest;
-import com.simple.ai.common.dto.agentMemory.PageAggregateAgentMemoryResponse;
+import com.simple.common.core.response.R;
+import com.simple.common.core.utils.AssertUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import com.simple.common.core.utils.AssertUtils;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.simple.ai.common.service.agentMemory.AgentMemoryService;
-import cn.hutool.core.util.ObjUtil;
+
+import java.util.List;
 
 /**
  * 智能体记忆(agent_memory)控制层
@@ -44,7 +32,7 @@ public class AgentMemoryController {
     private AgentMemoryService agentMemoryService;
 
     /**
-     * 分页查询智能体记忆。
+     * 分页查询智能体记忆
      *
      * @param request 分页请求
      * @return 分页数据
@@ -57,18 +45,11 @@ public class AgentMemoryController {
     }
 
     /**
-     * 聚合分页查询智能体记忆。
+     * 查询单个智能体记忆
      *
-     * @param request 聚合分页请求
-     * @return 聚合分页数据
+     * @param id 主键
+     * @return 记忆详情
      */
-    @GetMapping("aggregate-list")
-    @Operation(summary = "聚合分页查询智能体记忆")
-    @HasAuthority("sys:agent-memory:aggregate-list")
-    public R<IPage<PageAggregateAgentMemoryResponse>> aggregateList(@ParameterObject PageAggregateAgentMemoryRequest request) {
-        return R.ok(agentMemoryService.findAggregateAll(request));
-    }
-
     @GetMapping("find/{id}")
     @Operation(summary = "查询单个智能体记忆")
     @HasAuthority("sys:agent-memory:find")
@@ -77,6 +58,12 @@ public class AgentMemoryController {
         return R.ok(agentMemoryService.findById(id));
     }
 
+    /**
+     * 创建智能体记忆
+     *
+     * @param createRequest 创建请求
+     * @return 新增记录主键
+     */
     @PostMapping("create")
     @Operation(summary = "创建智能体记忆")
     @HasAuthority("sys:agent-memory:create")
@@ -84,15 +71,27 @@ public class AgentMemoryController {
         return R.ok(agentMemoryService.save(createRequest));
     }
 
+    /**
+     * 更新智能体记忆
+     *
+     * @param id            主键
+     * @param updateRequest 修改请求
+     * @return 修改记录主键
+     */
     @PutMapping("update/{id}")
-    @Operation(summary = "更新单个智能体记忆")
+    @Operation(summary = "更新智能体记忆")
     @HasAuthority("sys:agent-memory:update")
-    public R<Object> update(@PathVariable String id, @RequestBody @Validated UpdateAgentMemoryRequest updateRequest) {
+    public R<String> update(@PathVariable String id, @RequestBody @Validated UpdateAgentMemoryRequest updateRequest) {
         AssertUtils.isTrue(updateRequest.getId().equals(id), "请求内容的ID与路径ID不同");
-        agentMemoryService.updateById(updateRequest);
-        return R.ok();
+        return R.ok(agentMemoryService.updateById(updateRequest));
     }
 
+    /**
+     * 删除智能体记忆
+     *
+     * @param ids 主键列表
+     * @return 空响应
+     */
     @DeleteMapping("deletes")
     @Transactional
     @Operation(summary = "删除智能体记忆")
@@ -103,5 +102,18 @@ public class AgentMemoryController {
         return R.ok();
     }
 
+    /**
+     * 发布记忆版本
+     *
+     * @param id 记忆ID
+     * @return 空响应
+     */
+    @PutMapping("publish/{id}")
+    @Operation(summary = "发布记忆版本")
+    @HasAuthority("sys:agent-memory:publish")
+    public R<Object> publish(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentMemoryService.publish(id);
+        return R.ok();
+    }
 }
-

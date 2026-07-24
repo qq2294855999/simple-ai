@@ -11,7 +11,6 @@ import com.simple.ai.common.dto.subAgentRelation.FindAllSubAgentRelationRequest;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
-import com.simple.ai.common.entity.agentMemoryDetail.AgentMemoryDetail;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
@@ -19,7 +18,6 @@ import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.agentExecutor.AgentExecutorView;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
-import com.simple.ai.common.view.agentMemoryDetail.AgentMemoryDetailView;
 import com.simple.ai.common.view.agentRule.AgentRuleView;
 import com.simple.ai.common.view.agentSkill.AgentSkillView;
 import com.simple.ai.common.view.subAgentRelation.SubAgentRelationView;
@@ -73,12 +71,6 @@ public class AgentContextAssembler {
     private AgentMemoryView agentMemoryView;
 
     /**
-     * 智能体记忆详情视图
-     */
-    @Autowired
-    private AgentMemoryDetailView agentMemoryDetailView;
-
-    /**
      * 执行器视图
      */
     @Autowired
@@ -122,11 +114,8 @@ public class AgentContextAssembler {
         // 查询主智能体可用子智能体关系
         List<SubAgentRelation> subAgentRelations = loadSubAgentRelations(request.getAgentId());
 
-        // 查询智能体启用候选记忆（按 userId 过滤）
+        // 查询智能体启用候选记忆（按 userId 过滤，仅已发布版本）
         List<AgentMemory> memories = loadMemories(request.getAgentId(), request.getUserId());
-
-        // 批量查询候选记忆详情，避免循环内数据库查询
-        List<AgentMemoryDetail> memoryDetails = loadMemoryDetails(memories);
 
         // 查询会话摘要
         String sessionSummary = loadSessionSummary(request.getSessionId());
@@ -135,7 +124,7 @@ public class AgentContextAssembler {
         List<AgentExecutor> executors = loadExecutors(request.getUserId());
 
         // 构建上下文对象
-        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, memoryDetails, sessionSummary, executors, request.getUserId(), request.getClientId());
+        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, sessionSummary, executors, request.getUserId(), request.getClientId());
     }
 
     /**
@@ -205,21 +194,11 @@ public class AgentContextAssembler {
         FindAllAgentMemoryRequest request = new FindAllAgentMemoryRequest();
         request.setAgentId(agentId);
         request.setStatus(Status.ON);
+
+        // 仅加载已发布版本的记忆供AI意图识别匹配
+        request.setVersionStatus(2);
         // TODO: userId 过滤需 DTO 添加 userId 字段后启用
         return agentMemoryView.findAll(request);
-    }
-
-    /**
-     * 查询候选记忆详情。
-     *
-     * @param memories 候选记忆列表
-     * @return 候选记忆详情列表
-     */
-    private List<AgentMemoryDetail> loadMemoryDetails(List<AgentMemory> memories) {
-        List<String> memoryIds = memories.stream()
-                .map(AgentMemory::getId)
-                .toList();
-        return agentMemoryDetailView.findAllByAgentMemoryIds(memoryIds);
     }
 
     /**
@@ -251,7 +230,7 @@ public class AgentContextAssembler {
      * @return 智能体上下文
      */
     private AgentContext buildContext(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills, List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories,
-                                      List<AgentMemoryDetail> memoryDetails, String sessionSummary, List<AgentExecutor> executors, String userId, String clientId) {
+                                      String sessionSummary, List<AgentExecutor> executors, String userId, String clientId) {
         AgentContext context = new AgentContext();
         context.setAgentDefinition(agentDefinition);
         context.setSystemIronRule(AgentIronRuleConstant.SYSTEM_IRON_RULE);
@@ -259,7 +238,6 @@ public class AgentContextAssembler {
         context.setSkills(skills);
         context.setSubAgentRelations(subAgentRelations);
         context.setMemories(memories);
-        context.setMemoryDetails(memoryDetails);
         context.setSessionSummary(sessionSummary);
         context.setExecutors(executors);
 
@@ -271,7 +249,7 @@ public class AgentContextAssembler {
         String executorId = resolveExecutorId(clientId);
         context.setExecutorId(executorId);
 
-        context.setPromptContent(buildPromptContent(agentDefinition, rules, skills, subAgentRelations, memories, sessionSummary, executors));
+        context.setPromptContent(buildPromptContent(agentDefinition, rules, skills, subAgentRelations, memories, executors));
         return context;
     }
 
@@ -283,12 +261,11 @@ public class AgentContextAssembler {
      * @param skills 技能列表
      * @param subAgentRelations 子智能体关系列表
      * @param memories 候选记忆列表
-     * @param sessionSummary 会话摘要
      * @param executors 执行器类型列表
      * @return 提示词内容
      */
-    private String buildPromptContent(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills,
-                                      List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories, String sessionSummary, List<AgentExecutor> executors) {
+    private String buildPromptContent(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills, List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories,
+                                      List<AgentExecutor> executors) {
         StringBuilder builder = new StringBuilder();
         appendAgentDefinition(builder, agentDefinition);
         appendRules(builder, rules);
@@ -296,7 +273,6 @@ public class AgentContextAssembler {
         appendSubAgentRelations(builder, subAgentRelations);
         appendMemories(builder, memories);
         appendExecutors(builder, executors);
-        appendSessionSummary(builder, sessionSummary);
         return builder.toString();
     }
 
@@ -335,23 +311,20 @@ public class AgentContextAssembler {
      * @param agentDefinition 智能体定义
      */
     private void appendAgentDefinition(StringBuilder builder, AgentDefinition agentDefinition) {
-        builder.append("# 系统铁律\n");
+        builder.append("<system_iron_rule>\n");
         builder.append(AgentIronRuleConstant.SYSTEM_IRON_RULE);
-        builder.append("\n\n# 当前智能体\n");
+        builder.append("\n</system_iron_rule>\n\n");
+
+        builder.append("<agent>\n");
 
         // 告知AI自己的身份信息，避免AI通过工具查询未知的"当前智能体"名称
-        builder.append("名称：").append(agentDefinition.getName());
-        builder.append("\n");
-        builder.append("ID：").append(agentDefinition.getId());
-        builder.append("\n\n# 智能体定义\n");
-        builder.append(agentDefinition.getDefinitionDesc());
-        builder.append("\n\n# 第一铁律\n");
-        builder.append(agentDefinition.getFirstPrinciple());
-        builder.append("\n\n# 第二规则\n");
-        builder.append(agentDefinition.getSecondRule());
-        builder.append("\n\n# 第三技能\n");
-        builder.append(agentDefinition.getThirdSkill());
-        builder.append("\n\n");
+        builder.append("  <id>").append(agentDefinition.getId()).append("</id>\n");
+        builder.append("  <name>").append(agentDefinition.getName()).append("</name>\n");
+        builder.append("  <definition>").append(agentDefinition.getDefinitionDesc()).append("</definition>\n");
+        builder.append("  <first_principle>").append(agentDefinition.getFirstPrinciple()).append("</first_principle>\n");
+        builder.append("  <second_rule>").append(agentDefinition.getSecondRule()).append("</second_rule>\n");
+        builder.append("  <third_skill>").append(agentDefinition.getThirdSkill()).append("</third_skill>\n");
+        builder.append("</agent>\n\n");
     }
 
     /**
@@ -361,19 +334,20 @@ public class AgentContextAssembler {
      * @param rules 规则列表
      */
     private void appendRules(StringBuilder builder, List<AgentRule> rules) {
-        builder.append("# 直属规则\n");
-
-        // 遍历直属规则，将触发条件和触发动作写入提示词
-        for (AgentRule rule : rules) {
-            builder.append("## 规则\n");
-            builder.append(rule.getDefinitionDesc());
-            builder.append("\n触发条件：");
-            builder.append(rule.getTriggerCondition());
-            builder.append("\n触发动作：");
-            builder.append(rule.getTriggerAction());
-            builder.append("\n");
+        if (rules.isEmpty()) {
+            return;
         }
-        builder.append("\n");
+        builder.append("<rules>\n");
+
+        // 遍历直属规则，将定义描述、触发条件和触发动作写入提示词
+        for (AgentRule rule : rules) {
+            builder.append("  <rule>\n");
+            builder.append("    <desc>").append(rule.getDefinitionDesc()).append("</desc>\n");
+            builder.append("    <condition>").append(rule.getTriggerCondition()).append("</condition>\n");
+            builder.append("    <action>").append(rule.getTriggerAction()).append("</action>\n");
+            builder.append("  </rule>\n");
+        }
+        builder.append("</rules>\n\n");
     }
 
     /**
@@ -383,19 +357,20 @@ public class AgentContextAssembler {
      * @param skills 技能列表
      */
     private void appendSkills(StringBuilder builder, List<AgentSkill> skills) {
-        builder.append("# 直属技能\n");
-
-        // 遍历直属技能，将执行内容和返回格式写入提示词
-        for (AgentSkill skill : skills) {
-            builder.append("## 技能\n");
-            builder.append(skill.getDefinitionDesc());
-            builder.append("\n执行内容：");
-            builder.append(skill.getExecContent());
-            builder.append("\n返回格式：");
-            builder.append(skill.getReturnDataFormat());
-            builder.append("\n");
+        if (skills.isEmpty()) {
+            return;
         }
-        builder.append("\n");
+        builder.append("<skills>\n");
+
+        // 遍历直属技能，将定义描述、执行内容和返回格式写入提示词
+        for (AgentSkill skill : skills) {
+            builder.append("  <skill>\n");
+            builder.append("    <desc>").append(skill.getDefinitionDesc()).append("</desc>\n");
+            builder.append("    <content>").append(skill.getExecContent()).append("</content>\n");
+            builder.append("    <format>").append(skill.getReturnDataFormat()).append("</format>\n");
+            builder.append("  </skill>\n");
+        }
+        builder.append("</skills>\n\n");
     }
 
     /**
@@ -405,17 +380,17 @@ public class AgentContextAssembler {
      * @param subAgentRelations 子智能体关系列表
      */
     private void appendSubAgentRelations(StringBuilder builder, List<SubAgentRelation> subAgentRelations) {
-        builder.append("# 子智能体关系\n");
+        if (subAgentRelations.isEmpty()) {
+            return;
+        }
+        builder.append("<sub_agents>\n");
 
         // 遍历子智能体关系，将主从智能体关系写入提示词
         for (SubAgentRelation relation : subAgentRelations) {
-            builder.append("主智能体：");
-            builder.append(relation.getMainAgentId());
-            builder.append("，子智能体：");
-            builder.append(relation.getSubAgentId());
-            builder.append("\n");
+            builder.append("  <relation main=\"").append(relation.getMainAgentId());
+            builder.append("\" sub=\"").append(relation.getSubAgentId()).append("\" />\n");
         }
-        builder.append("\n");
+        builder.append("</sub_agents>\n\n");
     }
 
     /**
@@ -425,19 +400,20 @@ public class AgentContextAssembler {
      * @param memories 候选记忆列表
      */
     private void appendMemories(StringBuilder builder, List<AgentMemory> memories) {
-        builder.append("# 候选记忆\n");
-
-        // 遍历候选记忆，将触发条件和触发动作写入提示词
-        for (AgentMemory memory : memories) {
-            builder.append("## 记忆\n");
-            builder.append(memory.getMemoryName());
-            builder.append("\n触发条件：");
-            builder.append(memory.getTriggerCondition());
-            builder.append("\n触发动作：");
-            builder.append(memory.getTriggerAction());
-            builder.append("\n");
+        if (memories.isEmpty()) {
+            return;
         }
-        builder.append("\n");
+        builder.append("<memories>\n");
+
+        // 遍历已发布记忆，将记忆名称和参数定义写入提示词供 AI 意图识别
+        for (AgentMemory memory : memories) {
+            builder.append("  <memory>\n");
+            builder.append("    <id>").append(memory.getId()).append("</id>\n");
+            builder.append("    <name>").append(memory.getMemoryName()).append("</name>\n");
+            builder.append("    <summary>").append(memory.getSummary() != null ? memory.getSummary() : "").append("</summary>\n");
+            builder.append("  </memory>\n");
+        }
+        builder.append("</memories>\n\n");
     }
 
     /**
@@ -447,29 +423,19 @@ public class AgentContextAssembler {
      * @param executors 执行器类型列表
      */
     private void appendExecutors(StringBuilder builder, List<AgentExecutor> executors) {
-        builder.append("# 可用执行器类型\n");
+        if (executors.isEmpty()) {
+            return;
+        }
+        builder.append("<executors>\n");
 
         // 遍历启用执行器类型，将编码、名称和描述写入提示词供 AI 决策
         for (AgentExecutor executor : executors) {
-            builder.append("## 执行器\n");
-            builder.append("编码：").append(executor.getExecutorCode());
-            builder.append("\n名称：").append(executor.getExecutorName());
-            builder.append("\n描述：").append(executor.getDescription() != null ? executor.getDescription() : "");
-            builder.append("\n");
+            builder.append("  <executor code=\"").append(executor.getExecutorCode());
+            builder.append("\" name=\"").append(executor.getExecutorName());
+            builder.append("\" desc=\"").append(executor.getDescription() != null ? executor.getDescription() : "");
+            builder.append("\" />\n");
         }
-        builder.append("\n");
-    }
-
-    /**
-     * 追加会话摘要提示词。
-     *
-     * @param builder 提示词构建器
-     * @param sessionSummary 会话摘要
-     */
-    private void appendSessionSummary(StringBuilder builder, String sessionSummary) {
-        builder.append("# 会话摘要\n");
-        builder.append(sessionSummary == null ? "" : sessionSummary);
-        builder.append("\n");
+        builder.append("</executors>\n\n");
     }
 
 }

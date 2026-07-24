@@ -36,6 +36,7 @@ public final class AgentIronRuleConstant {
                     
                     ## 3. Markdown 表格格式
                     
+                    - 标题与表格之间必须有空行分隔
                     - 表头行与分隔行之间必须有换行
                     - 分隔行必须使用 `|---|` 格式且列数与表头一致
                     - 每行数据列数必须与表头一致

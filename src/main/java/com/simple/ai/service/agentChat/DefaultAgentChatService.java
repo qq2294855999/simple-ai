@@ -16,7 +16,6 @@ import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.ai.common.service.chatTurn.ChatTurnService;
 import com.simple.ai.common.service.command.CommandDispatchService;
-import com.simple.ai.common.service.executionEvent.AgentMemoryDistiller;
 import com.simple.ai.common.service.executionEvent.ExecutionEventBus;
 import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
@@ -123,12 +122,6 @@ class DefaultAgentChatService implements AgentChatService {
     private ExecutionEventView executionEventView;
 
     /**
-     * 智能体记忆蒸馏器，在每轮对话完成后提炼执行轨迹为记忆证据
-     */
-    @Autowired
-    private AgentMemoryDistiller agentMemoryDistiller;
-
-    /**
      * 对话轮次视图，用于查询轮次状态
      */
     @Autowired
@@ -162,12 +155,12 @@ class DefaultAgentChatService implements AgentChatService {
     }
 
     @Override
-    public List<AgentChatSessionResponse> findSessions(String agentId) {
+    public List<AgentChatSessionResponse> findSessions(String agentId, String modelId, String clientId) {
         AssertUtils.notEmpty(agentId, "智能体主键不能为空");
 
-        // 校验智能体存在后加载该智能体历史会话
+        // 校验智能体存在后加载该智能体历史会话，按模型和客户端过滤
         AgentDefinition agentDefinition = loadEnabledAgent(agentId);
-        List<AgentChatSession> sessions = agentChatSessionView.findAllByAgentId(agentId);
+        List<AgentChatSession> sessions = agentChatSessionView.findAllByAgentId(agentId, modelId, clientId);
         return buildSessionResponses(sessions, agentDefinition);
     }
 
@@ -232,8 +225,7 @@ class DefaultAgentChatService implements AgentChatService {
         // 完成本轮对话，关联AI回复消息
         chatTurnService.completeTurn(turnId, assistantMessageId, "");
 
-        // 异步触发记忆蒸馏：收集执行事件并创建记忆证据
-        triggerDistillation(turnId, response.getTaskId(), session.getAgentId(), request.getContent());
+        // 记忆蒸馏由 DefaultCommandDispatchService.triggerMemoryPrecipitation 在任务成功后触发
     }
 
     /**
@@ -284,30 +276,6 @@ class DefaultAgentChatService implements AgentChatService {
         response.setAssistantMessageId(turn.getAssistantMessageId());
         response.setTaskId(turn.getTaskId());
         return response;
-    }
-
-    /**
-     * 触发记忆蒸馏，将本轮执行轨迹提炼为记忆证据。
-     * <p>蒸馏过程在独立事务中执行，失败不影响主流程。</p>
-     *
-     * @param turnId         对话轮次主键
-     * @param taskId         调度任务主键
-     * @param agentId        智能体主键
-     * @param commandContent 用户命令内容
-     */
-    private void triggerDistillation(String turnId, String taskId, String agentId, String commandContent) {
-
-        // 轮次为空时跳过蒸馏
-        if (turnId == null || turnId.isBlank()) {
-            return;
-        }
-        try {
-            agentMemoryDistiller.distill(turnId, taskId, agentId, commandContent);
-        } catch (RuntimeException e) {
-
-            // 蒸馏失败不影响聊天主流程
-            log.warn("记忆蒸馏失败，turnId={}", turnId, e);
-        }
     }
 
     /**

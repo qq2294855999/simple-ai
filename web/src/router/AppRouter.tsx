@@ -9,6 +9,10 @@ import {AgentRuleManagementPage} from "../pages/AgentRuleManagementPage";
 import {SubAgentRelationManagementPage} from "../pages/SubAgentRelationManagementPage";
 import {AgentMemoryManagementPage} from "../pages/AgentMemoryManagementPage";
 import {AgentExecutorManagementPage} from "../pages/AgentExecutorManagementPage";
+import {ProtocolManagementPage} from "../pages/ProtocolManagementPage";
+import {ProtocolCreatePage} from "../pages/ProtocolCreatePage";
+import {ProtocolEditPage} from "../pages/ProtocolEditPage";
+import {ProtocolDetailPage} from "../pages/ProtocolDetailPage";
 import {AgentClientManagementPage} from "../pages/AgentClientManagementPage";
 import {AgentMemoryVersionPage} from "../pages/AgentMemoryVersionPage";
 import {AtomicCommandManagementPage} from "../pages/AtomicCommandManagementPage";
@@ -31,6 +35,10 @@ export const AppRouter = createBrowserRouter([
       { path: "sub-agent-relation", element: <SubAgentRelationManagementPage /> },
       { path: "agent-memory", element: <AgentMemoryManagementPage /> },
         {path: "agent-executor", element: <AgentExecutorManagementPage/>},
+        {path: "agent-protocol", element: <ProtocolManagementPage/>},
+        {path: "agent-protocol/create", element: <ProtocolCreatePage/>},
+        {path: "agent-protocol/:id/edit", element: <ProtocolEditPage/>},
+        {path: "agent-protocol/:id", element: <ProtocolDetailPage/>},
         {path: "agent-client", element: <AgentClientManagementPage/>},
         {path: "agent-memory-version", element: <AgentMemoryVersionPage/>},
       { path: "atomic-command", element: <AtomicCommandManagementPage /> },

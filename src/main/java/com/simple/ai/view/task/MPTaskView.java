@@ -29,7 +29,7 @@ class MPTaskView implements TaskView {
     @Override
     public IPage<Task> findAll(PageTaskRequest pageRequest) {
         LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getAgentMemoryId()), Task::getAgentMemoryId, pageRequest.getAgentMemoryId())
+        queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getMemoryId()), Task::getMemoryId, pageRequest.getMemoryId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getTaskName()), Task::getTaskName, pageRequest.getTaskName())
                     .like(ObjUtil.isNotEmpty(pageRequest.getParentTaskId()), Task::getParentTaskId, pageRequest.getParentTaskId())
                     .like(ObjUtil.isNotEmpty(pageRequest.getNextTaskId()), Task::getNextTaskId, pageRequest.getNextTaskId())
@@ -66,7 +66,7 @@ class MPTaskView implements TaskView {
     public List<Task> findAll(FindAllTaskRequest findAllRequest, FindAllTaskRequest neRequest) {
         LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), Task::getId, findAllRequest.getId())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentMemoryId()), Task::getAgentMemoryId, findAllRequest.getAgentMemoryId())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getMemoryId()), Task::getMemoryId, findAllRequest.getMemoryId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getTaskName()), Task::getTaskName, findAllRequest.getTaskName())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getParentTaskId()), Task::getParentTaskId, findAllRequest.getParentTaskId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getNextTaskId()), Task::getNextTaskId, findAllRequest.getNextTaskId())
@@ -81,7 +81,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getReserve()), Task::getReserve, findAllRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRemark()), Task::getRemark, findAllRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), Task::getId, neRequest.getId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), Task::getAgentMemoryId, neRequest.getAgentMemoryId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getMemoryId()), Task::getMemoryId, neRequest.getMemoryId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskName()), Task::getTaskName, neRequest.getTaskName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getParentTaskId()), Task::getParentTaskId, neRequest.getParentTaskId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getNextTaskId()), Task::getNextTaskId, neRequest.getNextTaskId())
@@ -103,7 +103,7 @@ class MPTaskView implements TaskView {
     public Task findOne(FindOneTaskRequest findOneRequest, FindOneTaskRequest neRequest) {
         LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), Task::getId, findOneRequest.getId())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentMemoryId()), Task::getAgentMemoryId, findOneRequest.getAgentMemoryId())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getMemoryId()), Task::getMemoryId, findOneRequest.getMemoryId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTaskName()), Task::getTaskName, findOneRequest.getTaskName())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getParentTaskId()), Task::getParentTaskId, findOneRequest.getParentTaskId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getNextTaskId()), Task::getNextTaskId, findOneRequest.getNextTaskId())
@@ -118,7 +118,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), Task::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), Task::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), Task::getId, neRequest.getId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), Task::getAgentMemoryId, neRequest.getAgentMemoryId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getMemoryId()), Task::getMemoryId, neRequest.getMemoryId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskName()), Task::getTaskName, neRequest.getTaskName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getParentTaskId()), Task::getParentTaskId, neRequest.getParentTaskId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getNextTaskId()), Task::getNextTaskId, neRequest.getNextTaskId())
@@ -146,7 +146,7 @@ class MPTaskView implements TaskView {
     public Long findCount(FindOneTaskRequest findOneRequest, FindOneTaskRequest neRequest) {
         LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), Task::getId, findOneRequest.getId())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentMemoryId()), Task::getAgentMemoryId, findOneRequest.getAgentMemoryId())
+                    .eq(ObjUtil.isNotEmpty(findOneRequest.getMemoryId()), Task::getMemoryId, findOneRequest.getMemoryId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getTaskName()), Task::getTaskName, findOneRequest.getTaskName())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getParentTaskId()), Task::getParentTaskId, findOneRequest.getParentTaskId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getNextTaskId()), Task::getNextTaskId, findOneRequest.getNextTaskId())
@@ -161,7 +161,7 @@ class MPTaskView implements TaskView {
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getReserve()), Task::getReserve, findOneRequest.getReserve())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getRemark()), Task::getRemark, findOneRequest.getRemark())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), Task::getId, neRequest.getId())
-                    .ne(ObjUtil.isNotEmpty(neRequest.getAgentMemoryId()), Task::getAgentMemoryId, neRequest.getAgentMemoryId())
+                    .ne(ObjUtil.isNotEmpty(neRequest.getMemoryId()), Task::getMemoryId, neRequest.getMemoryId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getTaskName()), Task::getTaskName, neRequest.getTaskName())
                     .ne(ObjUtil.isNotEmpty(neRequest.getParentTaskId()), Task::getParentTaskId, neRequest.getParentTaskId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getNextTaskId()), Task::getNextTaskId, neRequest.getNextTaskId())
@@ -218,8 +218,7 @@ class MPTaskView implements TaskView {
     @Override
     public void delete(DeleteTaskRequest request) {
         LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), Task::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getAgentMemoryId()), Task::getAgentMemoryId, request.getAgentMemoryId())
+        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), Task::getId, request.getId()).eq(ObjUtil.isNotEmpty(request.getMemoryId()), Task::getMemoryId, request.getMemoryId())
                     .eq(ObjUtil.isNotEmpty(request.getTaskName()), Task::getTaskName, request.getTaskName())
                     .eq(ObjUtil.isNotEmpty(request.getParentTaskId()), Task::getParentTaskId, request.getParentTaskId())
                     .eq(ObjUtil.isNotEmpty(request.getNextTaskId()), Task::getNextTaskId, request.getNextTaskId())

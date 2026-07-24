@@ -7,6 +7,7 @@ import type {
     CreateAgentExecutorRequestDto,
     UpdateAgentExecutorRequestDto
 } from "../dto/agentExecutor/AgentExecutorDto";
+import type {ProtocolPageResponseDto} from "../dto/protocol/ProtocolDto";
 
 /**
  * 执行器类型 API 封装。
@@ -44,5 +45,13 @@ export const AgentExecutorApi = {
 
     /** 批量删除 */
     deleteByIds: (ids: string[]) =>
-        Promise.all(ids.map(id => http.delete(`/agent/executor/${id}`))).then(() => undefined)
+        Promise.all(ids.map(id => http.delete(`/agent/executor/${id}`))).then(() => undefined),
+
+    /** 获取执行器关联的协议内容 */
+    getExecutorProtocol: (executorId: string) =>
+        http.get<string>(`/agent/executor/${executorId}/protocol`),
+
+    /** 查询所有启用的协议列表（用于下拉选择） */
+    findAllProtocols: () =>
+        http.get<PageResult<ProtocolPageResponseDto>>("/agent/protocol/page", {params: {current: 1, size: 1000, status: "ON"}})
 };

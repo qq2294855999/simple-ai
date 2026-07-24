@@ -6,25 +6,24 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+/**
+ * 智能体记忆分页请求参数
+ *
+ * @author qty
+ */
 @Data
 @Accessors(chain = true)
-@Schema(title = "智能体记忆(agent_memory)列表请求参数")
+@Schema(title = "智能体记忆(agent_memory)分页请求参数")
 public class PageAgentMemoryRequest extends PageBase {
 
     @Schema(description = "智能体ID")
     private String agentId;
 
-    @Schema(description = "记忆名称")
+    @Schema(description = "记忆名称模板")
     private String memoryName;
 
-    @Schema(description = "步骤名称")
-    private String stepName;
-
-    @Schema(description = "触发条件")
-    private String triggerCondition;
-
-    @Schema(description = "触发动作")
-    private String triggerAction;
+    @Schema(description = "版本状态：1=DRAFT, 2=PUBLISHED")
+    private Integer versionStatus;
 
     @Schema(description = "状态")
     private Status status;
@@ -35,4 +34,3 @@ public class PageAgentMemoryRequest extends PageBase {
     @Schema(description = "备注")
     private String remark;
 }
-

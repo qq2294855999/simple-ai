@@ -6,7 +6,6 @@ import com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResp
 import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionRequest;
 import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse;
 import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
 import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandResponse;
@@ -95,14 +94,6 @@ public interface AgentDefinitionRepository extends BaseMapper<AgentDefinition> {
     List<PageAgentMemoryResponse> selectMemoriesByAgentId(@Param("agentId") String agentId);
 
     /**
-     * 查询智能体记忆详情。
-     *
-     * @param agentId 智能体主键
-     * @return 记忆详情列表
-     */
-    List<PageAgentMemoryDetailResponse> selectMemoryDetailsByAgentId(@Param("agentId") String agentId);
-
-    /**
      * 查询智能体任务。
      *
      * @param agentId 智能体主键
@@ -151,20 +142,20 @@ public interface AgentDefinitionRepository extends BaseMapper<AgentDefinition> {
     int deleteTaskByAgentIds(@Param("ids") List<String> ids);
 
     /**
-     * 删除记忆详情。
-     *
-     * @param ids 智能体主键列表
-     * @return 影响行数
-     */
-    int deleteMemoryDetailByAgentIds(@Param("ids") List<String> ids);
-
-    /**
      * 删除记忆。
      *
      * @param ids 智能体主键列表
      * @return 影响行数
      */
     int deleteMemoryByAgentIds(@Param("ids") List<String> ids);
+
+    /**
+     * 删除记忆步骤。
+     *
+     * @param ids 智能体主键列表
+     * @return 影响行数
+     */
+    int deleteMemoryStepByAgentIds(@Param("ids") List<String> ids);
 
     /**
      * 删除子智能体关系。

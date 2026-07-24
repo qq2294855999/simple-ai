@@ -9,10 +9,13 @@ import com.simple.ai.common.dto.agentExecutor.AgentExecutorProtocolResponse.Mess
 import com.simple.ai.common.dto.agentExecutor.AgentExecutorProtocolResponse.MessageTypeInfo;
 import com.simple.ai.common.dto.agentExecutor.AgentExecutorProtocolResponse.SystemCommandInfo;
 import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
+import com.simple.ai.common.entity.protocol.Protocol;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
 import com.simple.ai.common.view.agentExecutor.AgentExecutorView;
+import com.simple.ai.common.view.protocol.ProtocolView;
 import com.simple.common.auth.client.util.LoginUserUtils;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.mp.common.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,9 @@ class DefaultAgentExecutorService implements AgentExecutorService {
 
     @Autowired
     private AgentExecutorCopyMapper copy;
+
+    @Autowired
+    private ProtocolView protocolView;
 
     @Override
     public IPage<PageAgentExecutorResponse> findAll(PageAgentExecutorRequest pageRequest) {
@@ -240,13 +246,39 @@ class DefaultAgentExecutorService implements AgentExecutorService {
         AgentExecutor entity = agentExecutorView.findById(id);
         AssertUtils.notEmpty(entity, "执行器类型[{}]不存在", id);
 
-        // 根据当前状态切换："ENABLE" ↔ "DISABLE"
-        String currentStatus = entity.getStatus();
-        String newStatus = "ENABLE".equals(currentStatus) ? "DISABLE" : "ENABLE";
+        // 根据当前状态切换：ON ↔ OFF
+        Status currentStatus = entity.getStatus();
+        Status newStatus = Status.ON.equals(currentStatus) ? Status.OFF : Status.ON;
         entity.setStatus(newStatus);
         agentExecutorView.updateById(entity);
         log.info("执行器类型状态切换成功，id={}，新状态={}", id, newStatus);
 
-        return newStatus;
+        return newStatus.name();
+    }
+
+    @Override
+    public String getExecutorProtocol(String executorId) {
+
+        // 查询并校验执行器存在
+        AgentExecutor entity = agentExecutorView.findById(executorId);
+        AssertUtils.notEmpty(entity, "执行器[{}]不存在", executorId);
+
+        // 获取执行器关联的协议ID
+        String protocolId = entity.getProtocolId();
+        if (protocolId == null || protocolId.isEmpty()) {
+
+            // 未关联协议，返回 null
+            return null;
+        }
+
+        // 查询协议内容
+        Protocol protocol = protocolView.findById(protocolId);
+        if (protocol == null) {
+
+            // 协议不存在，返回 null
+            return null;
+        }
+
+        return protocol.getContent();
     }
 }

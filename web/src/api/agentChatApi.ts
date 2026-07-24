@@ -21,8 +21,8 @@ export const AgentChatApi = {
   createSession: (data: CreateAgentChatSessionRequestDto) =>
     http.post<AgentChatSessionDto>("/sys/agent-chat/session", data),
 
-  findSessions: (agentId: string) =>
-    http.get<AgentChatSessionDto[]>("/sys/agent-chat/session-list", { params: { agentId } }),
+    findSessions: (agentId: string, modelId?: string, clientId?: string) =>
+        http.get<AgentChatSessionDto[]>("/sys/agent-chat/session-list", {params: {agentId, modelId, clientId}}),
 
   findMessages: (sessionId: string) =>
     http.get<AgentChatMessageDto[]>(`/sys/agent-chat/message-list/${sessionId}`),

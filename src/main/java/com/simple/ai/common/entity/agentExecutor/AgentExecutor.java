@@ -2,6 +2,7 @@ package com.simple.ai.common.entity.agentExecutor;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -43,10 +44,16 @@ public class AgentExecutor {
     private String description;
 
     /**
+     * 协议外键。
+     */
+    @TableField(value = "protocol_id")
+    private String protocolId;
+
+    /**
      * 状态。
      */
     @TableField(value = "status")
-    private String status;
+    private Status status;
 
     /**
      * 创建人用户ID。

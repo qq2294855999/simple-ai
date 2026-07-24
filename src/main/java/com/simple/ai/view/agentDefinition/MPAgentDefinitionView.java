@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.dto.agentDefinition.*;
 import com.simple.ai.common.dto.agentMemory.PageAgentMemoryResponse;
-import com.simple.ai.common.dto.agentMemoryDetail.PageAgentMemoryDetailResponse;
 import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
 import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
 import com.simple.ai.common.dto.atomicCommand.PageAtomicCommandResponse;
@@ -102,11 +101,6 @@ class MPAgentDefinitionView implements AgentDefinitionView {
     }
 
     @Override
-    public List<PageAgentMemoryDetailResponse> findMemoryDetailsByAgentId(String agentId) {
-        return repository.selectMemoryDetailsByAgentId(agentId);
-    }
-
-    @Override
     public List<PageTaskResponse> findTasksByAgentId(String agentId) {
         return repository.selectTasksByAgentId(agentId);
     }
@@ -137,13 +131,13 @@ class MPAgentDefinitionView implements AgentDefinitionView {
     }
 
     @Override
-    public int deleteMemoryDetailByAgentIds(List<String> ids) {
-        return repository.deleteMemoryDetailByAgentIds(ids);
+    public int deleteMemoryByAgentIds(List<String> ids) {
+        return repository.deleteMemoryByAgentIds(ids);
     }
 
     @Override
-    public int deleteMemoryByAgentIds(List<String> ids) {
-        return repository.deleteMemoryByAgentIds(ids);
+    public int deleteMemoryStepByAgentIds(List<String> ids) {
+        return repository.deleteMemoryStepByAgentIds(ids);
     }
 
     @Override

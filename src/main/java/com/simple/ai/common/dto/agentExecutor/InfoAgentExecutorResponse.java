@@ -1,6 +1,7 @@
 package com.simple.ai.common.dto.agentExecutor;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -30,8 +31,14 @@ public class InfoAgentExecutorResponse {
     @Schema(description = "执行器描述")
     private String description;
 
+    @Schema(description = "协议外键")
+    private String protocolId;
+
+    @Schema(description = "协议名称")
+    private String protocolName;
+
     @Schema(description = "状态")
-    private String status;
+    private Status status;
 
     @Schema(description = "创建人用户ID")
     private String createUserId;

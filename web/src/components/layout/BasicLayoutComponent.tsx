@@ -71,6 +71,7 @@ const CHILD_TO_PARENT: Record<string, string> = {
   "/agent-memory": "group-agent-config",
     "/agent-executor": "group-executor-client",
     "/agent-client": "group-executor-client",
+    "/agent-protocol": "group-executor-client",
   "/command-dispatch": "group-command",
   "/atomic-command": "group-command",
   "/task": "group-command",
@@ -113,6 +114,7 @@ export function BasicLayoutComponent() {
     "/agent-memory": "记忆编排管理",
       "/agent-executor": "执行器管理",
       "/agent-client": "客户端管理",
+      "/agent-protocol": "协议管理",
     "/command-dispatch": "命令调度",
     "/atomic-command": "原子命令管理",
     "/task": "任务执行记录",
@@ -259,7 +261,8 @@ export function BasicLayoutComponent() {
         key: "group-executor-client", icon: <ApiOutlined/>, label: "执行器与客户端",
         children: [
             {key: "/agent-executor", label: "执行器管理"},
-            {key: "/agent-client", label: "客户端管理"}
+            {key: "/agent-client", label: "客户端管理"},
+            {key: "/agent-protocol", label: "协议管理"}
         ]
     },
       {
