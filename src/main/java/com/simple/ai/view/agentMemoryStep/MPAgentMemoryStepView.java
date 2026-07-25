@@ -1,7 +1,11 @@
 package com.simple.ai.view.agentMemoryStep;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.simple.ai.common.dto.agentMemoryStep.PageAgentMemoryStepRequest;
 import com.simple.ai.common.entity.agentMemoryStep.AgentMemoryStep;
 import com.simple.ai.common.view.agentMemoryStep.AgentMemoryStepView;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +25,20 @@ class MPAgentMemoryStepView implements AgentMemoryStepView {
     private AgentMemoryStepRepository repository;
 
     @Override
+    public IPage<AgentMemoryStep> findAll(PageAgentMemoryStepRequest pageRequest) {
+        Page<AgentMemoryStep> page = new Page<>(pageRequest.getCurrent(), pageRequest.getSize());
+        LambdaQueryWrapper<AgentMemoryStep> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ObjUtil.isNotEmpty(pageRequest.getMemoryId()), AgentMemoryStep::getMemoryId, pageRequest.getMemoryId())
+               .like(ObjUtil.isNotEmpty(pageRequest.getStepName()), AgentMemoryStep::getStepName, pageRequest.getStepName())
+               .eq(ObjUtil.isNotEmpty(pageRequest.getAtomicCommandCode()), AgentMemoryStep::getAtomicCommandCode, pageRequest.getAtomicCommandCode())
+               .orderByAsc(AgentMemoryStep::getSequenceNo);
+        return repository.selectPage(page, wrapper);
+    }
+
+    @Override
     public List<AgentMemoryStep> findAllByMemoryId(String memoryId) {
         LambdaQueryWrapper<AgentMemoryStep> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AgentMemoryStep::getMemoryId, memoryId).orderByAsc(AgentMemoryStep::getStepNo);
+        wrapper.eq(AgentMemoryStep::getMemoryId, memoryId).orderByAsc(AgentMemoryStep::getSequenceNo);
         return repository.selectList(wrapper);
     }
 

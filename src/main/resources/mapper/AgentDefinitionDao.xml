@@ -180,7 +180,7 @@
     <select id="selectTasksByAgentId" resultType="com.simple.ai.common.dto.task.PageTaskResponse">
         select
             t.id,
-            t.agent_memory_id as agentMemoryId,
+            t.memory_id as memoryId,
             t.task_name as taskName,
             t.parent_task_id as parentTaskId,
             t.next_task_id as nextTaskId,
@@ -233,7 +233,11 @@
         as memoryStepCount,
             (select count(1) from task where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as taskCount,
             (select count(1) from task_detail where task_id in (select id from task where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as taskDetailCount,
-            (select count(1) from atomic_command where skill_id in (select id from agent_skill where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as atomicCommandUnlinkCount
+        (select count(1) from atomic_command where skill_id in (select id from agent_skill where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>)) as
+        atomicCommandUnlinkCount,
+        (select count(1) from agent_chat_session where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>) as chatSessionCount,
+        (select count(1) from agent_chat_message where session_id in (select id from agent_chat_session where agent_id in <foreach collection="ids" item="id" open="(" separator="," close=")">
+        #{id}</foreach>)) as chatMessageCount
     </select>
 
     <update id="unlinkAtomicCommandSkillByAgentIds">

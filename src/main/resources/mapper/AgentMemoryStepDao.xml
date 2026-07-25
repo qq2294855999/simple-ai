@@ -3,12 +3,13 @@
 <mapper namespace="com.simple.ai.view.agentMemoryStep.AgentMemoryStepRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_memory_step(id, memory_id, step_no, step_name, atomic_command_id, args_template, step_type, parent_step_id, next_step_id, branch_condition, branch_route, create_time,
-        update_time, status, reserve, remark)
+        insert into agent_memory_step(id, memory_id, sequence_no, atomic_command_id, atomic_command_code, step_name, args_template,
+        delay_min_ms, delay_max_ms, timeout_ms, success_assertion, failure_strategy, status, create_time, update_time)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.memoryId}, #{entity.stepNo}, #{entity.stepName}, #{entity.atomicCommandId}, #{entity.argsTemplate}, #{entity.stepType}, #{entity.parentStepId},
-            #{entity.nextStepId}, #{entity.branchCondition}, #{entity.branchRoute}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
+            (#{entity.id}, #{entity.memoryId}, #{entity.sequenceNo}, #{entity.atomicCommandId}, #{entity.atomicCommandCode},
+            #{entity.stepName}, #{entity.argsTemplate}, #{entity.delayMinMs}, #{entity.delayMaxMs}, #{entity.timeoutMs},
+            #{entity.successAssertion}, #{entity.failureStrategy}, #{entity.status}, #{entity.createTime}, #{entity.updateTime})
         </foreach>
     </insert>
 

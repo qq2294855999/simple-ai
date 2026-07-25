@@ -124,7 +124,7 @@ public class AgentContextAssembler {
         List<AgentExecutor> executors = loadExecutors(request.getUserId());
 
         // 构建上下文对象
-        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, sessionSummary, executors, request.getUserId(), request.getClientId());
+        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, sessionSummary, executors, request.getUserId(), request.getClientId(), request.getSessionId());
     }
 
     /**
@@ -197,7 +197,11 @@ public class AgentContextAssembler {
 
         // 仅加载已发布版本的记忆供AI意图识别匹配
         request.setVersionStatus(2);
-        // TODO: userId 过滤需 DTO 添加 userId 字段后启用
+
+        // 按用户ID过滤，实现多用户数据隔离
+        if (userId != null && !userId.isBlank()) {
+            request.setUserId(userId);
+        }
         return agentMemoryView.findAll(request);
     }
 
@@ -224,13 +228,15 @@ public class AgentContextAssembler {
      * @param skills 技能列表
      * @param subAgentRelations 子智能体关系列表
      * @param memories 候选记忆列表
-     * @param memoryDetails 候选记忆详情列表
      * @param sessionSummary 会话摘要
      * @param executors 执行器类型列表
+     * @param userId 用户ID
+     * @param clientId 客户端ID
+     * @param sessionId 会话ID
      * @return 智能体上下文
      */
     private AgentContext buildContext(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills, List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories,
-                                      String sessionSummary, List<AgentExecutor> executors, String userId, String clientId) {
+                                      String sessionSummary, List<AgentExecutor> executors, String userId, String clientId, String sessionId) {
         AgentContext context = new AgentContext();
         context.setAgentDefinition(agentDefinition);
         context.setSystemIronRule(AgentIronRuleConstant.SYSTEM_IRON_RULE);
@@ -241,9 +247,10 @@ public class AgentContextAssembler {
         context.setSessionSummary(sessionSummary);
         context.setExecutors(executors);
 
-        // 注入可信上下文：当前用户ID和客户端ID，供后续AI调用和命令路由使用
+        // 注入可信上下文：当前用户ID、客户端ID和会话ID，供后续AI调用和命令路由使用
         context.setUserId(userId);
         context.setClientId(clientId);
+        context.setSessionId(sessionId != null ? sessionId : "");
 
         // 根据客户端ID推导执行器类型ID，告知AI当前可用命令范围
         String executorId = resolveExecutorId(clientId);
@@ -405,12 +412,18 @@ public class AgentContextAssembler {
         }
         builder.append("<memories>\n");
 
-        // 遍历已发布记忆，将记忆名称和参数定义写入提示词供 AI 意图识别
+        // 遍历已发布记忆，将记忆名称、摘要和参数定义写入提示词供 AI 意图识别
         for (AgentMemory memory : memories) {
             builder.append("  <memory>\n");
             builder.append("    <id>").append(memory.getId()).append("</id>\n");
             builder.append("    <name>").append(memory.getMemoryName()).append("</name>\n");
             builder.append("    <summary>").append(memory.getSummary() != null ? memory.getSummary() : "").append("</summary>\n");
+
+            // 补充参数定义，供AI判断用户输入是否提供了足够参数
+            if (memory.getParamsDefinition() != null && !memory.getParamsDefinition().isBlank()) {
+                builder.append("    <params_definition>").append(memory.getParamsDefinition()).append("</params_definition>\n");
+            }
+
             builder.append("  </memory>\n");
         }
         builder.append("</memories>\n\n");

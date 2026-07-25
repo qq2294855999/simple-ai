@@ -1,7 +1,6 @@
 package com.simple.ai.common.entity.agentMemory;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -46,7 +45,7 @@ public class AgentMemory {
     /**
      * 参数定义JSON，描述每个占位符的类型和含义
      */
-    @TableField(value = "params_definition", typeHandler = JacksonTypeHandler.class)
+    @TableField(value = "params_definition")
     private String paramsDefinition;
 
     /**
@@ -62,6 +61,12 @@ public class AgentMemory {
     private Integer versionStatus;
 
     /**
+     * 父记忆ID，修订场景下指向被修订的旧版本记忆，首次探索沉淀时为空
+     */
+    @TableField(value = "parent_memory_id")
+    private String parentMemoryId;
+
+    /**
      * 来源任务ID（首次沉淀时的任务）
      */
     @TableField(value = "source_task_id")
@@ -74,7 +79,7 @@ public class AgentMemory {
     private String summary;
 
     /**
-     * 创建原因：MANUAL/AUTO_EXPLORE/AUTO_FIX
+     * 创建原因：MANUAL/AI_EXPLORATION/MEMORY_REVISE
      */
     @TableField(value = "create_reason")
     private String createReason;

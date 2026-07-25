@@ -3,11 +3,12 @@
 <mapper namespace="com.simple.ai.view.task.TaskRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into task(id, agent_memory_id, agent_id, task_name, parent_task_id, next_task_id, step_type, branch_condition, branch_route, request_params, return_params, exec_status, failure_reason,
+        insert into task(id, memory_id, agent_id, task_name, parent_task_id, next_task_id, step_type, branch_condition, branch_route, request_params, return_params, exec_status, failure_reason,
         create_time, update_time, status, reserve, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.agentMemoryId}, #{entity.agentId}, #{entity.taskName}, #{entity.parentTaskId}, #{entity.nextTaskId}, #{entity.stepType}, #{entity.branchCondition}, #{entity.branchRoute},
+            (#{entity.id}, #{entity.memoryId}, #{entity.agentId}, #{entity.taskName}, #{entity.parentTaskId}, #{entity.nextTaskId}, #{entity.stepType}, #{entity.branchCondition},
+            #{entity.branchRoute},
             #{entity.requestParams}, #{entity.returnParams}, #{entity.execStatus}, #{entity.failureReason}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve},
             #{entity.remark})
         </foreach>
@@ -16,7 +17,7 @@
     <select id="selectAggregatePage" resultType="com.simple.ai.common.dto.task.PageAggregateTaskResponse">
         select
             t.id,
-            t.agent_memory_id as agentMemoryId,
+        t.memory_id as memoryId,
             am.memory_name as memoryName,
             t.agent_id as agentId,
             ad.name as agentName,
@@ -47,7 +48,7 @@
             t.status,
             t.remark
         from task t
-        left join agent_memory am on am.id = t.agent_memory_id
+        left join agent_memory am on am.id = t.memory_id
         inner join agent_definition ad on ad.id = t.agent_id
         left join task parent_task on parent_task.id = t.parent_task_id
         left join task next_task on next_task.id = t.next_task_id
@@ -81,7 +82,7 @@
     <select id="selectAggregateCount" resultType="java.lang.Long">
         select count(1)
         from task t
-        left join agent_memory am on am.id = t.agent_memory_id
+        left join agent_memory am on am.id = t.memory_id
         inner join agent_definition ad on ad.id = t.agent_id
         <where>
             <if test="pageRequest.keyword != null and pageRequest.keyword != ''">
@@ -116,4 +117,3 @@
         </foreach>
     </delete>
 </mapper>
-

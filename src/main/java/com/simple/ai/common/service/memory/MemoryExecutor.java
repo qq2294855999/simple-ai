@@ -3,6 +3,8 @@ package com.simple.ai.common.service.memory;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.entity.task.Task;
+import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.util.function.Consumer;
 
@@ -24,7 +26,27 @@ public interface MemoryExecutor {
      * @param request          命令调度请求
      * @param memoryId         记忆ID
      * @param progressConsumer 进度事件消费者
-     * @return 执行结果内容
+     * @return 执行结果（含成功标志和详情文本）
      */
-    String execute(Task task, CommandDispatchRequest request, String memoryId, Consumer<CommandDispatchProgressEvent> progressConsumer);
+    MemoryExecutionResult execute(Task task, CommandDispatchRequest request, String memoryId, Consumer<CommandDispatchProgressEvent> progressConsumer);
+
+    /**
+     * 记忆执行结果。
+     * <p>结构化返回执行是否全部成功及详情文本，
+     * 避免调用方通过字符串匹配判断成功/失败。</p>
+     */
+    @Data
+    @Accessors(chain = true)
+    class MemoryExecutionResult {
+
+        /**
+         * 是否全部步骤执行成功
+         */
+        private boolean success;
+
+        /**
+         * 执行详情文本（各步骤名称+结果的拼接）
+         */
+        private String detail;
+    }
 }

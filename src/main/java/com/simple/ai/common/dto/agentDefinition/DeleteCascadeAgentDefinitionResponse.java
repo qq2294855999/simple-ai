@@ -38,4 +38,10 @@ public class DeleteCascadeAgentDefinitionResponse {
 
     @Schema(description = "解除技能关联的原子命令数量")
     private Long atomicCommandUnlinkCount;
+
+    @Schema(description = "删除聊天会话数量")
+    private Long chatSessionCount;
+
+    @Schema(description = "删除聊天消息数量")
+    private Long chatMessageCount;
 }

@@ -1,5 +1,7 @@
 package com.simple.ai.common.view.agentMemoryStep;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.simple.ai.common.dto.agentMemoryStep.PageAgentMemoryStepRequest;
 import com.simple.ai.common.entity.agentMemoryStep.AgentMemoryStep;
 
 import java.util.List;
@@ -12,7 +14,15 @@ import java.util.List;
 public interface AgentMemoryStepView {
 
     /**
-     * 按记忆ID查询所有步骤（按step_no排序）
+     * 分页列表
+     *
+     * @param pageRequest 分页参数
+     * @return 分页数据
+     */
+    IPage<AgentMemoryStep> findAll(PageAgentMemoryStepRequest pageRequest);
+
+    /**
+     * 按记忆ID查询所有步骤（按sequence_no排序）
      *
      * @param memoryId 记忆ID
      * @return 步骤列表

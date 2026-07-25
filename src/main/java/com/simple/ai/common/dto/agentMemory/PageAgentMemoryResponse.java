@@ -24,6 +24,9 @@ public class PageAgentMemoryResponse {
     @Schema(description = "智能体名称")
     private String agentName;
 
+    @Schema(description = "父记忆ID")
+    private String parentMemoryId;
+
     @Schema(description = "记忆名称模板")
     private String memoryName;
 
@@ -50,4 +53,10 @@ public class PageAgentMemoryResponse {
 
     @Schema(description = "备注")
     private String remark;
+
+    @Schema(description = "步骤数量")
+    private Integer stepCount;
+
+    @Schema(description = "参数数量")
+    private Integer paramCount;
 }

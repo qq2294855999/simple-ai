@@ -12,7 +12,7 @@
  Target Server Version : 140018 (140018)
  File Encoding         : 65001
 
- Date: 23/07/2026 18:55:27
+ Date: 25/07/2026 10:13:18
 */
 
 
@@ -31,13 +31,13 @@ CREATE TABLE "public"."agent_chat_message" (
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
-  "reserve"    text COLLATE "pg_catalog"."default",
+  "reserve" text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "provider_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "provider_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "model_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "model_code" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "turn_id"    varchar(64) COLLATE "pg_catalog"."default"
+  "turn_id" varchar(64) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT
@@ -75,44 +75,11 @@ COMMENT ON TABLE "public"."agent_chat_message" IS '智能体聊天消息';
 -- Records of agent_chat_message
 -- ----------------------------
 INSERT INTO "public"."agent_chat_message"
-VALUES ('2080240362812923904', '2080240285419626496', '', 'USER', '打开为新，找到文件传输助手，发送测试消息：你好啊', 'PLAIN_TEXT', 1, '2026-07-23 18:35:26.148',
-        '2026-07-23 18:35:26.148', 1, '', '用户聊天消息', '', '', '', '', NULL);
+VALUES ('2080642571690094592', '2080642554497642496', '', 'USER', '打开微信', 'PLAIN_TEXT', 1, '2026-07-24 21:13:40.217', '2026-07-24 21:13:40.217', 1, '',
+        '用户聊天消息', '', '', '', '', NULL);
 INSERT INTO "public"."agent_chat_message"
-VALUES ('2080240536482275328', '2080240285419626496', '2080240362880032768', 'ASSISTANT', '我来一步步完成这个任务。首先查询WinRPA执行器的详细信息，获取可用的原子命令。好的，我来逐步执行这个任务。首先需要为WinRPA执行器创建所需的原子命令，然后逐个执行。
-
----
-
-## 📋任务分析|步骤 |操作 |目标 |
-|------|------|------|
-|1 |打开微信应用 |启动微信 |
-|2 |找到文件传输助手 |定位联系人 |
-|3 |发送消息 |发送"你好啊" |
-
----
-
-### 🔹步骤1：创建「打开微信」原子命令**步骤1：打开微信** —原子命令已创建（ID: `2080240470430375936`），执行启动微信。
-
-现在微信已打开，接下来需要在微信中找到"文件传输助手"。##任务执行报告### 📋任务概述在 Windows10上通过微信向文件传输助手发送测试消息「你好啊」。
-
----
-
-### 🔧已创建的原子命令|步骤 |命令ID |命令名称 |命令内容 |作用 |
-|------|--------|----------|----------|------|
-|1 | `2080240470430375936` |打开微信 | `start weixin` |启动微信应用程序 |
-|2 | `2080240492735684608` |微信搜索联系人 | `weixin_search_contact:文件传输助手` |搜索并定位文件传输助手 |
-|3 | `2080240505293430784` |发送微信消息 | `weixin_send_message:你好啊` |发送测试消息「你好啊」 |
-
----
-
-### ⚠️当前状态说明三条原子命令已成功创建并注册到 **WinRPA执行器**（编码：`win_rpa`，ID：`2079542278239834112`）下。但是，当前系统提供的工具仅支持**元数据管理**（创建/查询），暂未提供**原子命令执行**的直接调用接口。
-
-这意味着命令定义已就绪，但需要实际的执行器客户端实例来驱动运行。建议下一步：
-
-1.为该执行器创建**客户端实例**（`createClient`）
-2.由客户端按步骤1→2→3顺序执行上述原子命令---
-
->如需我继续创建客户端实例并推进实际执行，请确认。', 'RESTRICTED_MARKDOWN', 2, '2026-07-23 18:36:07.554', '2026-07-23 18:36:07.554', 1, '', '智能体最终回复消息',
-        '2077379712738693120', '词元之河', '2077431632937414656', 'deepseek-v4-pro', NULL);
+VALUES ('2080642642179567616', '2080642554497642496', '2080642571761397760', 'SYSTEM_ERROR', '客户端实例[2079542278239834112]不存在', 'PLAIN_TEXT', 2,
+        '2026-07-24 21:13:57.024', '2026-07-24 21:13:57.024', 1, '', '智能体最终回复消息', '', '', '', '', NULL);
 
 -- ----------------------------
 -- Table structure for agent_chat_session
@@ -126,12 +93,12 @@ CREATE TABLE "public"."agent_chat_session" (
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
-  "reserve"        text COLLATE "pg_catalog"."default",
+  "reserve"   text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id"        varchar(255) COLLATE "pg_catalog"."default",
+  "user_id"   varchar(255) COLLATE "pg_catalog"."default",
   "create_user_id" varchar(64) COLLATE "pg_catalog"."default",
-  "model_id"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "client_id"      varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
+  "model_id"  varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "client_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
 )
 ;
 COMMENT ON COLUMN "public"."agent_chat_session"."id" IS '主键';
@@ -160,8 +127,8 @@ COMMENT ON TABLE "public"."agent_chat_session" IS '智能体聊天会话';
 -- Records of agent_chat_session
 -- ----------------------------
 INSERT INTO "public"."agent_chat_session"
-VALUES ('2080240285419626496', '2079806936913846272', '打开为新，找到文件传输助手，发送测试消息：你好啊', '2026-07-23 18:36:07.556', '2026-07-23 18:35:07.697',
-        '2026-07-23 18:35:07.697', 1, '', '智能体人机对话会话', '1', '1');
+VALUES ('2080642554497642496', '2079806936913846272', '打开微信', '2026-07-24 21:13:57.024', '2026-07-24 21:13:36.118', '2026-07-24 21:13:36.118', 1, '',
+        '智能体人机对话会话', '1', '1', '2077431632937414656', '2080625787096334336');
 
 -- ----------------------------
 -- Table structure for agent_client
@@ -238,8 +205,8 @@ ON TABLE "public"."agent_client" IS '客户端实例';
 -- Records of agent_client
 -- ----------------------------
 INSERT INTO "public"."agent_client"
-VALUES ('2079805807278751744', '1', '2079542278239834112', '家用', '$2a$10$TpFvA2YsZjIvyLnUsBjXCeUoqXAJsGHhXj46YCancdL4K6lgMgq3W', '2027-07-22 13:48:39.963',
-        '2026-07-23 18:36:07.835', NULL, NULL, NULL, NULL, '1', NULL, '2026-07-22 13:48:40.035', NULL, NULL, '2026-07-23 18:36:07.837', NULL, NULL, 1);
+VALUES ('2080625787096334336', '1', '2079542278239834112', '家用', '$2a$10$873vG3GE.lcpgdogj4NrIehQbjSL3pW3lo/rxuoeXr/pyK3JXzKPG', '2027-07-24 20:06:58.403',
+        '2026-07-24 21:12:55.344', NULL, NULL, NULL, NULL, '1', NULL, '2026-07-24 20:06:58.458', NULL, NULL, '2026-07-24 21:12:55.348', NULL, NULL, 1);
 
 -- ----------------------------
 -- Table structure for agent_definition
@@ -311,7 +278,8 @@ CREATE TABLE "public"."agent_executor"
     "update_time"      timestamp(6),
     "reserve"          text COLLATE "pg_catalog"."default",
     "remark"           text COLLATE "pg_catalog"."default",
-    "status"           int2                                        NOT NULL DEFAULT 1
+    "status"           int2                                        NOT NULL DEFAULT 1,
+    "protocol_id"      varchar(32) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT
@@ -341,70 +309,57 @@ ON COLUMN "public"."agent_executor"."remark" IS '备注';
 COMMENT
 ON COLUMN "public"."agent_executor"."status" IS '状态: ON(启用) / OFF(停用)';
 COMMENT
+ON COLUMN "public"."agent_executor"."protocol_id" IS '协议外键，关联 agent_protocol.id，标识该执行器使用的对接协议';
+COMMENT
 ON TABLE "public"."agent_executor" IS '执行器类型';
 
 -- ----------------------------
 -- Records of agent_executor
 -- ----------------------------
 INSERT INTO "public"."agent_executor"
-VALUES ('2079542278239834112', 'win_rpa', 'WinRPA执行器', 'Win10的RPA执行器', NULL, NULL, '2026-07-21 20:21:29.816', NULL, NULL, '2026-07-22 10:31:41.345',
-        NULL, NULL, 1);
+VALUES ('2079542278239834112', 'win_rpa', 'WinRPA执行器', 'Win10的RPA执行器', NULL, NULL, '2026-07-21 20:21:29.816', NULL, NULL, '2026-07-24 18:26:58.437',
+        NULL, NULL, 1, '2080577692820090880');
 
 -- ----------------------------
 -- Table structure for agent_memory
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_memory";
 CREATE TABLE "public"."agent_memory" (
-                                         "id"                varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-                                         "agent_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-                                         "memory_name"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-                                         "params_definition" jsonb,
-                                         "version_no"        int4                                        NOT NULL DEFAULT 1,
-                                         "version_status"    int2                                        NOT NULL DEFAULT 1,
-                                         "source_task_id"    varchar(32) COLLATE "pg_catalog"."default",
-                                         "summary"           text COLLATE "pg_catalog"."default",
-                                         "create_reason"     varchar(64) COLLATE "pg_catalog"."default",
-                                         "client_id"         varchar(32) COLLATE "pg_catalog"."default",
-                                         "user_id"           varchar(32) COLLATE "pg_catalog"."default",
-                                         "create_user_id"    varchar(32) COLLATE "pg_catalog"."default",
+                                         "id"                varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+                                         "agent_id"          varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                         "memory_name"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                         "step_name"         varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                         "trigger_condition" text COLLATE "pg_catalog"."default"         NOT NULL,
+                                         "trigger_action"    text COLLATE "pg_catalog"."default"         NOT NULL,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
-                                         "remark"            varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
+                                         "remark"            varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                         "user_id"           varchar(255) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT
-ON COLUMN "public"."agent_memory"."id" IS '记忆主键';
+ON COLUMN "public"."agent_memory"."id" IS '主键';
 COMMENT
-ON COLUMN "public"."agent_memory"."agent_id" IS '所属智能体ID';
+ON COLUMN "public"."agent_memory"."agent_id" IS '智能体ID';
 COMMENT
-ON COLUMN "public"."agent_memory"."memory_name" IS '记忆名称模板，支持{param}占位符';
+ON COLUMN "public"."agent_memory"."memory_name" IS '记忆名称';
 COMMENT
-ON COLUMN "public"."agent_memory"."params_definition" IS '参数定义JSON，描述每个占位符的类型和含义';
+ON COLUMN "public"."agent_memory"."step_name" IS '步骤名称';
 COMMENT
-ON COLUMN "public"."agent_memory"."version_no" IS '版本号，从1递增';
+ON COLUMN "public"."agent_memory"."trigger_condition" IS '触发条件';
 COMMENT
-ON COLUMN "public"."agent_memory"."version_status" IS '1-DRAFT / 2-PUBLISHED / 3-RETIRED';
-COMMENT
-ON COLUMN "public"."agent_memory"."source_task_id" IS '来源任务ID';
-COMMENT
-ON COLUMN "public"."agent_memory"."summary" IS 'AI生成的记忆摘要';
-COMMENT
-ON COLUMN "public"."agent_memory"."create_reason" IS 'AI_EXPLORATION / MEMORY_REVISE';
-COMMENT
-ON COLUMN "public"."agent_memory"."client_id" IS '关联客户端ID';
-COMMENT
-ON COLUMN "public"."agent_memory"."user_id" IS '用户归属ID';
-COMMENT
-ON COLUMN "public"."agent_memory"."create_user_id" IS '创建人用户ID';
+ON COLUMN "public"."agent_memory"."trigger_action" IS '触发动作';
 COMMENT ON COLUMN "public"."agent_memory"."create_time" IS '创建时间';
 COMMENT ON COLUMN "public"."agent_memory"."update_time" IS '修改时间';
 COMMENT
-ON COLUMN "public"."agent_memory"."status" IS 'ON(启用) / DISABLE(停用)';
+ON COLUMN "public"."agent_memory"."status" IS '状态';
 COMMENT
 ON COLUMN "public"."agent_memory"."reserve" IS '扩展字段，JSON格式';
 COMMENT ON COLUMN "public"."agent_memory"."remark" IS '备注';
+COMMENT
+ON COLUMN "public"."agent_memory"."user_id" IS '用户归属ID，确保每个用户的记忆私域隔离';
 COMMENT ON TABLE "public"."agent_memory" IS '智能体记忆';
 
 -- ----------------------------
@@ -412,64 +367,460 @@ COMMENT ON TABLE "public"."agent_memory" IS '智能体记忆';
 -- ----------------------------
 
 -- ----------------------------
--- Table structure for agent_memory_step
+-- Table structure for agent_memory_detail
 -- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_step";
-CREATE TABLE "public"."agent_memory_step"
+DROP TABLE IF EXISTS "public"."agent_memory_detail";
+CREATE TABLE "public"."agent_memory_detail"
 (
-    "id"                  varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-    "memory_id"           varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-    "sequence_no"         int4                                        NOT NULL,
-    "atomic_command_id"   varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-    "atomic_command_code" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
-    "step_name"           varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-    "args_template"       jsonb,
-    "delay_min_ms"        int4                                                 DEFAULT 100,
-    "delay_max_ms"        int4                                                 DEFAULT 500,
-    "timeout_ms"          int4                                                 DEFAULT 30000,
-    "success_assertion"   text COLLATE "pg_catalog"."default",
-    "failure_strategy"    varchar(32) COLLATE "pg_catalog"."default"           DEFAULT 'STOP'::character varying,
-    "status"              varchar(16) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT 'ON'::character varying,
-    "create_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "update_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "id"                 varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+    "agent_memory_id"    varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "step_name"          varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "step_type"          int2                                        NOT NULL DEFAULT 1,
+    "exec_content"       text COLLATE "pg_catalog"."default"         NOT NULL,
+    "return_data_format" text COLLATE "pg_catalog"."default"         NOT NULL,
+    "parent_step_id"     varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "next_step_id"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "branch_condition"   text COLLATE "pg_catalog"."default"         NOT NULL,
+    "branch_route"       text COLLATE "pg_catalog"."default"         NOT NULL,
+    "model"              varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "create_time"        timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "update_time"        timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status"             int2                                        NOT NULL DEFAULT 1,
+    "reserve"            text COLLATE "pg_catalog"."default",
+    "remark"             varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
 )
 ;
 COMMENT
-ON COLUMN "public"."agent_memory_step"."id" IS '步骤主键';
+ON COLUMN "public"."agent_memory_detail"."id" IS '主键';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."memory_id" IS '关联的记忆ID';
+ON COLUMN "public"."agent_memory_detail"."agent_memory_id" IS '智能体记忆ID';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."sequence_no" IS '步骤序号，从10递增';
+ON COLUMN "public"."agent_memory_detail"."step_name" IS '步骤名称';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."atomic_command_id" IS '原子命令主键';
+ON COLUMN "public"."agent_memory_detail"."step_type" IS '步骤类型：智能体记忆步骤类型';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."atomic_command_code" IS '原子命令编码（冗余）';
+ON COLUMN "public"."agent_memory_detail"."exec_content" IS '执行内容';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."step_name" IS '步骤名称';
+ON COLUMN "public"."agent_memory_detail"."return_data_format" IS '返回的数据格式';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."args_template" IS '参数模板JSON，支持{param}占位符';
+ON COLUMN "public"."agent_memory_detail"."parent_step_id" IS '父步骤ID';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."delay_min_ms" IS '执行前延迟最小值';
+ON COLUMN "public"."agent_memory_detail"."next_step_id" IS '下一个步骤ID';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."delay_max_ms" IS '执行前延迟最大值';
+ON COLUMN "public"."agent_memory_detail"."branch_condition" IS '分支条件';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."timeout_ms" IS '命令超时时间';
+ON COLUMN "public"."agent_memory_detail"."branch_route" IS '分支路由';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."success_assertion" IS '成功断言规则';
+ON COLUMN "public"."agent_memory_detail"."model" IS '模型';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."failure_strategy" IS 'STOP / RETRY / SKIP';
+ON COLUMN "public"."agent_memory_detail"."create_time" IS '创建时间';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."status" IS 'ON(启用) / OFF(停用)';
+ON COLUMN "public"."agent_memory_detail"."update_time" IS '修改时间';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."create_time" IS '创建时间';
+ON COLUMN "public"."agent_memory_detail"."status" IS '状态';
 COMMENT
-ON COLUMN "public"."agent_memory_step"."update_time" IS '修改时间';
+ON COLUMN "public"."agent_memory_detail"."reserve" IS '扩展字段，JSON格式';
 COMMENT
-ON TABLE "public"."agent_memory_step" IS '记忆步骤';
+ON COLUMN "public"."agent_memory_detail"."remark" IS '备注';
+COMMENT
+ON TABLE "public"."agent_memory_detail" IS '智能体记忆详情';
 
 -- ----------------------------
--- Records of agent_memory_step
+-- Records of agent_memory_detail
 -- ----------------------------
+
+-- ----------------------------
+-- Table structure for agent_memory_version
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."agent_memory_version";
+CREATE TABLE "public"."agent_memory_version"
+(
+    "id"                varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+    "memory_id"         varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+    "version_no"        int4                                       NOT NULL DEFAULT 1,
+    "version_status"    int2                                       NOT NULL DEFAULT 1,
+    "source_task_id"    varchar(32) COLLATE "pg_catalog"."default",
+    "success_assertion" text COLLATE "pg_catalog"."default",
+    "summary"           text COLLATE "pg_catalog"."default",
+    "create_reason"     text COLLATE "pg_catalog"."default",
+    "create_user_id"    varchar(32) COLLATE "pg_catalog"."default",
+    "create_time"       timestamp(6),
+    "update_time"       timestamp(6)
+)
+;
+COMMENT
+ON COLUMN "public"."agent_memory_version"."id" IS '主键';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."memory_id" IS '关联的记忆主键，对应 agent_memory.id';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."version_no" IS '版本号，同一记忆下递增，从1开始';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."version_status" IS '版本状态: 1-DRAFT(草稿) / 2-PUBLISHED(已发布) / 3-RETIRED(已淘汰)';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."source_task_id" IS '来源任务主键，记录该版本由哪个任务产生';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."success_assertion" IS '成功判定规则，用于验证记忆执行是否成功的条件';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."summary" IS '版本摘要，AI生成的该版本简要描述';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."create_reason" IS '创建原因: AI_EXPLORATION(AI探索沉淀) / MEMORY_REVISE(失败修订)';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."create_user_id" IS '创建人用户ID';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."create_time" IS '创建时间';
+COMMENT
+ON COLUMN "public"."agent_memory_version"."update_time" IS '修改时间';
+COMMENT
+ON TABLE "public"."agent_memory_version" IS '记忆版本';
+
+-- ----------------------------
+-- Records of agent_memory_version
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for agent_memory_version_detail
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."agent_memory_version_detail";
+CREATE TABLE "public"."agent_memory_version_detail"
+(
+    "id"                  varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "version_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "sequence_no"         int4                                        NOT NULL,
+    "atomic_command_id"   varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "atomic_command_code" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
+    "args_template"       text COLLATE "pg_catalog"."default",
+    "delay_min_ms"        int4                                                 DEFAULT 100,
+    "delay_max_ms"        int4                                                 DEFAULT 500,
+    "timeout_ms"          int4                                                 DEFAULT 30000,
+    "idempotency_key"     varchar(256) COLLATE "pg_catalog"."default",
+    "success_assertion"   text COLLATE "pg_catalog"."default",
+    "failure_strategy"    varchar(32) COLLATE "pg_catalog"."default"           DEFAULT 'STOP'::character varying,
+    "status"              varchar(16) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT 'ON'::character varying,
+    "create_time"         timestamp(6),
+    "update_time"         timestamp(6)
+)
+;
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."id" IS '主键';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."version_id" IS '关联的记忆版本主键，对应 agent_memory_version.id';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."sequence_no" IS '步骤序号，同一版本内从10开始递增，决定执行顺序';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."atomic_command_id" IS '原子命令主键，对应 atomic_command.id';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."atomic_command_code" IS '原子命令编码，冗余字段，如 window.find';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."args_template" IS '参数模板JSON，运行时变量替换后传给执行器';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."delay_min_ms" IS '执行前随机延迟最小值（毫秒），默认100';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."delay_max_ms" IS '执行前随机延迟最大值（毫秒），默认500';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."timeout_ms" IS '命令超时时间（毫秒），默认30000';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."idempotency_key" IS '幂等键，同一任务+步骤序号固定值，防止重复执行';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."success_assertion" IS '成功断言规则，用于判断该步骤是否执行成功';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."failure_strategy" IS '失败处理策略: STOP(停止) / RETRY(重试) / SKIP(跳过)';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."status" IS '状态: ON(启用) / OFF(停用)';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."create_time" IS '创建时间';
+COMMENT
+ON COLUMN "public"."agent_memory_version_detail"."update_time" IS '修改时间';
+COMMENT
+ON TABLE "public"."agent_memory_version_detail" IS '记忆版本步骤';
+
+-- ----------------------------
+-- Records of agent_memory_version_detail
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for agent_protocol
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."agent_protocol";
+CREATE TABLE "public"."agent_protocol"
+(
+    "id"               varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "protocol_code"    varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
+    "protocol_name"    varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
+    "protocol_version" varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "content"          text COLLATE "pg_catalog"."default"         NOT NULL,
+    "description"      text COLLATE "pg_catalog"."default",
+    "create_user_id"   varchar(32) COLLATE "pg_catalog"."default",
+    "create_user_name" varchar(64) COLLATE "pg_catalog"."default",
+    "create_time"      timestamp(6),
+    "update_user_id"   varchar(32) COLLATE "pg_catalog"."default",
+    "update_user_name" varchar(64) COLLATE "pg_catalog"."default",
+    "update_time"      timestamp(6),
+    "reserve"          text COLLATE "pg_catalog"."default",
+    "remark"           text COLLATE "pg_catalog"."default",
+    "status"           int2                                        NOT NULL DEFAULT 1
+)
+;
+COMMENT
+ON COLUMN "public"."agent_protocol"."id" IS '主键';
+COMMENT
+ON COLUMN "public"."agent_protocol"."protocol_code" IS '协议编码，唯一标识协议类型，如 SEP_V1';
+COMMENT
+ON COLUMN "public"."agent_protocol"."protocol_name" IS '协议名称，用户可读，如 Simple Executor Protocol v1.0';
+COMMENT
+ON COLUMN "public"."agent_protocol"."protocol_version" IS '协议版本，如 v1.0、v2.0';
+COMMENT
+ON COLUMN "public"."agent_protocol"."content" IS '协议内容，JSON格式，包含消息结构、消息类型、命令列表等完整协议定义';
+COMMENT
+ON COLUMN "public"."agent_protocol"."description" IS '协议描述，说明该协议的主要特点和适用范围';
+COMMENT
+ON COLUMN "public"."agent_protocol"."create_user_id" IS '创建人用户ID';
+COMMENT
+ON COLUMN "public"."agent_protocol"."create_user_name" IS '创建人用户名称';
+COMMENT
+ON COLUMN "public"."agent_protocol"."create_time" IS '创建时间';
+COMMENT
+ON COLUMN "public"."agent_protocol"."update_user_id" IS '修改人用户ID';
+COMMENT
+ON COLUMN "public"."agent_protocol"."update_user_name" IS '修改人用户名称';
+COMMENT
+ON COLUMN "public"."agent_protocol"."update_time" IS '修改时间';
+COMMENT
+ON COLUMN "public"."agent_protocol"."reserve" IS '扩展字段，JSON格式';
+COMMENT
+ON COLUMN "public"."agent_protocol"."remark" IS '备注';
+COMMENT
+ON COLUMN "public"."agent_protocol"."status" IS '状态: 1(启用) / 0(停用)';
+COMMENT
+ON TABLE "public"."agent_protocol" IS '执行器协议';
+
+-- ----------------------------
+-- Records of agent_protocol
+-- ----------------------------
+INSERT INTO "public"."agent_protocol"
+VALUES ('2080577692820090880', 'RPA', '执行器通用协议', 'v1.0', '# Simple Executor Protocol v1.0
+
+## 协议概述
+
+SEP v1.0 是智能体系统与远程执行器之间的标准通信协议。基于 WebSocket 全双工通道，采用 JSON 格式的 messageType/payload 双层结构，支持批量命令下发、逐项结果回传、心跳保活和内置系统命令。
+
+---
+
+## 外层消息结构
+
+所有 WebSocket 业务消息均使用统一的外层结构包裹，通过 messageType 字段区分消息类型，payload 字段承载具体业务数据。
+
+### JSON 示例
+
+```json
+{
+  "messageType": "COMMAND_BATCH",
+  "payload": { ... }
+}
+```
+
+### 字段说明
+
+| 字段名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| messageType | String | 是 | 协议消息类型，取值：COMMAND_BATCH、COMMAND_RESULT、HEARTBEAT、HEARTBEAT_ACK |
+| payload | Object | 是 | 消息负载，结构随 messageType 变化 |
+
+---
+
+## 消息类型
+
+### 1. COMMAND_BATCH
+
+- **方向**：Server → Executor
+- **描述**：服务端向执行器下发批量命令。执行器收到后按顺序逐条执行，每条命令执行完毕后单独回传 COMMAND_RESULT。
+
+#### JSON 示例
+
+```json
+{
+  "dispatchId": "1901234567890",
+  "taskId": "1901234567890",
+  "clientId": "client_001",
+  "stopOnFailure": true,
+  "minDelayMs": 100,
+  "maxDelayMs": 500,
+  "commands": [{
+    "commandId": "1901234567891",
+    "sequenceNo": 10,
+    "atomicCommandCode": "window.find",
+    "args": {},
+    "timeoutMs": 10000,
+    "idempotencyKey": "taskId+seq"
+  }]
+}
+```
+
+#### 字段说明
+
+| 字段名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| dispatchId | String | 是 | 调度ID（雪花ID），唯一标识一次命令调度 |
+| taskId | String | 是 | 任务ID，关联的任务主键 |
+| clientId | String | 是 | 目标客户端ID，WebSocket 点对点路由依据 |
+| stopOnFailure | Boolean | 否 | 是否失败即停止后续命令执行 |
+| minDelayMs | Integer | 否 | 执行前最小随机延迟(毫秒)，用于模拟人工操作间隔 |
+| maxDelayMs | Integer | 否 | 执行前最大随机延迟(毫秒) |
+| commands | Array<ExecutorCommandItem> | 是 | 命令列表，按顺序执行 |
+|   └─ commandId | String | 是 | 命令ID（雪花ID），用于关联回执 |
+|   └─ sequenceNo | Integer | 是 | 步骤序号，从10递增 |
+|   └─ atomicCommandCode | String | 是 | 原子命令编码，如 window.find、control.click |
+|   └─ args | Map<String,Object> | 否 | 命令参数，键值对形式 |
+|   └─ timeoutMs | Integer | 否 | 命令超时时间(毫秒)，超时视为失败 |
+|   └─ idempotencyKey | String | 否 | 幂等键，用于去重 |
+
+---
+
+### 2. COMMAND_RESULT
+
+- **方向**：Executor → Server
+- **描述**：执行器向服务端回传单条命令的执行结果。每条命令独立回传，包含执行状态、返回数据和错误详情。
+
+#### JSON 示例
+
+```json
+{
+  "dispatchId": "1901234567890",
+  "taskId": "1901234567890",
+  "commandId": "1901234567891",
+  "sequenceNo": 10,
+  "success": true,
+  "message": "窗口已找到",
+  "data": { "handle": "0x123ABC" },
+  "error": null,
+  "startedAt": "2026-07-21T10:00:00Z",
+  "finishedAt": "2026-07-21T10:00:01Z"
+}
+```
+
+#### 字段说明
+
+| 字段名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| dispatchId | String | 是 | 调度ID，与 COMMAND_BATCH 中的 dispatchId 对应 |
+| taskId | String | 是 | 任务ID，与 COMMAND_BATCH 中的 taskId 对应 |
+| commandId | String | 是 | 命令ID，与 ExecutorCommandItem.commandId 对应 |
+| sequenceNo | Integer | 是 | 步骤序号 |
+| success | Boolean | 是 | 是否执行成功 |
+| message | String | 否 | 执行说明，成功时为成功描述，失败时为错误简述 |
+| data | Map<String,Object> | 否 | 返回数据，包含执行结果的关键信息 |
+| error | ExecutorCommandError | 否 | 错误详情，失败时包含 error.code、error.detail、error.recoverable |
+| startedAt | Instant | 是 | 开始执行时间（ISO8601 UTC） |
+| finishedAt | Instant | 是 | 执行完成时间（ISO8601 UTC） |
+
+---
+
+### 3. HEARTBEAT
+
+- **方向**：Server → Executor
+- **描述**：服务端向执行器发送心跳探测。执行器收到后应立即回复 HEARTBEAT_ACK。心跳用于检测 WebSocket 连接的活跃状态，超时未回复视为断连。
+
+#### JSON 示例
+
+```json
+{
+  "messageType": "HEARTBEAT",
+  "payload": {}
+}
+```
+
+#### 字段说明
+
+| 字段名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| payload | Object | 否 | 心跳消息负载为空对象 |
+
+---
+
+### 4. HEARTBEAT_ACK
+
+- **方向**：Executor → Server
+- **描述**：执行器对心跳探测的确认回复，表示执行器仍在运行且 WebSocket 连接正常。
+
+#### JSON 示例
+
+```json
+{
+  "messageType": "HEARTBEAT_ACK",
+  "payload": {}
+}
+```
+
+#### 字段说明
+
+| 字段名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| payload | Object | 否 | 心跳确认消息负载为空对象 |
+
+---
+
+## 内置系统命令
+
+### system.capability
+
+- **描述**：返回执行器支持的全部原子命令列表。握手鉴权通过后，服务端自动下发此命令以同步执行器能力清单。
+- **参数**：（无参数）— system.capability 不需要额外参数
+- **返回数据**：返回原子命令列表，每条包含命令 code、name、description、argsSchema、resultSchema、riskLevel、isIdempotent 等元信息
+
+#### JSON 示例
+
+```json
+{
+  "messageType": "COMMAND_BATCH",
+  "payload": {
+    "dispatchId": "system",
+    "commands": [{
+      "commandId": "sys_cap_001",
+      "sequenceNo": 0,
+      "atomicCommandCode": "system.capability",
+      "args": {}
+    }]
+  }
+}
+```
+
+---
+
+### system.health
+
+- **描述**：返回执行器的健康状态，包括进程状态、系统资源使用情况和当前检查时间。
+- **参数**：（无参数）— system.health 不需要额外参数
+- **返回数据**：返回健康检查结果，包含 status（健康状态）、checkedAt（检查时间）、process（进程信息）等
+
+#### JSON 示例
+
+```json
+{
+  "messageType": "COMMAND_BATCH",
+  "payload": {
+    "dispatchId": "system",
+    "commands": [{
+      "commandId": "sys_health_001",
+      "sequenceNo": 0,
+      "atomicCommandCode": "system.health",
+      "args": {}
+    }]
+  }
+}
+```
+
+---
+
+## 通信流程
+
+1. WebSocket 连接建立，携带 type=agent-executor、cliKey=clientId、token=secret 鉴权参数
+2. 服务端鉴权通过后，自动下发 system.capability 命令
+3. 执行器执行 system.capability 并返回支持的命令列表
+4. 服务端 upsert 原子命令表，同步执行器能力
+5. 正常运行期间，服务端按需下发 COMMAND_BATCH 批量命令
+6. 执行器逐条执行命令，每条完成后回传 COMMAND_RESULT
+7. 服务端按 commandId 完成等待器，AI 根据结果继续决策
+8. 服务端定期发送 HEARTBEAT，执行器回复 HEARTBEAT_ACK
+9. 断连后服务端清理等待器，执行器自动重连后重新握手', NULL, '1', NULL, '2026-07-24 16:55:51.889', NULL, NULL, '2026-07-24 16:55:51.89', NULL, NULL, 1);
 
 -- ----------------------------
 -- Table structure for agent_rule
@@ -547,6 +898,12 @@ COMMENT ON TABLE "public"."agent_skill" IS '智能体技能';
 -- ----------------------------
 -- Records of agent_skill
 -- ----------------------------
+INSERT INTO "public"."agent_skill"
+VALUES ('2080291159512735744', '2079806936913846272',
+        '通过模拟键盘快捷键操作，在Windows系统中打开指定的应用程序。执行流程：按下Win键打开开始菜单 → 输入应用程序名称进行搜索 → 等待搜索结果出现 → 按下回车键启动应用',
+        '1. 模拟按下键盘Win键；2. 输入目标应用程序名称；3. 等待1-2秒让搜索结果加载；4. 模拟按下回车键确认打开',
+        '{"status": "success|failed", "message": "操作结果描述", "appName": "应用程序名称"}', '2026-07-23 21:57:17.025', '2026-07-23 21:57:17.025', 1, NULL,
+        '用于打开Windows应用程序的通用技能', NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for ai_model
@@ -756,6 +1113,33 @@ VALUES ('2080240492735684608', '微信搜索联系人', 'weixin_search_contact:�
 INSERT INTO "public"."atomic_command"
 VALUES ('2080240505293430784', '发送微信消息', 'weixin_send_message:你好啊', '向当前微信聊天窗口发送消息', '', '2026-07-23 18:36:00.118',
         '2026-07-23 18:36:00.118', 1, NULL, '发送测试消息：你好啊', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080291176063459328', '打开微信', 'Win键 → 输入"微信" → 等待1000ms → 回车键', '在Windows系统中启动微信应用程序', '2080291159512735744',
+        '2026-07-23 21:57:20.971', '2026-07-23 21:57:20.971', 1, NULL, '通过开始菜单搜索打开微信', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080503788197904384', '按下Win键', 'key_press:win', '模拟按下键盘Windows键，打开开始菜单', '', '2026-07-24 12:02:11.654', '2026-07-24 12:02:11.654', 1,
+        NULL, '用于打开Windows开始菜单', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080503799749017600', '输入文本', 'type_text:{text}', '模拟键盘输入指定文本内容', '', '2026-07-24 12:02:14.408', '2026-07-24 12:02:14.408', 1, NULL,
+        '用于在搜索框或输入框中输入文本', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080503809236533248', '等待', 'wait:{duration}', '等待指定的时间（秒）', '', '2026-07-24 12:02:16.67', '2026-07-24 12:02:16.67', 1, NULL,
+        '用于操作之间的延迟等待', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080503818141040640', '按下回车键', 'key_press:enter', '模拟按下键盘回车键，确认当前选择', '', '2026-07-24 12:02:18.793', '2026-07-24 12:02:18.793', 1,
+        NULL, '用于确认选择或启动应用', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080625504681263104', '按下Win键', 'keyboard.press.win', '模拟按下键盘Windows徽标键，打开开始菜单', '', '2026-07-24 20:05:51.125',
+        '2026-07-24 20:05:51.125', 1, NULL, '用于打开开始菜单，配合应用搜索使用', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080625515141857280', '输入文本', 'keyboard.type.text', '模拟键盘输入指定的文本内容', '', '2026-07-24 20:05:53.619', '2026-07-24 20:05:53.619', 1,
+        NULL, '用于在搜索框或输入框中输入文本', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080625529503154176', '等待', 'system.wait', '暂停执行指定时间，等待系统响应', '', '2026-07-24 20:05:57.043', '2026-07-24 20:05:57.043', 1, NULL,
+        '用于等待搜索结果加载或界面渲染完成', NULL, NULL);
+INSERT INTO "public"."atomic_command"
+VALUES ('2080625529511542784', '按下回车键', 'keyboard.press.enter', '模拟按下键盘回车键，确认选择或执行', '', '2026-07-24 20:05:57.045',
+        '2026-07-24 20:05:57.045', 1, NULL, '用于确认打开选中的应用或执行命令', NULL, NULL);
 
 -- ----------------------------
 -- Table structure for chat_turn
@@ -808,11 +1192,47 @@ ON TABLE "public"."chat_turn" IS '对话轮次';
 -- Records of chat_turn
 -- ----------------------------
 INSERT INTO "public"."chat_turn"
-VALUES ('2080137398186201088', '2080137334441168896', 1, '2080137398140063744', NULL, '', NULL, '2026-07-23 11:46:17.468', '2026-07-23 11:46:17.468', '1', NULL,
+VALUES ('2080137398186201088', '2080137334441168896', 1, '2080137398140063744', NULL, '', NULL, '2026-07-23 11:46:17.468', '2026-07-23 11:46:17.468', 1, NULL,
         '');
 INSERT INTO "public"."chat_turn"
-VALUES ('2080240362850672640', '2080240285419626496', 1, '2080240362812923904', NULL, '', NULL, '2026-07-23 18:35:26.157', '2026-07-23 18:35:26.157', '1', NULL,
+VALUES ('2080240362850672640', '2080240285419626496', 1, '2080240362812923904', NULL, '', NULL, '2026-07-23 18:35:26.157', '2026-07-23 18:35:26.157', 1, NULL,
         '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080267856010047488', '2080267812255068160', 1, '2080267855976493056', '2080267870945964032', '', NULL, '2026-07-23 20:24:41.037',
+        '2026-07-23 20:24:41.037', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080267971613454336', '2080267812255068160', 2, '2080267971596677120', '2080268032195981312', '', NULL, '2026-07-23 20:25:08.599',
+        '2026-07-23 20:25:08.599', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080271939085291520', '2080271927366406144', 1, '2080271939051737088', '2080271982936739840', '', NULL, '2026-07-23 20:40:54.518',
+        '2026-07-23 20:40:54.518', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080273956658802688', '2080273869140455424', 1, '2080273956621053952', '2080274109528600576', '', NULL, '2026-07-23 20:48:55.545',
+        '2026-07-23 20:48:55.545', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080275201146499072', '2080273869140455424', 2, '2080275201100361728', '2080275239138504704', '', NULL, '2026-07-23 20:53:52.254',
+        '2026-07-23 20:53:52.254', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080280355811921920', '2080280339907121152', 1, '2080280355786756096', '2080280388489744384', '', NULL, '2026-07-23 21:14:21.222',
+        '2026-07-23 21:14:21.222', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080283794981842944', '2080283764233400320', 1, '2080283794927316992', '2080283827911323648', '', NULL, '2026-07-23 21:28:01.184',
+        '2026-07-23 21:28:01.184', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080285348874952704', '2080283764233400320', 2, '2080285348812038144', '2080285417376325632', '', NULL, '2026-07-23 21:34:11.661',
+        '2026-07-23 21:34:11.661', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080291027190833152', '2080291017908838400', 1, '2080291027165667328', '2080291258989043712', '', NULL, '2026-07-23 21:56:45.477',
+        '2026-07-23 21:56:45.477', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080503671730470912', '2080291017908838400', 2, '2080503671659167744', '2080503863418552320', '', NULL, '2026-07-24 12:01:43.886',
+        '2026-07-24 12:01:43.886', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080625379049275392', '2080625360162324480', 1, '2080625379019915264', '2080625587858505728', '', NULL, '2026-07-24 20:05:21.172',
+        '2026-07-24 20:05:21.172', 1, NULL, '');
+INSERT INTO "public"."chat_turn"
+VALUES ('2080642571732037632', '2080642554497642496', 1, '2080642571690094592', '2080642642179567616', '', NULL, '2026-07-24 21:13:40.227',
+        '2026-07-24 21:13:40.227', 1, NULL, '');
 
 -- ----------------------------
 -- Table structure for execution_event
@@ -948,6 +1368,382 @@ VALUES ('2080240536390000640', '2080240362850672640', '2080240362880032768', '',
 INSERT INTO "public"."execution_event"
 VALUES ('2080240536452915200', '2080240362850672640', '2080240362880032768', '', 'TASK_COMPLETED', '任务执行成功', '', '', '', '', 10,
         '2026-07-23 18:36:07.547', '2026-07-23 18:36:07.547', NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-23 18:36:07.547', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856051990528', '2080267856010047488', '2080267856031019008', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 20:24:41.046', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.047', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856135876608', '2080267856010047488', '2080267856031019008', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 20:24:41.066', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.067', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856144265216', '2080267856010047488', '2080267856031019008', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 20:24:41.068', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.069', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856156848128', '2080267856010047488', '2080267856031019008', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 20:24:41.072', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.072', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856165236736', '2080267856010047488', '2080267856031019008', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 20:24:41.074', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.074', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856177819648', '2080267856010047488', '2080267856031019008', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 20:24:41.076', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.077', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856190402560', '2080267856010047488', '2080267856031019008', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 20:24:41.08', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.08', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267856202985472', '2080267856010047488', '2080267856031019008', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 20:24:41.082', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:24:41.083', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267870899826688', '2080267856010047488', '2080267856031019008', '', 'AI_COMPLETED', 'AI 探索方案生成完成', '', '', '', '', 9,
+        '2026-07-23 20:24:44.586', NULL, NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-23 20:24:44.587', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267870929186816', '2080267856010047488', '2080267856031019008', '', 'TASK_COMPLETED', '任务执行成功', '', '', '', '', 10,
+        '2026-07-23 20:24:44.594', '2026-07-23 20:24:44.594', NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-23 20:24:44.594', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971626037248', '2080267971613454336', '2080267971621842944', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 20:25:08.602', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.602', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971667980288', '2080267971613454336', '2080267971621842944', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 20:25:08.611', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.612', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971672174592', '2080267971613454336', '2080267971621842944', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 20:25:08.613', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.613', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971680563200', '2080267971613454336', '2080267971621842944', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 20:25:08.615', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.615', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971693146112', '2080267971613454336', '2080267971621842944', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 20:25:08.618', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.618', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971701534720', '2080267971613454336', '2080267971621842944', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 20:25:08.62', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.62', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971714117632', '2080267971613454336', '2080267971621842944', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 20:25:08.623', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.623', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080267971722506240', '2080267971613454336', '2080267971621842944', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 20:25:08.625', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:08.625', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080268032183398400', '2080267971613454336', '2080267971621842944', '', 'TASK_FAILED', '任务执行失败', '', '', '', '当前登录用户身份为空', 9,
+        '2026-07-23 20:25:23.04', '2026-07-23 20:25:23.04', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:25:23.04', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939123040256', '2080271939085291520', '2080271939106263040', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 20:40:54.527', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.527', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939206926336', '2080271939085291520', '2080271939106263040', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 20:40:54.546', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.547', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939215314944', '2080271939085291520', '2080271939106263040', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 20:40:54.548', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.549', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939223703552', '2080271939085291520', '2080271939106263040', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 20:40:54.55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.551', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939236286464', '2080271939085291520', '2080271939106263040', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 20:40:54.554', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.554', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939248869376', '2080271939085291520', '2080271939106263040', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 20:40:54.556', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.557', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939261452288', '2080271939085291520', '2080271939106263040', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 20:40:54.56', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.56', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271939274035200', '2080271939085291520', '2080271939106263040', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 20:40:54.562', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:40:54.563', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080271982919962624', '2080271939085291520', '2080271939106263040', '', 'TASK_FAILED', '任务执行失败', '', '', '', '客户端实例[win_rpa]不存在', 9,
+        '2026-07-23 20:41:04.969', '2026-07-23 20:41:04.969', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:41:04.969', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956700745728', '2080273956658802688', '2080273956683968512', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 20:48:55.554', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.555', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956784631808', '2080273956658802688', '2080273956683968512', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 20:48:55.575', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.575', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956793020416', '2080273956658802688', '2080273956683968512', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 20:48:55.577', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.577', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956809797632', '2080273956658802688', '2080273956683968512', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 20:48:55.581', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.581', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956822380544', '2080273956658802688', '2080273956683968512', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 20:48:55.583', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.584', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956834963456', '2080273956658802688', '2080273956683968512', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 20:48:55.586', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.587', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956851740672', '2080273956658802688', '2080273956683968512', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 20:48:55.591', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.591', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080273956864323584', '2080273956658802688', '2080273956683968512', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 20:48:55.593', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:48:55.594', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080274109516017664', '2080273956658802688', '2080273956683968512', '', 'TASK_FAILED', '任务执行失败', '', '', '', '智能体[2079542278239834112]不存在',
+        9, '2026-07-23 20:49:31.988', '2026-07-23 20:49:31.988', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:49:31.989', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201230385152', '2080275201146499072', '2080275201213607936', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 20:53:52.273', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.274', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201335242752', '2080275201146499072', '2080275201213607936', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 20:53:52.299', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.299', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201343631360', '2080275201146499072', '2080275201213607936', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 20:53:52.301', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.301', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201352019968', '2080275201146499072', '2080275201213607936', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 20:53:52.302', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.303', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201356214272', '2080275201146499072', '2080275201213607936', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 20:53:52.304', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.304', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201368797184', '2080275201146499072', '2080275201213607936', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 20:53:52.306', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.307', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201381380096', '2080275201146499072', '2080275201213607936', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 20:53:52.31', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.31', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275201414934528', '2080275201146499072', '2080275201213607936', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 20:53:52.314', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:53:52.318', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080275239121727488', '2080275201146499072', '2080275201213607936', '', 'TASK_FAILED', '任务执行失败', '', '', '', '智能体[当前智能体]不存在', 9,
+        '2026-07-23 20:54:01.308', '2026-07-23 20:54:01.308', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 20:54:01.308', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280355853864960', '2080280355811921920', '2080280355837087744', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 21:14:21.231', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.232', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280355941945344', '2080280355811921920', '2080280355837087744', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 21:14:21.253', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.253', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280355954528256', '2080280355811921920', '2080280355837087744', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 21:14:21.255', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.256', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280355962916864', '2080280355811921920', '2080280355837087744', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 21:14:21.257', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.258', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280355971305472', '2080280355811921920', '2080280355837087744', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 21:14:21.259', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.26', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280355983888384', '2080280355811921920', '2080280355837087744', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 21:14:21.262', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.263', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280356004859904', '2080280355811921920', '2080280355837087744', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 21:14:21.268', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.268', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280356017442816', '2080280355811921920', '2080280355837087744', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 21:14:21.27', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:21.271', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080280388477161472', '2080280355811921920', '2080280355837087744', '', 'TASK_FAILED', '任务执行失败', '', '', '', '当前登录用户身份为空', 9,
+        '2026-07-23 21:14:29.01', '2026-07-23 21:14:29.01', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:14:29.01', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795040563200', '2080283794981842944', '2080283795015397376', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 21:28:01.196', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.198', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795158003712', '2080283794981842944', '2080283795015397376', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 21:28:01.226', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.226', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795170586624', '2080283794981842944', '2080283795015397376', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 21:28:01.229', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.229', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795199946752', '2080283794981842944', '2080283795015397376', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 21:28:01.236', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.236', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795212529664', '2080283794981842944', '2080283795015397376', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 21:28:01.239', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.239', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795233501184', '2080283794981842944', '2080283795015397376', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 21:28:01.242', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.244', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795254472704', '2080283794981842944', '2080283795015397376', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 21:28:01.249', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.249', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283795271249920', '2080283794981842944', '2080283795015397376', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 21:28:01.252', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:01.253', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080283827890352128', '2080283794981842944', '2080283795015397376', '', 'TASK_FAILED', '任务执行失败', '', '', '', '当前登录用户身份为空', 9,
+        '2026-07-23 21:28:09.03', '2026-07-23 21:28:09.03', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:28:09.03', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285348979810304', '2080285348874952704', '2080285348954644480', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 21:34:11.685', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.686', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349109833728', '2080285348874952704', '2080285348954644480', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 21:34:11.717', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.717', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349122416640', '2080285348874952704', '2080285348954644480', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3, '2026-07-23 21:34:11.72',
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.72', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349139193856', '2080285348874952704', '2080285348954644480', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 21:34:11.724', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.724', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349155971072', '2080285348874952704', '2080285348954644480', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 21:34:11.728', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.728', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349197914112', '2080285348874952704', '2080285348954644480', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 21:34:11.731', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.738', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349235662848', '2080285348874952704', '2080285348954644480', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 21:34:11.747', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.747', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285349256634368', '2080285348874952704', '2080285348954644480', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 21:34:11.751', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:11.752', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080285417351159808', '2080285348874952704', '2080285348954644480', '', 'TASK_FAILED', '任务执行失败', '', '', '', '不支持的过期时间单位[{}]', 9,
+        '2026-07-23 21:34:27.987', '2026-07-23 21:34:27.987', NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:34:27.987', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027245359104', '2080291027190833152', '2080291027220193280', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-23 21:56:45.489', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.49', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027366993920', '2080291027190833152', '2080291027220193280', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-23 21:56:45.518', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.519', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027379576832', '2080291027190833152', '2080291027220193280', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-23 21:56:45.522', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.522', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027404742656', '2080291027190833152', '2080291027220193280', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-23 21:56:45.527', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.528', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027417325568', '2080291027190833152', '2080291027220193280', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-23 21:56:45.531', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.531', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027442491392', '2080291027190833152', '2080291027220193280', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-23 21:56:45.535', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.537', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027467657216', '2080291027190833152', '2080291027220193280', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-23 21:56:45.543', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.543', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291027484434432', '2080291027190833152', '2080291027220193280', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-23 21:56:45.546', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-23 21:56:45.547', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291258892574720', '2080291027190833152', '2080291027220193280', '', 'AI_COMPLETED', 'AI 探索方案生成完成', '', '', '', '', 9,
+        '2026-07-23 21:57:40.719', NULL, NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-23 21:57:40.719', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080291258955489280', '2080291027190833152', '2080291027220193280', '', 'TASK_COMPLETED', '任务执行成功', '', '', '', '', 10,
+        '2026-07-23 21:57:40.734', '2026-07-23 21:57:40.734', NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-23 21:57:40.734', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671772413952', '2080503671730470912', '2080503671755636736', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-24 12:01:43.895', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.896', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671864688640', '2080503671730470912', '2080503671755636736', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-24 12:01:43.918', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.918', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671873077248', '2080503671730470912', '2080503671755636736', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3, '2026-07-24 12:01:43.92',
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.92', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671881465856', '2080503671730470912', '2080503671755636736', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-24 12:01:43.922', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.922', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671894048768', '2080503671730470912', '2080503671755636736', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-24 12:01:43.925', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.925', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671915020288', '2080503671730470912', '2080503671755636736', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-24 12:01:43.929', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.93', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671931797504', '2080503671730470912', '2080503671755636736', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-24 12:01:43.933', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.934', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503671940186112', '2080503671730470912', '2080503671755636736', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-24 12:01:43.936', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 12:01:43.936', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503863380803584', '2080503671730470912', '2080503671755636736', '', 'AI_COMPLETED', 'AI 探索方案生成完成', '', '', '', '', 9,
+        '2026-07-24 12:02:29.578', NULL, NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-24 12:02:29.579', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080503863401775104', '2080503671730470912', '2080503671755636736', '', 'TASK_COMPLETED', '任务执行成功', '', '', '', '', 10,
+        '2026-07-24 12:02:29.584', '2026-07-24 12:02:29.584', NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-24 12:02:29.584', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379087024128', '2080625379049275392', '2080625379074441216', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-24 20:05:21.181', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.181', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379179298816', '2080625379049275392', '2080625379074441216', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-24 20:05:21.203', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.203', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379187687424', '2080625379049275392', '2080625379074441216', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-24 20:05:21.205', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.205', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379204464640', '2080625379049275392', '2080625379074441216', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-24 20:05:21.209', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.209', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379212853248', '2080625379049275392', '2080625379074441216', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-24 20:05:21.21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.211', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379225436160', '2080625379049275392', '2080625379074441216', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-24 20:05:21.213', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.214', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379242213376', '2080625379049275392', '2080625379074441216', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-24 20:05:21.217', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.218', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625379250601984', '2080625379049275392', '2080625379074441216', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-24 20:05:21.219', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 20:05:21.22', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625587812368384', '2080625379049275392', '2080625379074441216', '', 'AI_COMPLETED', 'AI 探索方案生成完成', '', '', '', '', 9,
+        '2026-07-24 20:06:10.944', NULL, NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-24 20:06:10.945', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080625587837534208', '2080625379049275392', '2080625379074441216', '', 'TASK_COMPLETED', '任务执行成功', '', '', '', '', 10,
+        '2026-07-24 20:06:10.951', '2026-07-24 20:06:10.951', NULL, NULL, NULL, '词元之河', NULL, 'deepseek-v4-pro', '2026-07-24 20:06:10.951', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571782369280', '2080642571732037632', '2080642571761397760', '', 'CONTEXT_ASSEMBLING', '正在装配智能体上下文', '', '', '', '', 1,
+        '2026-07-24 21:13:40.238', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.239', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571899809792', '2080642571732037632', '2080642571761397760', '', 'CONTEXT_ASSEMBLED', '智能体定义已装配', '', '', '', '', 2,
+        '2026-07-24 21:13:40.267', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.267', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571912392704', '2080642571732037632', '2080642571761397760', '', 'RULE_LOADED', '智能体规则已装配', '', '', '', '', 3,
+        '2026-07-24 21:13:40.269', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.27', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571929169920', '2080642571732037632', '2080642571761397760', '', 'SKILL_LOADED', '智能体技能已装配', '', '', '', '', 4,
+        '2026-07-24 21:13:40.273', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.274', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571937558528', '2080642571732037632', '2080642571761397760', '', 'SUB_AGENT_LOADED', '子智能体关系已装配', '', '', '', '', 5,
+        '2026-07-24 21:13:40.276', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.276', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571954335744', '2080642571732037632', '2080642571761397760', '', 'MEMORY_MATCHING', '正在匹配候选记忆', '', '', '', '', 6,
+        '2026-07-24 21:13:40.279', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.28', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571971112960', '2080642571732037632', '2080642571761397760', '', 'MEMORY_MISSED', '未命中候选记忆，转入 AI 探索', '', '', '', '', 7,
+        '2026-07-24 21:13:40.284', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.284', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642571983695872', '2080642571732037632', '2080642571761397760', '', 'AI_STARTED', 'AI 开始生成探索方案', '', '', '', '', 8,
+        '2026-07-24 21:13:40.285', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-24 21:13:40.287', 1);
+INSERT INTO "public"."execution_event"
+VALUES ('2080642642162790400', '2080642571732037632', '2080642571761397760', '', 'TASK_FAILED', '任务执行失败', '', '', '',
+        '客户端实例[2079542278239834112]不存在', 9, '2026-07-24 21:13:57.019', '2026-07-24 21:13:57.019', NULL, NULL, NULL, NULL, NULL, NULL,
+        '2026-07-24 21:13:57.019', 1);
+
+-- ----------------------------
+-- Table structure for memory_evidence
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."memory_evidence";
+CREATE TABLE "public"."memory_evidence"
+(
+    "id"                varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+    "turn_id"           varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
+    "memory_version_id" varchar(64) COLLATE "pg_catalog"."default",
+    "evidence_type"     varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
+    "evidence_content"  jsonb                                       NOT NULL,
+    "quality_score"     numeric(3, 2),
+    "create_time"       timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status"            int2                                        NOT NULL DEFAULT 1
+)
+;
+COMMENT
+ON COLUMN "public"."memory_evidence"."id" IS '证据主键，UUID';
+COMMENT
+ON COLUMN "public"."memory_evidence"."turn_id" IS '轮次主键，关联 chat_turn.id';
+COMMENT
+ON COLUMN "public"."memory_evidence"."memory_version_id" IS '记忆版本主键，关联 agent_memory_version.id';
+COMMENT
+ON COLUMN "public"."memory_evidence"."evidence_type" IS '证据类型: EXECUTION_TRACE/REASONING_SUMMARY';
+COMMENT
+ON COLUMN "public"."memory_evidence"."evidence_content" IS '证据内容: 原子命令调用链+结果摘要';
+COMMENT
+ON COLUMN "public"."memory_evidence"."quality_score" IS '质量评分 0.00-1.00';
+COMMENT
+ON COLUMN "public"."memory_evidence"."create_time" IS '创建时间';
+COMMENT
+ON COLUMN "public"."memory_evidence"."status" IS '状态: ON/DISABLE';
+COMMENT
+ON TABLE "public"."memory_evidence" IS '记忆证据';
+
+-- ----------------------------
+-- Records of memory_evidence
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for sub_agent_relation
@@ -986,38 +1782,36 @@ COMMENT ON TABLE "public"."sub_agent_relation" IS '子智能体关联';
 DROP TABLE IF EXISTS "public"."task";
 CREATE TABLE "public"."task" (
   "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "memory_id"         varchar(32) COLLATE "pg_catalog"."default",
-  "memory_version_no" int4,
+  "agent_memory_id"   varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "task_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "parent_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "next_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "step_type"   int2                                        NOT NULL DEFAULT 1,
+  "step_type"         int2                                        NOT NULL DEFAULT 1,
   "branch_condition" text COLLATE "pg_catalog"."default" NOT NULL,
   "branch_route" text COLLATE "pg_catalog"."default" NOT NULL,
   "request_params" text COLLATE "pg_catalog"."default" NOT NULL,
   "return_params" text COLLATE "pg_catalog"."default" NOT NULL,
-  "exec_status" int2                                        NOT NULL DEFAULT 1,
+  "exec_status"       int2                                        NOT NULL DEFAULT 1,
   "failure_reason" text COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::text,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
-  "reserve"     text COLLATE "pg_catalog"."default",
+  "reserve"           text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "provider_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "provider_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "model_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "model_code"  varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id"     varchar(255) COLLATE "pg_catalog"."default",
-  "client_id"   varchar(255) COLLATE "pg_catalog"."default",
+  "model_code"        varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "user_id"           varchar(255) COLLATE "pg_catalog"."default",
+  "client_id"         varchar(255) COLLATE "pg_catalog"."default",
+  "memory_version_id" varchar(255) COLLATE "pg_catalog"."default",
   "dispatch_id" varchar(255) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."task"."id" IS '主键';
 COMMENT
-ON COLUMN "public"."task"."memory_id" IS '关联记忆ID';
-COMMENT
-ON COLUMN "public"."task"."memory_version_no" IS '执行时的记忆版本号快照';
+ON COLUMN "public"."task"."agent_memory_id" IS '智能体记忆主键';
 COMMENT ON COLUMN "public"."task"."agent_id" IS '智能体主键';
 COMMENT ON COLUMN "public"."task"."task_name" IS '任务名称';
 COMMENT ON COLUMN "public"."task"."parent_task_id" IS '父任务ID';
@@ -1049,49 +1843,19 @@ ON COLUMN "public"."task"."user_id" IS '用户归属ID，确保任务归属到�
 COMMENT
 ON COLUMN "public"."task"."client_id" IS '执行客户端主键，关联 agent_client.id，记录由哪个客户端执行';
 COMMENT
-ON COLUMN "public"."task"."dispatch_id" IS '下发批次标识';
+ON COLUMN "public"."task"."memory_version_id" IS '记忆版本主键，关联 agent_memory_version.id，记录命中哪个记忆版本';
+COMMENT
+ON COLUMN "public"."task"."dispatch_id" IS '下发批次标识，服务端雪花ID，关联一次 WebSocket 批量命令下发';
 COMMENT ON TABLE "public"."task" IS '任务';
 
 -- ----------------------------
 -- Records of task
 -- ----------------------------
 INSERT INTO "public"."task"
-VALUES ('2080240362880032768', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
-        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"打开为新，找到文件传输助手，发送测试消息：你好啊","clientId":"2079805807278751744","sessionId":"2080240285419626496","modelId":"2077431632937414656"}', '我来一步步完成这个任务。首先查询WinRPA执行器的详细信息，获取可用的原子命令。好的，我来逐步执行这个任务。首先需要为WinRPA执行器创建所需的原子命令，然后逐个执行。
-
----
-
-## 📋任务分析|步骤 |操作 |目标 |
-|------|------|------|
-|1 |打开微信应用 |启动微信 |
-|2 |找到文件传输助手 |定位联系人 |
-|3 |发送消息 |发送"你好啊" |
-
----
-
-### 🔹步骤1：创建「打开微信」原子命令**步骤1：打开微信** —原子命令已创建（ID: `2080240470430375936`），执行启动微信。
-
-现在微信已打开，接下来需要在微信中找到"文件传输助手"。##任务执行报告### 📋任务概述在 Windows10上通过微信向文件传输助手发送测试消息「你好啊」。
-
----
-
-### 🔧已创建的原子命令|步骤 |命令ID |命令名称 |命令内容 |作用 |
-|------|--------|----------|----------|------|
-|1 | `2080240470430375936` |打开微信 | `start weixin` |启动微信应用程序 |
-|2 | `2080240492735684608` |微信搜索联系人 | `weixin_search_contact:文件传输助手` |搜索并定位文件传输助手 |
-|3 | `2080240505293430784` |发送微信消息 | `weixin_send_message:你好啊` |发送测试消息「你好啊」 |
-
----
-
-### ⚠️当前状态说明三条原子命令已成功创建并注册到 **WinRPA执行器**（编码：`win_rpa`，ID：`2079542278239834112`）下。但是，当前系统提供的工具仅支持**元数据管理**（创建/查询），暂未提供**原子命令执行**的直接调用接口。
-
-这意味着命令定义已就绪，但需要实际的执行器客户端实例来驱动运行。建议下一步：
-
-1.为该执行器创建**客户端实例**（`createClient`）
-2.由客户端按步骤1→2→3顺序执行上述原子命令---
-
->如需我继续创建客户端实例并推进实际执行，请确认。', 3, '', '2026-07-23 18:35:26.164', '2026-07-23 18:35:26.164', 1, '', '智能体命令调度任务',
-        '2077379712738693120', '词元之河', '2077431632937414656', 'deepseek-v4-pro', NULL, NULL, NULL, NULL);
+VALUES ('2080642571761397760', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"打开微信","clientId":"2080625787096334336","sessionId":"2080642554497642496","modelId":"2077431632937414656"}',
+        '', 4, '客户端实例[2079542278239834112]不存在', '2026-07-24 21:13:40.234', '2026-07-24 21:13:40.234', 1, '', '智能体命令调度任务', '', '', '', '', NULL,
+        NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for task_detail
@@ -1169,11 +1933,10 @@ COMMENT ON TABLE "public"."task_detail" IS '任务详情';
 -- Records of task_detail
 -- ----------------------------
 INSERT INTO "public"."task_detail"
-VALUES ('2080240536373223424', '2080240362880032768', '人机对话', '', '', '', '',
-        '{"agentId":"2079806936913846272","modelId":"2077431632937414656","promptContent":"# 系统铁律\n必须优先保证用户目标闭环；必须遵守安全边界；必须记录每个任务步骤；必须在失败时返回明确失败原因；最终用户回复只能使用受限Markdown（标题、段落、列表、引用、表格、行内代码、带语言标识的代码块），禁止HTML、SVG、脚本、事件属性；调度过程必须通过结构化事件输出，不得伪装成最终回复。当用户要求创建记忆、规则、技能或智能体时，必须在任务步骤中使用WRITE角色并以JSON格式输出创建参数。创建记忆JSON格式：{\"type\":\"创建记忆\",\"agentId\":\"当前智能体ID\",\"memoryName\":\"记忆名称\",\"stepName\":\"步骤名称\",\"triggerCondition\":\"触发条件\",\"triggerAction\":\"触发动作\"}；创建规则JSON格式：{\"type\":\"创建规则\",\"agentId\":\"当前智能体ID\",\"definitionDesc\":\"定义描述\",\"triggerCondition\":\"触发条件\",\"triggerAction\":\"触发动作\"}；创建技能JSON格式：{\"type\":\"创建技能\",\"agentId\":\"当前智能体ID\",\"definitionDesc\":\"定义描述\",\"execContent\":\"执行内容\",\"returnDataFormat\":\"返回格式\"}；创建智能体JSON格式：{\"type\":\"创建智能体\",\"name\":\"名称\",\"definitionDesc\":\"定义描述\"}。\n\n# 智能体定义\n你是一个win10上的控制软件，你的职责是根据用户下达的任务，通过执行器原子命令进行软件控制，直到达成目的。记住，不是一次性生成所有命令顺序，而是一个命令一个命令的执行，根据返回的数据结果，在决定执行哪一个命令\n\n# 第一铁律\nnull\n\n# 第二规则\nnull\n\n# 第三技能\nnull\n\n# 直属规则\n\n# 直属技能\n\n# 子智能体关系\n\n# 候选记忆\n\n# 可用执行器类型\n## 执行器\n编码：win_rpa\n名称：WinRPA执行器\n描述：Win10的RPA执行器\n\n# 会话摘要\n\n","commandContent":"打开为新，找到文件传输助手，发送测试消息：你好啊"}',
-        '{"success":true,"responseContent":"我来一步步完成这个任务。首先查询WinRPA执行器的详细信息，获取可用的原子命令。好的，我来逐步执行这个任务。首先需要为WinRPA执行器创建所需的原子命令，然后逐个执行。\n\n---\n\n## 📋任务分析|步骤 |操作 |目标 |\n|------|------|------|\n|1 |打开微信应用 |启动微信 |\n|2 |找到文件传输助手 |定位联系人 |\n|3 |发送消息 |发送\"你好啊\" |\n\n---\n\n### 🔹步骤1：创建「打开微信」原子命令**步骤1：打开微信** —原子命令已创建（ID: `2080240470430375936`），执行启动微信。\n\n现在微信已打开，接下来需要在微信中找到\"文件传输助手\"。##任务执行报告### 📋任务概述在 Windows10上通过微信向文件传输助手发送测试消息「你好啊」。\n\n---\n\n### 🔧已创建的原子命令|步骤 |命令ID |命令名称 |命令内容 |作用 |\n|------|--------|----------|----------|------|\n|1 | `2080240470430375936` |打开微信 | `start weixin` |启动微信应用程序 |\n|2 | `2080240492735684608` |微信搜索联系人 | `weixin_search_contact:文件传输助手` |搜索并定位文件传输助手 |\n|3 | `2080240505293430784` |发送微信消息 | `weixin_send_message:你好啊` |发送测试消息「你好啊」 |\n\n---\n\n### ⚠️当前状态说明三条原子命令已成功创建并注册到 **WinRPA执行器**（编码：`win_rpa`，ID：`2079542278239834112`）下。但是，当前系统提供的工具仅支持**元数据管理**（创建/查询），暂未提供**原子命令执行**的直接调用接口。\n\n这意味着命令定义已就绪，但需要实际的执行器客户端实例来驱动运行。建议下一步：\n\n1.为该执行器创建**客户端实例**（`createClient`）\n2.由客户端按步骤1→2→3顺序执行上述原子命令---\n\n>如需我继续创建客户端实例并推进实际执行，请确认。","failureReason":"","providerId":"2077379712738693120","providerName":"词元之河","modelId":"2077431632937414656","modelCode":"deepseek-v4-pro"}',
-        '2026-07-23 18:36:07.528', '2026-07-23 18:36:07.528', 1, '', 'AI探索执行详情', '2077379712738693120', '词元之河', '2077431632937414656',
-        'deepseek-v4-pro', NULL, NULL, NULL, NULL, NULL, 1, 3);
+VALUES ('2080642642141818880', '2080642571761397760', '人机对话', '', '', '', '',
+        '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"打开微信","clientId":"2080625787096334336","sessionId":"2080642554497642496","modelId":"2077431632937414656"}',
+        '客户端实例[2079542278239834112]不存在', '2026-07-24 21:13:57.014', '2026-07-24 21:13:57.014', 1, '', '智能体命令调度失败详情', '', '', '', '', NULL,
+        NULL, NULL, NULL, NULL, 1, 4);
 
 -- ----------------------------
 -- Indexes structure for table agent_chat_message
@@ -1245,6 +2008,13 @@ CREATE INDEX "idx_agent_definition_default_model" ON "public"."agent_definition"
 ALTER TABLE "public"."agent_definition" ADD CONSTRAINT "agent_definition_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table agent_executor
+-- ----------------------------
+CREATE INDEX "idx_agent_executor_protocol_id" ON "public"."agent_executor" USING btree (
+    "protocol_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+
+-- ----------------------------
 -- Uniques structure for table agent_executor
 -- ----------------------------
 ALTER TABLE "public"."agent_executor"
@@ -1270,18 +2040,62 @@ CREATE INDEX "idx_agent_memory_agent_status" ON "public"."agent_memory" USING bt
 ALTER TABLE "public"."agent_memory" ADD CONSTRAINT "agent_memory_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
--- Indexes structure for table agent_memory_step
+-- Indexes structure for table agent_memory_detail
 -- ----------------------------
-CREATE INDEX "idx_ams_memory_sequence" ON "public"."agent_memory_step" USING btree (
-    "memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+CREATE INDEX "idx_agent_memory_detail_memory_status" ON "public"."agent_memory_detail" USING btree (
+    "agent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+    "status" "pg_catalog"."int2_ops" ASC NULLS LAST
+    );
+CREATE INDEX "idx_agent_memory_detail_next_step" ON "public"."agent_memory_detail" USING btree (
+    "next_step_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+CREATE INDEX "idx_agent_memory_detail_parent_step" ON "public"."agent_memory_detail" USING btree (
+    "parent_step_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+
+-- ----------------------------
+-- Primary Key structure for table agent_memory_detail
+-- ----------------------------
+ALTER TABLE "public"."agent_memory_detail"
+    ADD CONSTRAINT "agent_memory_detail_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Uniques structure for table agent_memory_version
+-- ----------------------------
+ALTER TABLE "public"."agent_memory_version"
+    ADD CONSTRAINT "agent_memory_version_memory_id_version_no_key" UNIQUE ("memory_id", "version_no");
+
+-- ----------------------------
+-- Primary Key structure for table agent_memory_version
+-- ----------------------------
+ALTER TABLE "public"."agent_memory_version"
+    ADD CONSTRAINT "agent_memory_version_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Indexes structure for table agent_memory_version_detail
+-- ----------------------------
+CREATE INDEX "idx_mvd_version" ON "public"."agent_memory_version_detail" USING btree (
+    "version_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
     "sequence_no" "pg_catalog"."int4_ops" ASC NULLS LAST
     );
 
 -- ----------------------------
--- Primary Key structure for table agent_memory_step
+-- Primary Key structure for table agent_memory_version_detail
 -- ----------------------------
-ALTER TABLE "public"."agent_memory_step"
-    ADD CONSTRAINT "agent_memory_step_pkey" PRIMARY KEY ("id");
+ALTER TABLE "public"."agent_memory_version_detail"
+    ADD CONSTRAINT "agent_memory_version_detail_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Uniques structure for table agent_protocol
+-- ----------------------------
+ALTER TABLE "public"."agent_protocol"
+    ADD CONSTRAINT "agent_protocol_protocol_code_key" UNIQUE ("protocol_code");
+
+-- ----------------------------
+-- Primary Key structure for table agent_protocol
+-- ----------------------------
+ALTER TABLE "public"."agent_protocol"
+    ADD CONSTRAINT "agent_protocol_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table agent_rule
@@ -1419,6 +2233,22 @@ ALTER TABLE "public"."execution_event"
     ADD CONSTRAINT "execution_event_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
+-- Indexes structure for table memory_evidence
+-- ----------------------------
+CREATE INDEX "idx_memory_evidence_turn" ON "public"."memory_evidence" USING btree (
+    "turn_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+CREATE INDEX "idx_memory_evidence_version" ON "public"."memory_evidence" USING btree (
+    "memory_version_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+
+-- ----------------------------
+-- Primary Key structure for table memory_evidence
+-- ----------------------------
+ALTER TABLE "public"."memory_evidence"
+    ADD CONSTRAINT "memory_evidence_pkey" PRIMARY KEY ("id");
+
+-- ----------------------------
 -- Indexes structure for table sub_agent_relation
 -- ----------------------------
 CREATE INDEX "idx_sub_agent_relation_main_status" ON "public"."sub_agent_relation" USING btree (
@@ -1439,7 +2269,7 @@ CREATE INDEX "idx_task_agent_update" ON "public"."task" USING btree (
   "update_time" "pg_catalog"."timestamp_ops" DESC NULLS FIRST
 );
 CREATE INDEX "idx_task_memory_status" ON "public"."task" USING btree (
-    "memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+    "agent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
     "exec_status" "pg_catalog"."int2_ops" ASC NULLS LAST
 );
 CREATE INDEX "idx_task_model_snapshot" ON "public"."task" USING btree (

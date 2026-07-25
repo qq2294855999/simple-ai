@@ -113,8 +113,11 @@ class MPAgentMemoryView implements AgentMemoryView {
         LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), AgentMemory::getId, findAllRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentId()), AgentMemory::getAgentId, findAllRequest.getAgentId())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getParentMemoryId()), AgentMemory::getParentMemoryId, findAllRequest.getParentMemoryId())
                     .like(ObjUtil.isNotEmpty(findAllRequest.getMemoryName()), AgentMemory::getMemoryName, findAllRequest.getMemoryName())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getVersionStatus()), AgentMemory::getVersionStatus, findAllRequest.getVersionStatus())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getUserId()), AgentMemory::getUserId, findAllRequest.getUserId())
+                    .eq(ObjUtil.isNotEmpty(findAllRequest.getSourceTaskId()), AgentMemory::getSourceTaskId, findAllRequest.getSourceTaskId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemory::getStatus, findAllRequest.getStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId());

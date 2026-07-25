@@ -1,15 +1,9 @@
 package com.simple.ai.common.dto.task;
 
-import java.util.Date;
-
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
-
-import java.util.Map;
 
 /**
  * 任务创建请求，前端仅提交用户填写字段，系统字段由服务端处理。
@@ -21,9 +15,9 @@ import java.util.Map;
 @Schema(title = "任务(task)创建请求参数")
 public class CreateTaskRequest {
 
-    @Schema(description = "智能体记忆主键")
-    @NotEmpty(message = "智能体记忆主键不能为空")
-    private String agentMemoryId;
+    @Schema(description = "关联记忆ID")
+    @NotEmpty(message = "关联记忆ID不能为空")
+    private String memoryId;
 
     @Schema(description = "任务名称")
     @NotEmpty(message = "任务名称不能为空")
@@ -48,4 +42,3 @@ public class CreateTaskRequest {
     @Schema(description = "备注")
     private String remark;
 }
-

@@ -116,4 +116,65 @@ public class AgentMemoryController {
         agentMemoryService.publish(id);
         return R.ok();
     }
+
+    /**
+     * 退役记忆版本
+     *
+     * @param id 记忆ID
+     * @return 空响应
+     */
+    @PutMapping("retire/{id}")
+    @Operation(summary = "退役记忆版本")
+    @HasAuthority("sys:agent-memory:retire")
+    public R<Object> retire(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        agentMemoryService.retire(id);
+        return R.ok();
+    }
+
+    /**
+     * 获取记忆的参数定义。
+     * <p>返回参数定义JSON和步骤列表，用于前端动态生成执行表单。</p>
+     *
+     * @param id 记忆ID
+     * @return 参数定义响应
+     */
+    @GetMapping("{id}/params-definition")
+    @Operation(summary = "获取记忆参数定义")
+    @HasAuthority("sys:agent-memory:find")
+    public R<ParamsDefinitionResponse> getParamsDefinition(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        return R.ok(agentMemoryService.getParamsDefinition(id));
+    }
+
+    /**
+     * 执行记忆。
+     * <p>根据用户传入的参数替换步骤模板中的占位符，创建任务并逐步骤执行。</p>
+     *
+     * @param id      记忆ID
+     * @param request 执行请求（含参数和客户端ID）
+     * @return 执行响应
+     */
+    @PostMapping("{id}/execute")
+    @Operation(summary = "执行记忆")
+    @HasAuthority("sys:agent-memory:execute")
+    public R<ExecuteMemoryResponse> execute(@PathVariable String id, @RequestBody ExecuteMemoryRequest request) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        return R.ok(agentMemoryService.execute(id, request));
+    }
+
+    /**
+     * 查询记忆版本历史。
+     * <p>沿 parentMemoryId 链路追溯，返回该记忆的完整版本演进链。</p>
+     *
+     * @param id 记忆ID
+     * @return 版本历史列表
+     */
+    @GetMapping("{id}/version-history")
+    @Operation(summary = "查询记忆版本历史")
+    @HasAuthority("sys:agent-memory:find")
+    public R<java.util.List<MemoryVersionHistoryResponse>> findVersionHistory(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        return R.ok(agentMemoryService.findVersionHistory(id));
+    }
 }

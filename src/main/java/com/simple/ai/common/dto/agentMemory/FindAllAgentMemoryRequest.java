@@ -23,11 +23,17 @@ public class FindAllAgentMemoryRequest {
     @Schema(description = "智能体ID")
     private String agentId;
 
+    @Schema(description = "父记忆ID，用于查询某记忆的版本链")
+    private String parentMemoryId;
+
     @Schema(description = "记忆名称模板")
     private String memoryName;
 
     @Schema(description = "版本状态：1=DRAFT, 2=PUBLISHED")
     private Integer versionStatus;
+
+    @Schema(description = "用户ID，用于多用户数据隔离")
+    private String userId;
 
     @Schema(description = "创建时间")
     private Date createTime;
@@ -43,4 +49,7 @@ public class FindAllAgentMemoryRequest {
 
     @Schema(description = "备注")
     private String remark;
+
+    @Schema(description = "来源任务ID，用于幂等性校验")
+    private String sourceTaskId;
 }

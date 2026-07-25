@@ -2,8 +2,6 @@ package com.simple.ai.common.entity.agentMemoryStep;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.ai.common.enums.AgentStepTypeProcess;
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -12,9 +10,10 @@ import java.util.Date;
 
 /**
  * 智能体记忆步骤(agent_memory_step)实体类。
+ *
  * <p>记忆步骤是记忆的有序执行序列，每步对应一个原子命令调用。
- * args_template 支持与记忆 params_definition 对应的 {param} 占位符，
- * 执行时由 MemoryExecutor 替换为实际参数值。</p>
+ * sequence_no 决定执行顺序，args_template 支持与记忆 params_definition
+ * 对应的 {param} 占位符，执行时由 MemoryExecutor 替换为实际参数值。</p>
  *
  * @author qty
  */
@@ -38,22 +37,28 @@ public class AgentMemoryStep {
     private String memoryId;
 
     /**
-     * 步骤序号（从1开始）
+     * 步骤序号，从10开始递增，决定执行顺序
      */
-    @TableField(value = "step_no")
-    private Integer stepNo;
+    @TableField(value = "sequence_no")
+    private Integer sequenceNo;
 
     /**
-     * 步骤名称
-     */
-    @TableField(value = "step_name")
-    private String stepName;
-
-    /**
-     * 原子命令ID
+     * 原子命令主键，关联 atomic_command.id
      */
     @TableField(value = "atomic_command_id")
     private String atomicCommandId;
+
+    /**
+     * 原子命令编码（冗余），如 weixin_search_contact
+     */
+    @TableField(value = "atomic_command_code")
+    private String atomicCommandCode;
+
+    /**
+     * 步骤名称，如"搜索联系人"
+     */
+    @TableField(value = "step_name")
+    private String stepName;
 
     /**
      * 参数模板JSON，支持{param}占位符
@@ -62,34 +67,40 @@ public class AgentMemoryStep {
     private String argsTemplate;
 
     /**
-     * 步骤类型
+     * 执行前随机延迟最小值（毫秒）
      */
-    @TableField(value = "step_type")
-    private AgentStepTypeProcess stepType;
+    @TableField(value = "delay_min_ms")
+    private Integer delayMinMs;
 
     /**
-     * 父步骤ID（用于分支/循环嵌套）
+     * 执行前随机延迟最大值（毫秒）
      */
-    @TableField(value = "parent_step_id")
-    private String parentStepId;
+    @TableField(value = "delay_max_ms")
+    private Integer delayMaxMs;
 
     /**
-     * 下一步骤ID
+     * 命令超时时间（毫秒）
      */
-    @TableField(value = "next_step_id")
-    private String nextStepId;
+    @TableField(value = "timeout_ms")
+    private Integer timeoutMs;
 
     /**
-     * 分支条件表达式
+     * 成功断言规则，用于判断该步骤是否执行成功
      */
-    @TableField(value = "branch_condition")
-    private String branchCondition;
+    @TableField(value = "success_assertion")
+    private String successAssertion;
 
     /**
-     * 分支路由标识
+     * 失败处理策略: STOP(停止) / RETRY(重试) / SKIP(跳过)
      */
-    @TableField(value = "branch_route")
-    private String branchRoute;
+    @TableField(value = "failure_strategy")
+    private String failureStrategy;
+
+    /**
+     * 状态：ON(启用) / OFF(停用)
+     */
+    @TableField(value = "status")
+    private String status;
 
     /**
      * 创建时间
@@ -102,22 +113,4 @@ public class AgentMemoryStep {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
-
-    /**
-     * 状态
-     */
-    @TableField(value = "status")
-    private Status status;
-
-    /**
-     * 预留字段
-     */
-    @TableField(value = "reserve")
-    private String reserve;
-
-    /**
-     * 备注
-     */
-    @TableField(value = "remark")
-    private String remark;
 }

@@ -92,4 +92,10 @@ public class AgentContext {
      */
     @Schema(description = "当前执行器类型ID")
     private String executorId;
+
+    /**
+     * 当前会话ID，用于AI调用时传递会话上下文。
+     */
+    @Schema(description = "当前会话ID")
+    private String sessionId;
 }

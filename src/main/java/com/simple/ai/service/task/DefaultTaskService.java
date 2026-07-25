@@ -66,8 +66,8 @@ class DefaultTaskService implements TaskService {
     public String save(CreateTaskRequest createRequest) {
 
         // 校验记忆存在
-        AgentMemory memory = agentMemoryView.findById(createRequest.getAgentMemoryId());
-        AssertUtils.notEmpty(memory, "记忆[{}]不存在", createRequest.getAgentMemoryId());
+        AgentMemory memory = agentMemoryView.findById(createRequest.getMemoryId());
+        AssertUtils.notEmpty(memory, "记忆[{}]不存在", createRequest.getMemoryId());
 
         // 构建任务并根据所属记忆回填智能体归属
         var entity = copy.toEntity(createRequest);
@@ -84,8 +84,8 @@ class DefaultTaskService implements TaskService {
         AssertUtils.notEmpty(task, "主键[{}]的数据不存在", updateRequest.getId());
 
         // 校验变更后的记忆存在，并使用其智能体归属覆盖任务关联
-        AgentMemory memory = agentMemoryView.findById(updateRequest.getAgentMemoryId());
-        AssertUtils.notEmpty(memory, "记忆[{}]不存在", updateRequest.getAgentMemoryId());
+        AgentMemory memory = agentMemoryView.findById(updateRequest.getMemoryId());
+        AssertUtils.notEmpty(memory, "记忆[{}]不存在", updateRequest.getMemoryId());
 
         // 构建任务并同步记忆对应的智能体归属
         var entity = copy.toEntity(updateRequest);
@@ -104,4 +104,3 @@ class DefaultTaskService implements TaskService {
         taskView.deleteByIds(ids);
     }
 }
-

@@ -20,8 +20,8 @@ public class PageAggregateTaskResponse {
     @Schema(description = "主键")
     private String id;
 
-    @Schema(description = "智能体记忆ID")
-    private String agentMemoryId;
+    @Schema(description = "关联记忆ID")
+    private String memoryId;
 
     @Schema(description = "记忆名称")
     private String memoryName;

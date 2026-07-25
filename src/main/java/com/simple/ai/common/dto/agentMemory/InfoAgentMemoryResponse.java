@@ -23,6 +23,12 @@ public class InfoAgentMemoryResponse {
     @Schema(description = "智能体ID")
     private String agentId;
 
+    @Schema(description = "父记忆ID")
+    private String parentMemoryId;
+
+    @Schema(description = "父记忆名称")
+    private String parentMemoryName;
+
     @Schema(description = "记忆名称模板")
     private String memoryName;
 

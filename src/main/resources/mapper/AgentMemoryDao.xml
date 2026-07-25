@@ -3,11 +3,13 @@
 <mapper namespace="com.simple.ai.view.agentMemory.AgentMemoryRepository">
 
     <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
-        insert into agent_memory(id, agent_id, memory_name, params_definition, version_no, version_status, source_task_id, summary, create_reason, client_id, user_id, create_user_id, create_time,
+        insert into agent_memory(id, agent_id, memory_name, params_definition, version_no, version_status, parent_memory_id, source_task_id, summary, create_reason, client_id, user_id, create_user_id,
+        create_time,
         update_time, status, reserve, remark)
         values
         <foreach collection="entities" item="entity" separator=",">
-            (#{entity.id}, #{entity.agentId}, #{entity.memoryName}, #{entity.paramsDefinition}, #{entity.versionNo}, #{entity.versionStatus}, #{entity.sourceTaskId}, #{entity.summary},
+            (#{entity.id}, #{entity.agentId}, #{entity.memoryName}, #{entity.paramsDefinition}, #{entity.versionNo}, #{entity.versionStatus}, #{entity.parentMemoryId}, #{entity.sourceTaskId},
+            #{entity.summary},
             #{entity.createReason}, #{entity.clientId}, #{entity.userId}, #{entity.createUserId}, #{entity.createTime}, #{entity.updateTime}, #{entity.status}, #{entity.reserve}, #{entity.remark})
         </foreach>
     </insert>

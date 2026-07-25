@@ -136,11 +136,11 @@ class DefaultAgentDefinitionService implements AgentDefinitionService {
     public DeleteCascadeAgentDefinitionResponse deleteCascadeByIds(List<String> ids) {
         AssertUtils.notEmpty(ids, "主键不能为空");
 
-        // 校验删除对象全部存在
-        validateDeleteAgents(ids);
-
-        // 预统计删除影响范围
+        // 预统计删除影响范围（同时用于校验删除对象存在性）
         DeleteCascadeAgentDefinitionResponse response = agentDefinitionView.countCascadeByIds(ids);
+
+        // 校验删除对象全部存在
+        validateDeleteAgents(ids, response);
 
         // 按依赖顺序清理聚合子数据
         executeCascadeDelete(ids);
@@ -195,10 +195,10 @@ class DefaultAgentDefinitionService implements AgentDefinitionService {
     /**
      * 校验待删除智能体全部存在。
      *
-     * @param ids 智能体主键列表
+     * @param ids      智能体主键列表
+     * @param response 已查询的级联统计结果
      */
-    private void validateDeleteAgents(List<String> ids) {
-        DeleteCascadeAgentDefinitionResponse response = agentDefinitionView.countCascadeByIds(ids);
+    private void validateDeleteAgents(List<String> ids, DeleteCascadeAgentDefinitionResponse response) {
         Long agentCount = response.getAgentCount();
         AssertUtils.isTrue(agentCount == ids.size(), "存在无效的智能体主键，无法删除");
     }

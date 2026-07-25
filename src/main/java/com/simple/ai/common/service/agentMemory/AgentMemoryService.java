@@ -58,4 +58,40 @@ public interface AgentMemoryService {
      * @param id 记忆ID
      */
     void publish(String id);
+
+    /**
+     * 退役记忆版本。
+     * <p>将 PUBLISHED 状态的记忆退役为 RETIRED，使其不再被记忆匹配器命中。</p>
+     *
+     * @param id 记忆ID
+     */
+    void retire(String id);
+
+    /**
+     * 获取记忆的参数定义。
+     * <p>返回参数定义JSON和步骤列表，用于前端动态生成执行表单。</p>
+     *
+     * @param id 记忆ID
+     * @return 参数定义响应
+     */
+    ParamsDefinitionResponse getParamsDefinition(String id);
+
+    /**
+     * 执行记忆。
+     * <p>根据用户传入的参数替换步骤模板中的占位符，创建任务并逐步骤执行。</p>
+     *
+     * @param id      记忆ID
+     * @param request 执行请求（含参数和客户端ID）
+     * @return 执行响应（含任务ID和执行状态）
+     */
+    ExecuteMemoryResponse execute(String id, ExecuteMemoryRequest request);
+
+    /**
+     * 查询记忆版本历史。
+     * <p>沿 parentMemoryId 链路向上追溯，返回该记忆的完整版本演进链。</p>
+     *
+     * @param id 记忆ID
+     * @return 版本历史列表（按版本号降序）
+     */
+    java.util.List<MemoryVersionHistoryResponse> findVersionHistory(String id);
 }
