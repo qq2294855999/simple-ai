@@ -164,15 +164,6 @@ class MPAtomicCommandView implements AtomicCommandView {
 
     @Override
     public void delete(DeleteAtomicCommandRequest request) {
-        LambdaQueryWrapper<AtomicCommand> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AtomicCommand::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getName()), AtomicCommand::getName, request.getName())
-                    .eq(ObjUtil.isNotEmpty(request.getCommand()), AtomicCommand::getCommand, request.getCommand())
-                    .eq(ObjUtil.isNotEmpty(request.getRole()), AtomicCommand::getRole, request.getRole())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AtomicCommand::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AtomicCommand::getReserve, request.getReserve())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), AtomicCommand::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 }
-

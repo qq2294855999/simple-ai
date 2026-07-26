@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.command;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
@@ -8,25 +9,18 @@ import lombok.Data;
  * @author qty
  */
 @Data
+@Schema(title = "业务执行客户端回传结果")
 public class AgentExecutorResponse {
 
-    /**
-     * 任务ID，用于关联等待中的调度流程
-     */
+    @Schema(description = "任务ID，用于关联等待中的调度流程")
     private String taskId;
 
-    /**
-     * 是否执行成功
-     */
+    @Schema(description = "是否执行成功")
     private Boolean success;
 
-    /**
-     * 执行响应内容
-     */
+    @Schema(description = "执行响应内容")
     private String responseContent;
 
-    /**
-     * 失败原因
-     */
+    @Schema(description = "失败原因")
     private String failureReason;
 }

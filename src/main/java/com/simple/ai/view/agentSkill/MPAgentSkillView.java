@@ -120,16 +120,7 @@ class MPAgentSkillView implements AgentSkillView {
 
     @Override
     public void delete(DeleteAgentSkillRequest request) {
-        LambdaQueryWrapper<AgentSkill> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentSkill::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getAgentId()), AgentSkill::getAgentId, request.getAgentId())
-                    .eq(ObjUtil.isNotEmpty(request.getDefinitionDesc()), AgentSkill::getDefinitionDesc, request.getDefinitionDesc())
-                    .eq(ObjUtil.isNotEmpty(request.getExecContent()), AgentSkill::getExecContent, request.getExecContent())
-                    .eq(ObjUtil.isNotEmpty(request.getReturnDataFormat()), AgentSkill::getReturnDataFormat, request.getReturnDataFormat())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentSkill::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentSkill::getReserve, request.getReserve())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentSkill::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 
     /**
@@ -188,4 +179,3 @@ class MPAgentSkillView implements AgentSkillView {
         return queryWrapper;
     }
 }
-

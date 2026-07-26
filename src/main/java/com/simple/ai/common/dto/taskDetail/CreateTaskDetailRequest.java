@@ -1,15 +1,9 @@
 package com.simple.ai.common.dto.taskDetail;
 
-import java.util.Date;
-
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
-
-import java.util.Map;
 
 /**
  * 任务详情创建请求，前端仅提交用户填写字段，系统字段由服务端处理。
@@ -35,8 +29,8 @@ public class CreateTaskDetailRequest {
     @Schema(description = "下一个任务ID")
     private String nextTaskId;
 
-    @Schema(description = "步骤类型：智能体步骤类型")
-    @NotEmpty(message = "步骤类型：智能体步骤类型不能为空")
+    @Schema(description = "步骤类型")
+    @NotEmpty(message = "步骤类型不能为空")
     private String stepType;
 
     @Schema(description = "分支条件")
@@ -48,4 +42,3 @@ public class CreateTaskDetailRequest {
     @Schema(description = "备注")
     private String remark;
 }
-

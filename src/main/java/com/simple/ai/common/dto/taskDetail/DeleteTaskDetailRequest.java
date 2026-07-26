@@ -1,64 +1,21 @@
 package com.simple.ai.common.dto.taskDetail;
 
-import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import java.util.Date;
-
+/**
+ * 任务详情(task_detail)删除请求参数。
+ *
+ * @author qty
+ */
 @Data
 @Accessors(chain = true)
-@Schema(title = "任务详情(task_detail)单条数据请求参数")
+@Schema(title = "任务详情删除请求参数")
 public class DeleteTaskDetailRequest {
 
     @Schema(description = "主键")
+    @NotEmpty(message = "主键不能为空")
     private String id;
-
-    @Schema(description = "任务主键")
-    private String taskId;
-
-    @Schema(description = "任务名称")
-    private String taskName;
-
-    @Schema(description = "父任务ID")
-    private String parentTaskId;
-
-    @Schema(description = "下一个任务ID")
-    private String nextTaskId;
-
-    @Schema(description = "步骤类型：智能体步骤类型")
-    private String stepType;
-
-    @Schema(description = "分支条件")
-    private String branchCondition;
-
-    @Schema(description = "分支路由")
-    private String branchRoute;
-
-    @Schema(description = "请求参数")
-    private String requestParams;
-
-    @Schema(description = "返回参数")
-    private String returnParams;
-
-    @Schema(description = "执行状态")
-    private String execStatus;
-
-    @Schema(description = "创建时间")
-    private Date createTime;
-
-    @Schema(description = "修改时间")
-    private Date updateTime;
-
-    @Schema(description = "状态")
-    private Status status;
-
-    @Schema(description = "扩展")
-    private String reserve;
-
-    @Schema(description = "备注")
-    private String remark;
-
 }
-

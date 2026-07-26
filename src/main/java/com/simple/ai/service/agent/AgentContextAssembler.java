@@ -1,6 +1,5 @@
 package com.simple.ai.service.agent;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.simple.ai.common.constant.AgentIronRuleConstant;
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
@@ -8,20 +7,20 @@ import com.simple.ai.common.dto.agentRule.FindAllAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.FindAllAgentSkillRequest;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.subAgentRelation.FindAllSubAgentRelationRequest;
+import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
-import com.simple.ai.common.service.session.AgentSessionService;
+import com.simple.ai.common.view.agentClient.AgentClientView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.agentExecutor.AgentExecutorView;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.ai.common.view.agentRule.AgentRuleView;
 import com.simple.ai.common.view.agentSkill.AgentSkillView;
 import com.simple.ai.common.view.subAgentRelation.SubAgentRelationView;
-import com.simple.ai.view.agentExecutor.AgentExecutorRepository;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.mp.common.enums.Status;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +32,7 @@ import java.util.List;
  * 智能体上下文组装器。
  *
  * <p>按 userId 过滤所有资产，确保多用户数据隔离。
- * 加载执行器能力信息供命令路由使用。</p>
+ * 通过会话绑定的客户端解析执行器信息，将当前会话上下文写入提示词供 AI 直接感知。</p>
  *
  * @author qty
  */
@@ -71,28 +70,22 @@ public class AgentContextAssembler {
     private AgentMemoryView agentMemoryView;
 
     /**
-     * 执行器视图
+     * 客户端实例视图，用于从 clientId 解析客户端名称和执行器类型
+     */
+    @Autowired
+    private AgentClientView agentClientView;
+
+    /**
+     * 执行器类型视图，用于从 executorId 解析执行器编码和名称
      */
     @Autowired
     private AgentExecutorView agentExecutorView;
 
     /**
-     * 智能体会话服务
-     */
-    @Autowired
-    private AgentSessionService agentSessionService;
-
-    /**
-     * 执行器类型仓库
-     */
-    @Autowired
-    private AgentExecutorRepository agentExecutorRepository;
-
-    /**
      * 组装智能体上下文。
      *
-     * <p>按请求中的 userId 过滤规则/技能/记忆等资产，
-     * 确保多用户数据隔离，同时加载执行器能力信息供命令路由使用。</p>
+     * <p>按请求中的 userId 过滤规则/技能/记忆等资产，确保多用户数据隔离。
+     * 通过会话绑定的客户端解析执行器信息，将当前会话上下文写入提示词供 AI 直接感知。</p>
      *
      * @param request 命令调度请求
      * @return 智能体上下文
@@ -117,14 +110,11 @@ public class AgentContextAssembler {
         // 查询智能体启用候选记忆（按 userId 过滤，仅已发布版本）
         List<AgentMemory> memories = loadMemories(request.getAgentId(), request.getUserId());
 
-        // 查询会话摘要
-        String sessionSummary = loadSessionSummary(request.getSessionId());
-
-        // 加载当前用户下所有启用的执行器类型，供 AI 决策时按 executor_type 筛选可用命令
-        List<AgentExecutor> executors = loadExecutors(request.getUserId());
+        // 解析当前会话的客户端和执行器信息，供提示词直接告知AI
+        AgentContext sessionContext = resolveSessionContext(request.getClientId());
 
         // 构建上下文对象
-        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, sessionSummary, executors, request.getUserId(), request.getClientId(), request.getSessionId());
+        return buildContext(agentDefinition, rules, skills, subAgentRelations, memories, sessionContext, request.getUserId(), request.getClientId(), request.getSessionId());
     }
 
     /**
@@ -206,18 +196,44 @@ public class AgentContextAssembler {
     }
 
     /**
-     * 查询会话摘要。
+     * 解析当前会话的客户端和执行器信息。
      *
-     * @param sessionId 会话ID
-     * @return 会话摘要
+     * <p>通过 clientId 查询客户端实例获取名称、在线状态和执行器类型ID，
+     * 再通过执行器类型ID查询执行器编码和名称，将完整会话上下文填入 AgentContext。</p>
+     *
+     * @param clientId 客户端ID
+     * @return 填充了会话上下文信息的 AgentContext 对象
      */
-    private String loadSessionSummary(String sessionId) {
+    private AgentContext resolveSessionContext(String clientId) {
+        AgentContext context = new AgentContext();
 
-        // 会话ID为空时表示无需读取历史摘要
-        if (sessionId == null || sessionId.isBlank()) {
-            return "";
+        // 客户端ID为空时返回空上下文，不阻塞主流程
+        if (clientId == null || clientId.isBlank()) {
+            return context;
         }
-        return agentSessionService.findSummary(sessionId);
+
+        // 查询客户端实例，获取名称、在线状态和执行器类型ID
+        AgentClient client = agentClientView.findById(clientId);
+        if (client == null) {
+            return context;
+        }
+
+        context.setClientId(clientId);
+        context.setClientName(client.getClientName() != null ? client.getClientName() : "");
+        context.setClientOnline(client.getIsOnline() != null ? client.getIsOnline() : false);
+
+        // 通过客户端关联的执行器类型ID查询执行器编码和名称
+        String executorId = client.getExecutorId();
+        if (executorId != null && !executorId.isBlank()) {
+            context.setExecutorId(executorId);
+            AgentExecutor executor = agentExecutorView.findById(executorId);
+            if (executor != null) {
+                context.setExecutorCode(executor.getExecutorCode() != null ? executor.getExecutorCode() : "");
+                context.setExecutorName(executor.getExecutorName() != null ? executor.getExecutorName() : "");
+            }
+        }
+
+        return context;
     }
 
     /**
@@ -228,15 +244,14 @@ public class AgentContextAssembler {
      * @param skills 技能列表
      * @param subAgentRelations 子智能体关系列表
      * @param memories 候选记忆列表
-     * @param sessionSummary 会话摘要
-     * @param executors 执行器类型列表
+     * @param sessionContext 会话上下文（含客户端和执行器信息）
      * @param userId 用户ID
      * @param clientId 客户端ID
      * @param sessionId 会话ID
      * @return 智能体上下文
      */
     private AgentContext buildContext(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills, List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories,
-                                      String sessionSummary, List<AgentExecutor> executors, String userId, String clientId, String sessionId) {
+                                      AgentContext sessionContext, String userId, String clientId, String sessionId) {
         AgentContext context = new AgentContext();
         context.setAgentDefinition(agentDefinition);
         context.setSystemIronRule(AgentIronRuleConstant.SYSTEM_IRON_RULE);
@@ -244,19 +259,20 @@ public class AgentContextAssembler {
         context.setSkills(skills);
         context.setSubAgentRelations(subAgentRelations);
         context.setMemories(memories);
-        context.setSessionSummary(sessionSummary);
-        context.setExecutors(executors);
 
-        // 注入可信上下文：当前用户ID、客户端ID和会话ID，供后续AI调用和命令路由使用
+        // 注入可信上下文：当前用户ID和会话ID
         context.setUserId(userId);
-        context.setClientId(clientId);
         context.setSessionId(sessionId != null ? sessionId : "");
 
-        // 根据客户端ID推导执行器类型ID，告知AI当前可用命令范围
-        String executorId = resolveExecutorId(clientId);
-        context.setExecutorId(executorId);
+        // 注入会话上下文：客户端和执行器信息
+        context.setClientId(sessionContext.getClientId() != null ? sessionContext.getClientId() : (clientId != null ? clientId : ""));
+        context.setClientName(sessionContext.getClientName() != null ? sessionContext.getClientName() : "");
+        context.setClientOnline(sessionContext.getClientOnline() != null ? sessionContext.getClientOnline() : false);
+        context.setExecutorId(sessionContext.getExecutorId() != null ? sessionContext.getExecutorId() : "");
+        context.setExecutorCode(sessionContext.getExecutorCode() != null ? sessionContext.getExecutorCode() : "");
+        context.setExecutorName(sessionContext.getExecutorName() != null ? sessionContext.getExecutorName() : "");
 
-        context.setPromptContent(buildPromptContent(agentDefinition, rules, skills, subAgentRelations, memories, executors));
+        context.setPromptContent(buildPromptContent(agentDefinition, rules, skills, subAgentRelations, memories, context));
         return context;
     }
 
@@ -268,47 +284,48 @@ public class AgentContextAssembler {
      * @param skills 技能列表
      * @param subAgentRelations 子智能体关系列表
      * @param memories 候选记忆列表
-     * @param executors 执行器类型列表
+     * @param context 智能体上下文（含会话上下文信息）
      * @return 提示词内容
      */
     private String buildPromptContent(AgentDefinition agentDefinition, List<AgentRule> rules, List<AgentSkill> skills, List<SubAgentRelation> subAgentRelations, List<AgentMemory> memories,
-                                      List<AgentExecutor> executors) {
+                                      AgentContext context) {
         StringBuilder builder = new StringBuilder();
         appendAgentDefinition(builder, agentDefinition);
+        appendCurrentSession(builder, context);
         appendRules(builder, rules);
         appendSkills(builder, skills);
         appendSubAgentRelations(builder, subAgentRelations);
         appendMemories(builder, memories);
-        appendExecutors(builder, executors);
         return builder.toString();
     }
 
     /**
-     * 加载当前用户下所有启用的执行器类型。
+     * 追加当前会话上下文提示词。
      *
-     * @param userId 用户ID（当前暂未按 userId 过滤，保留参数扩展）
-     * @return 执行器类型列表
+     * <p>将当前会话绑定的用户、客户端和执行器信息写入提示词，
+     * 使 AI 无需工具调用即可感知会话上下文，精确知道命令应发往哪个客户端。</p>
+     *
+     * @param builder 提示词构建器
+     * @param context 智能体上下文
      */
-    private List<AgentExecutor> loadExecutors(String userId) {
-        LambdaQueryWrapper<AgentExecutor> wrapper = new LambdaQueryWrapper<AgentExecutor>().eq(AgentExecutor::getStatus, Status.ON);
-        return agentExecutorRepository.selectList(wrapper);
-    }
+    private void appendCurrentSession(StringBuilder builder, AgentContext context) {
+        builder.append("<current_session>\n");
 
-    /**
-     * 根据客户端ID解析执行器类型ID。
-     * <p>从 agent_client 表查询客户端关联的执行器类型。
-     * 客户端未指定时返回空字符串。</p>
-     *
-     * @param clientId 客户端ID
-     * @return 执行器类型ID，客户端未指定时返回空字符串
-     */
-    private String resolveExecutorId(String clientId) {
-        if (clientId == null || clientId.isBlank()) {
-            return "";
-        }
-        // TODO: 通过 AgentClientView 查询 agent_client 表的 executor_id
-        // 当前阶段暂未引入 AgentClientView，后续任务 1.4 resolveClientIdIfAbsent 统一处理
-        return "";
+        // 会话ID和用户ID
+        builder.append("  <session_id>").append(context.getSessionId()).append("</session_id>\n");
+        builder.append("  <user_id>").append(context.getUserId() != null ? context.getUserId() : "").append("</user_id>\n");
+
+        // 客户端信息：ID、名称、在线状态
+        builder.append("  <client id=\"").append(context.getClientId() != null ? context.getClientId() : "");
+        builder.append("\" name=\"").append(context.getClientName());
+        builder.append("\" online=\"").append(context.getClientOnline()).append("\" />\n");
+
+        // 执行器信息：ID、编码、名称
+        builder.append("  <executor id=\"").append(context.getExecutorId());
+        builder.append("\" code=\"").append(context.getExecutorCode());
+        builder.append("\" name=\"").append(context.getExecutorName()).append("\" />\n");
+
+        builder.append("</current_session>\n\n");
     }
 
     /**
@@ -427,28 +444,6 @@ public class AgentContextAssembler {
             builder.append("  </memory>\n");
         }
         builder.append("</memories>\n\n");
-    }
-
-    /**
-     * 追加执行器类型提示词。
-     *
-     * @param builder   提示词构建器
-     * @param executors 执行器类型列表
-     */
-    private void appendExecutors(StringBuilder builder, List<AgentExecutor> executors) {
-        if (executors.isEmpty()) {
-            return;
-        }
-        builder.append("<executors>\n");
-
-        // 遍历启用执行器类型，将编码、名称和描述写入提示词供 AI 决策
-        for (AgentExecutor executor : executors) {
-            builder.append("  <executor code=\"").append(executor.getExecutorCode());
-            builder.append("\" name=\"").append(executor.getExecutorName());
-            builder.append("\" desc=\"").append(executor.getDescription() != null ? executor.getDescription() : "");
-            builder.append("\" />\n");
-        }
-        builder.append("</executors>\n\n");
     }
 
 }

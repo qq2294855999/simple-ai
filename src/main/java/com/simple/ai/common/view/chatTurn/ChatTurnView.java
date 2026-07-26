@@ -101,6 +101,15 @@ public interface ChatTurnView {
     void delete(DeleteChatTurnRequest request);
 
     /**
+     * 查询指定会话的最大轮次序号。
+     * <p>用于 startTurn 时计算下一个轮次序号，避免 findOne 在多条记录时抛异常。</p>
+     *
+     * @param sessionId 会话ID
+     * @return 最大轮次序号，无记录时返回 null
+     */
+    Integer findMaxTurnNumber(String sessionId);
+
+    /**
      * 获取单条数据
      *
      * @param findOneRequest 查询条件
@@ -131,4 +140,3 @@ public interface ChatTurnView {
     }
 
 }
-

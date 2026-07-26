@@ -31,6 +31,7 @@ public class CreateAgentDefinitionRequest {
     private String thirdSkill;
 
     @Schema(description = "默认模型主键")
+    @NotEmpty(message = "默认模型主键不能为空")
     private String defaultModelId;
 
     @Schema(description = "备注")

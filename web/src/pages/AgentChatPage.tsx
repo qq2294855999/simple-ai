@@ -29,6 +29,7 @@ import type {AgentDefinitionPageDto} from "../dto/agentDefinition/AgentDefinitio
 import type {AiModelResponseDto} from "../dto/aiModel/AiModelDto";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
 import {ToastUtil} from "../utils/ToastUtil";
+import {DateUtil} from "../utils/DateUtil";
 import {
     appendAssistantToken,
     appendProgressEvent,
@@ -139,7 +140,7 @@ export function AgentChatPage() {
         }
   }, []);
 
-    /** 渲染会话描述信息（智能体 + 模型 + 客户端）。 */
+    /** 渲染会话描述信息（智能体 + 模型 + 客户端 + 创建时间）。 */
     const renderSessionDescription = useCallback((session: AgentChatSessionDto): React.ReactNode => {
         const parts: string[] = [];
         if (session.agentName) {
@@ -166,7 +167,19 @@ export function AgentChatPage() {
             }
         }
 
-        return parts.length > 0 ? parts.join(" · ") : session.agentName;
+        const descText = parts.length > 0 ? parts.join(" · ") : session.agentName;
+
+        // 创建时间显示在描述下方，使用次要文字样式
+        const createTimeText = session.createTime ? DateUtil.formatDateTime(session.createTime) : "";
+
+        return (
+            <div>
+                <div>{descText}</div>
+                {createTimeText && (
+                    <Typography.Text type="secondary" style={{fontSize: 12}}>{createTimeText}</Typography.Text>
+                )}
+            </div>
+        );
     }, [models, clients]);
 
   const loadMessages = useCallback(async (sessionId: string) => {

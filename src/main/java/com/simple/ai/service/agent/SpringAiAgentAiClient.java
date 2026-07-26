@@ -3,12 +3,23 @@ package com.simple.ai.service.agent;
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
 import com.simple.ai.common.dto.aiModel.AiModelRuntimeConfig;
+import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
+import com.simple.ai.common.entity.agentChatRawLog.AgentChatRawLog;
+import com.simple.ai.common.properties.SimpleAiProperties;
 import com.simple.ai.common.service.agent.AgentAiClient;
+import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
+import com.simple.ai.common.view.agentChatRawLog.AgentChatRawLogView;
 import com.simple.ai.service.aiModel.AiModelChatClientFactory;
 import com.simple.ai.service.aiModel.AiModelRoutingService;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.core.utils.JsonUtils;
+import com.simple.common.mp.common.enums.Status;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
@@ -17,10 +28,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -33,6 +41,8 @@ import java.util.function.Consumer;
 @Service
 class SpringAiAgentAiClient implements AgentAiClient {
 
+    private static final Logger log = LoggerFactory.getLogger(SpringAiAgentAiClient.class);
+
     @Autowired
     private AiModelRoutingService aiModelRoutingService;
 
@@ -44,6 +54,24 @@ class SpringAiAgentAiClient implements AgentAiClient {
 
     @Autowired
     private AgentSessionContextHolder agentSessionContextHolder;
+
+    /**
+     * 聊天消息视图，用于加载会话历史消息
+     */
+    @Autowired
+    private AgentChatMessageView agentChatMessageView;
+
+    /**
+     * 原始消息日志视图，用于保存 AI 调用原始请求/响应
+     */
+    @Autowired
+    private AgentChatRawLogView agentChatRawLogView;
+
+    /**
+     * 全局配置属性。
+     */
+    @Autowired
+    private SimpleAiProperties simpleAiProperties;
 
     /**
      * AssistantMessage / ChatResponse metadata 中推理内容 key 白名单（兼容 OpenAI 兼容推理模型）。
@@ -111,24 +139,37 @@ class SpringAiAgentAiClient implements AgentAiClient {
     }
 
     /**
-     * 调用 Spring AI 获取完整同步 ChatResponse（不再只取 .content()，避免丢 reasoning）。
+     * 调用 Spring AI 获取完整同步 ChatResponse。
+     * <p>使用角色分离模式：system 提示词 + 对话历史 + 当前用户命令。</p>
      *
      * @param chatClient 动态聊天客户端
      * @param request AI 调用请求
      * @return Spring AI ChatResponse
      */
     private ChatResponse callSpringAiChatResponse(ChatClient chatClient, AgentAiRequest request) {
-        String userContent = buildUserContent(request);
+        String systemPrompt = request.getPromptContent();
+        List<Message> historyMessages = loadHistoryMessages(request.getSessionId());
+
+        // 保存原始请求日志
+        saveRequestRawLog(request, systemPrompt, historyMessages);
+
+        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt().system(systemPrompt);
+        ChatClient.ChatClientRequestSpec historySpec = requestSpec.messages(historyMessages);
+
         // 注册工具回调，让 AI 在对话中自主调用工具完成数据操作
-        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
-        ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
+        ChatClient.ChatClientRequestSpec userSpec = historySpec.user(request.getCommandContent());
         ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks);
-        return toolSpec.call().chatResponse();
+        ChatResponse chatResponse = toolSpec.call().chatResponse();
+
+        // 保存原始响应日志
+        saveResponseRawLog(request, chatResponse);
+        return chatResponse;
     }
 
     /**
      * 调用 Spring AI 获取流式 ChatResponse Flux，分别把 content token 与 reasoning token 推送出去。
      * 返回 [aggregatedContent, aggregatedThinking] 用于落库。
+     * <p>使用角色分离模式：system 提示词 + 对话历史 + 当前用户命令。</p>
      *
      * @param chatClient 动态聊天客户端
      * @param request AI 调用请求
@@ -137,9 +178,13 @@ class SpringAiAgentAiClient implements AgentAiClient {
      * @return [完整content, 完整thinking] 聚合字符串
      */
     private String[] callSpringAiChatResponseStream(ChatClient chatClient, AgentAiRequest request, Consumer<String> tokenConsumer, Consumer<String> thinkingTokenConsumer) {
-        String userContent = buildUserContent(request);
+        String systemPrompt = request.getPromptContent();
+        List<Message> historyMessages = loadHistoryMessages(request.getSessionId());
         StringBuilder contentBuilder = new StringBuilder();
         StringBuilder thinkingBuilder = new StringBuilder();
+
+        // 保存原始请求日志（流式请求结构与非流式一致）
+        saveRequestRawLog(request, systemPrompt, historyMessages);
 
         // 将完整会话上下文存入 Redis，供 ToolCallback 在异步线程中获取
         if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
@@ -150,23 +195,24 @@ class SpringAiAgentAiClient implements AgentAiClient {
         // 在 boundedElastic 执行线程上设置 AgentSessionContext ThreadLocal，
         // 使 ToolCallback 能通过 resolveUserIdFromSession() 获取会话上下文
         String sessionId = request.getSessionId() != null && !request.getSessionId().isBlank() ? request.getSessionId() : null;
-        List<ToolCallback> wrappedCallbacks = new java.util.ArrayList<>();
+        List<ToolCallback> wrappedCallbacks = new ArrayList<>();
         for (ToolCallback tc : toolCallbacks) {
             wrappedCallbacks.add(new SessionAwareToolCallback(tc, sessionId));
         }
 
         try {
-            // 构建 Spring AI 流式请求，获取完整 ChatResponse（而不是仅 content 字符串）
-            ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
-            ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
+            // 构建 Spring AI 流式请求，使用角色分离：system 提示词 + 对话历史 + 当前用户命令
+            ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt().system(systemPrompt);
+            ChatClient.ChatClientRequestSpec historySpec = requestSpec.messages(historyMessages);
 
             // 构建工具上下文，传递 sessionId 供工具回调获取用户上下文
-            java.util.Map<String, Object> toolContext = new java.util.HashMap<>();
+            Map<String, Object> toolContext = new java.util.HashMap<>();
             if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
                 toolContext.put("sessionId", request.getSessionId());
             }
 
             // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
+            ChatClient.ChatClientRequestSpec userSpec = historySpec.user(request.getCommandContent());
             ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(wrappedCallbacks).toolContext(toolContext);
             ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
             Flux<ChatResponse> chatResponseFlux = streamSpec.chatResponse();
@@ -174,7 +220,11 @@ class SpringAiAgentAiClient implements AgentAiClient {
             // 消费每一片 ChatResponse，分别提取 content token / reasoning token
             chatResponseFlux.doOnNext(chatResponse -> acceptStreamChatResponse(tokenConsumer, thinkingTokenConsumer, contentBuilder, thinkingBuilder, chatResponse)).blockLast();
 
-            return new String[] { contentBuilder.toString(), thinkingBuilder.toString() };
+            String[] result = new String[] { contentBuilder.toString(), thinkingBuilder.toString() };
+
+            // 保存原始响应日志（流式聚合后的完整内容）
+            saveResponseRawLog(request, result[0], result[1]);
+            return result;
         } finally {
             // 清理 Redis 中的会话上下文，防止数据残留
             if (request.getSessionId() != null) {
@@ -441,28 +491,184 @@ class SpringAiAgentAiClient implements AgentAiClient {
     }
 
     /**
-     * 构建发送给模型的用户内容。
+     * 从数据库加载会话的最近 N 轮对话历史，转换为 Spring AI Message 列表。
      *
-     * <p>将系统提示词、会话摘要和用户命令拼接为 XML 结构化上下文。</p>
+     * <p>每轮包含一条 USER 消息和一条 ASSISTANT 消息。
+     * 按 sequence_no 升序排列，确保对话时序正确。</p>
+     *
+     * <p>排除最近一条 USER 消息：因为当前消息已通过 saveUserMessage 先落库，
+     * 再通过 .user(currentCommand) 单独发送，历史中不应重复包含。</p>
+     *
+     * @param sessionId 会话ID，为空时返回空列表
+     * @return 对话历史消息列表
+     */
+    private List<Message> loadHistoryMessages(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        // 查询会话全部消息，按序号升序排列
+        List<AgentChatMessage> allMessages = agentChatMessageView.findAllBySessionId(sessionId);
+        if (allMessages.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 从最新消息向前取最近 N 轮，转换为 Spring AI Message
+        List<Message> historyMessages = new ArrayList<>();
+        int turnCount = 0;
+
+        // 标记是否已跳过当前轮次的 USER 消息（即最近一条 user 消息，它会在 .user() 中单独发送）
+        boolean skippedCurrentUser = false;
+
+        // 从最新到最旧遍历消息，按轮数限制裁剪
+        for (int i = allMessages.size() - 1; i >= 0; i--) {
+            AgentChatMessage msg = allMessages.get(i);
+
+            // 只取 USER 和 ASSISTANT 角色的消息，SYSTEM_ERROR 不参与上下文
+            if (!"USER".equals(msg.getRole()) && !"ASSISTANT".equals(msg.getRole())) {
+                continue;
+            }
+
+            // 跳过最近一条 USER 消息（即当前消息，已通过 .user() 单独发送），避免重复
+            if ("USER".equals(msg.getRole()) && !skippedCurrentUser) {
+                skippedCurrentUser = true;
+                continue;
+            }
+
+            // 每遇到一条 USER 消息计数为一轮
+            if ("USER".equals(msg.getRole())) {
+                turnCount++;
+                if (turnCount > simpleAiProperties.getChat().getMaxHistoryTurns()) {
+                    break;
+                }
+            }
+
+            // 插入到列表头部以保持时间顺序
+            historyMessages.add(0, toSpringAiMessage(msg));
+        }
+
+        return historyMessages;
+    }
+
+    /**
+     * 将 AgentChatMessage 实体转换为 Spring AI Message 对象。
+     *
+     * @param msg 聊天消息实体
+     * @return Spring AI Message 对象
+     */
+    private Message toSpringAiMessage(AgentChatMessage msg) {
+        if ("ASSISTANT".equals(msg.getRole())) {
+            return new AssistantMessage(msg.getContent());
+        }
+        return new UserMessage(msg.getContent());
+    }
+
+    /**
+     * 保存原始请求日志：将发送给大模型的 system 提示词、对话历史、用户命令序列化为 JSON 并落库。
      *
      * @param request AI 调用请求
-     * @return 用户内容
+     * @param systemPrompt 系统提示词
+     * @param historyMessages 对话历史消息列表
      */
-    private String buildUserContent(AgentAiRequest request) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(request.getPromptContent());
+    private void saveRequestRawLog(AgentAiRequest request, String systemPrompt, List<Message> historyMessages) {
+        try {
+            // 构建请求原始内容 JSON
+            Map<String, Object> requestContent = new HashMap<>();
+            requestContent.put("system", systemPrompt);
 
-        // 注入会话摘要，帮助AI理解历史对话脉络
-        String sessionSummary = request.getSessionSummary();
-        if (sessionSummary != null && !sessionSummary.isBlank()) {
-            builder.append("<session_summary>\n");
-            builder.append(sessionSummary);
-            builder.append("\n</session_summary>\n\n");
+            // 将历史消息转换为 role:content 格式
+            List<Map<String, String>> messages = new ArrayList<>();
+            for (Message msg : historyMessages) {
+                Map<String, String> entry = new HashMap<>();
+                entry.put("role", (msg instanceof AssistantMessage) ? "assistant" : "user");
+                entry.put("content", msg.getText());
+                messages.add(entry);
+            }
+            requestContent.put("messages", messages);
+            requestContent.put("user", request.getCommandContent());
+
+            // 构建实体并保存
+            AgentChatRawLog rawLog = new AgentChatRawLog();
+            rawLog.setSessionId(request.getSessionId());
+            rawLog.setDirection("REQUEST");
+            rawLog.setRawContent(JsonUtils.toJsonStr(requestContent));
+            rawLog.setModelCode("");
+            rawLog.setProviderId("");
+            rawLog.setStatus(Status.ON);
+            rawLog.setRemark("");
+
+            agentChatRawLogView.save(rawLog);
+        } catch (RuntimeException e) {
+
+            // 原始日志保存失败不影响主流程
+            log.warn("原始请求日志保存失败，sessionId={}", request.getSessionId(), e);
         }
-        builder.append("<current_command>\n");
-        builder.append(request.getCommandContent());
-        builder.append("\n</current_command>\n");
-        return builder.toString();
+    }
+
+    /**
+     * 保存原始响应日志：将 ChatResponse 中的 content 和 reasoning 序列化为 JSON 并落库。
+     *
+     * @param request      AI 调用请求
+     * @param chatResponse Spring AI ChatResponse 对象
+     */
+    private void saveResponseRawLog(AgentAiRequest request, ChatResponse chatResponse) {
+        try {
+            String content = extractAssistantContent(chatResponse);
+            String thinking = extractAssistantReasoning(chatResponse);
+
+            // 构建响应原始内容 JSON
+            Map<String, Object> responseContent = new HashMap<>();
+            responseContent.put("content", content);
+            responseContent.put("thinking", thinking);
+
+            // 构建实体并保存
+            AgentChatRawLog rawLog = new AgentChatRawLog();
+            rawLog.setSessionId(request.getSessionId());
+            rawLog.setDirection("RESPONSE");
+            rawLog.setRawContent(JsonUtils.toJsonStr(responseContent));
+            rawLog.setModelCode("");
+            rawLog.setProviderId("");
+            rawLog.setStatus(Status.ON);
+            rawLog.setRemark("");
+
+            agentChatRawLogView.save(rawLog);
+        } catch (RuntimeException e) {
+
+            // 原始日志保存失败不影响主流程
+            log.warn("原始响应日志保存失败，sessionId={}", request.getSessionId(), e);
+        }
+    }
+
+    /**
+     * 保存原始响应日志（流式聚合版）：将聚合后的 content 和 thinking 序列化为 JSON 并落库。
+     *
+     * @param request  AI 调用请求
+     * @param content  聚合后的内容文本
+     * @param thinking 聚合后的思考文本
+     */
+    private void saveResponseRawLog(AgentAiRequest request, String content, String thinking) {
+        try {
+            // 构建响应原始内容 JSON
+            Map<String, Object> responseContent = new HashMap<>();
+            responseContent.put("content", content);
+            responseContent.put("thinking", thinking);
+
+            // 构建实体并保存
+            AgentChatRawLog rawLog = new AgentChatRawLog();
+            rawLog.setSessionId(request.getSessionId());
+            rawLog.setDirection("RESPONSE");
+            rawLog.setRawContent(JsonUtils.toJsonStr(responseContent));
+            rawLog.setModelCode("");
+            rawLog.setProviderId("");
+            rawLog.setStatus(Status.ON);
+            rawLog.setRemark("");
+
+            agentChatRawLogView.save(rawLog);
+        } catch (RuntimeException e) {
+
+            // 原始日志保存失败不影响主流程
+            log.warn("原始响应日志保存失败，sessionId={}", request.getSessionId(), e);
+        }
     }
 
     /**

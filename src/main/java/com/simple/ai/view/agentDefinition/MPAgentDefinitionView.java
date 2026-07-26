@@ -219,19 +219,7 @@ class MPAgentDefinitionView implements AgentDefinitionView {
 
     @Override
     public void delete(DeleteAgentDefinitionRequest request) {
-        LambdaQueryWrapper<AgentDefinition> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentDefinition::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getName()), AgentDefinition::getName, request.getName())
-                    .eq(ObjUtil.isNotEmpty(request.getDefinitionDesc()), AgentDefinition::getDefinitionDesc, request.getDefinitionDesc())
-                    .eq(ObjUtil.isNotEmpty(request.getFirstPrinciple()), AgentDefinition::getFirstPrinciple, request.getFirstPrinciple())
-                    .eq(ObjUtil.isNotEmpty(request.getSecondRule()), AgentDefinition::getSecondRule, request.getSecondRule())
-                    .eq(ObjUtil.isNotEmpty(request.getThirdSkill()), AgentDefinition::getThirdSkill, request.getThirdSkill())
-                    .eq(ObjUtil.isNotEmpty(request.getCreateBy()), AgentDefinition::getCreateBy, request.getCreateBy())
-                    .eq(ObjUtil.isNotEmpty(request.getUpdateBy()), AgentDefinition::getUpdateBy, request.getUpdateBy())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentDefinition::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentDefinition::getReserve, request.getReserve())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentDefinition::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.simple.ai.common.dto.agentExecutor;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -15,5 +16,6 @@ import lombok.experimental.Accessors;
 public class DeleteAgentExecutorRequest {
 
     @Schema(description = "主键")
+    @NotEmpty(message = "主键不能为空")
     private String id;
 }

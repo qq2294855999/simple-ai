@@ -1,6 +1,7 @@
 package com.simple.ai.common.dto.agent;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 /**
@@ -13,5 +14,6 @@ import lombok.Data;
 public class ToolQueryByIdRequest {
 
     @Schema(description = "数据主键ID")
+    @NotEmpty(message = "数据主键ID不能为空")
     private String id;
 }

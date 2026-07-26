@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.aiModelProvider;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.Date;
@@ -10,38 +11,39 @@ import java.util.Date;
  * @author qty
  */
 @Data
+@Schema(title = "AI模型供应商响应")
 public class AiModelProviderResponse {
 
-    /** 供应商主键 */
+    @Schema(description = "供应商主键")
     private String id;
 
-    /** 供应商编码 */
+    @Schema(description = "供应商编码")
     private String providerCode;
 
-    /** 供应商名称 */
+    @Schema(description = "供应商名称")
     private String providerName;
 
-    /** 协议类型 */
+    @Schema(description = "协议类型")
     private String protocolType;
 
-    /** 服务根地址 */
+    @Schema(description = "服务根地址")
     private String baseUrl;
 
-    /** 是否已经配置 API Key */
+    @Schema(description = "是否已经配置API Key")
     private Boolean apiKeyConfigured;
 
-    /** 超时毫秒数 */
+    @Schema(description = "超时毫秒数")
     private Integer timeoutMillis;
 
-    /** 是否系统默认供应商 */
+    @Schema(description = "是否系统默认供应商")
     private Boolean systemDefault;
 
-    /** 启停状态 */
+    @Schema(description = "启停状态")
     private Integer status;
 
-    /** 备注 */
+    @Schema(description = "备注")
     private String remark;
 
-    /** 最后修改时间 */
+    @Schema(description = "最后修改时间")
     private Date updateTime;
 }

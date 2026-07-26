@@ -39,14 +39,7 @@ spring:
         default-requeue-rejected: false # 消费失败的q是否重新放回队列重新消费
         # concurrency: 1 # 消费线程数
         # max-concurrency: 10 # 消费线程最大数量
-  ai:
-    openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:sk-74c65aa35b5f4a18972599336fdb8dc3}
-      base-url: https://api.deepseek.com
-      chat:
-        options:
-          model: deepseek-v4-pro
-# doc文档配置
+  # doc文档配置
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -73,4 +66,6 @@ simple:
     server-url: http://localhost:8000 # 授权中心服务端地址
   ai:
     model-encryption-key: "rFPZRGHBTPexORdwm8oK6o0AZsiqO+LTSfW+G/1ECtg="
-
+    chat:
+      stream-timeout-millis: 300000 # SSE 流式聊天最大等待时长（毫秒），默认 5 分钟
+      max-history-turns: 20 # 注入 AI 上下文的对话历史最大轮数

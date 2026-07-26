@@ -226,7 +226,7 @@ class DefaultAgentChatService implements AgentChatService {
         // 完成本轮对话，关联AI回复消息
         chatTurnService.completeTurn(turnId, assistantMessageId, "");
 
-        // 记忆蒸馏由 DefaultCommandDispatchService.triggerMemoryPrecipitation 在任务成功后触发
+        // 记忆蒸馏不再自动触发，改为由用户或指定体明确要求蒸馏正确线路后再执行
     }
 
     /**
@@ -792,6 +792,7 @@ class DefaultAgentChatService implements AgentChatService {
         response.setLastMessageAt(session.getLastMessageAt());
         response.setModelId(session.getModelId());
         response.setClientId(session.getClientId());
+        response.setCreateTime(session.getCreateTime());
         return response;
     }
 

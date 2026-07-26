@@ -82,11 +82,9 @@ class DefaultChatTurnService implements ChatTurnService {
         AssertUtils.notEmpty(sessionId, "会话主键不能为空");
         AssertUtils.notEmpty(userMessageId, "用户消息主键不能为空");
 
-        // 查询当前会话已有的最大轮次序号
-        FindOneChatTurnRequest maxTurnRequest = new FindOneChatTurnRequest();
-        maxTurnRequest.setSessionId(sessionId);
-        ChatTurn maxTurn = chatTurnView.findOne(maxTurnRequest);
-        int nextTurnNumber = maxTurn == null ? 1 : (maxTurn.getTurnNumber() == null ? 1 : maxTurn.getTurnNumber() + 1);
+        // 查询当前会话已有的最大轮次序号，用于计算下一个轮次序号
+        Integer maxTurnNumber = chatTurnView.findMaxTurnNumber(sessionId);
+        int nextTurnNumber = maxTurnNumber == null ? 1 : maxTurnNumber + 1;
 
         // 创建新的对话轮次
         ChatTurn turn = new ChatTurn();
@@ -167,4 +165,3 @@ class DefaultChatTurnService implements ChatTurnService {
         return (int) Math.ceil(text.length() / 2.5);
     }
 }
-

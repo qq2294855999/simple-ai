@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.aiModel;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
@@ -9,11 +10,12 @@ import lombok.Data;
  * @author qty
  */
 @Data
+@Schema(title = "供应商远程模型列表项响应")
 public class AiModelProviderModelResponse {
 
-    /** 模型编码 */
+    @Schema(description = "模型编码")
     private String modelCode;
 
-    /** 模型名称 */
+    @Schema(description = "模型名称")
     private String modelName;
 }

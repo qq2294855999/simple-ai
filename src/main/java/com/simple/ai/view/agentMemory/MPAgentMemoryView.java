@@ -95,11 +95,7 @@ class MPAgentMemoryView implements AgentMemoryView {
 
     @Override
     public void delete(DeleteAgentMemoryRequest request) {
-        LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentMemory::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getAgentId()), AgentMemory::getAgentId, request.getAgentId())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentMemory::getStatus, request.getStatus());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 
     /**

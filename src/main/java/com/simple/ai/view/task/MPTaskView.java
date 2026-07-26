@@ -217,21 +217,6 @@ class MPTaskView implements TaskView {
 
     @Override
     public void delete(DeleteTaskRequest request) {
-        LambdaQueryWrapper<Task> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), Task::getId, request.getId()).eq(ObjUtil.isNotEmpty(request.getMemoryId()), Task::getMemoryId, request.getMemoryId())
-                    .eq(ObjUtil.isNotEmpty(request.getTaskName()), Task::getTaskName, request.getTaskName())
-                    .eq(ObjUtil.isNotEmpty(request.getParentTaskId()), Task::getParentTaskId, request.getParentTaskId())
-                    .eq(ObjUtil.isNotEmpty(request.getNextTaskId()), Task::getNextTaskId, request.getNextTaskId())
-                    .eq(ObjUtil.isNotEmpty(request.getStepType()), Task::getStepType, request.getStepType())
-                    .eq(ObjUtil.isNotEmpty(request.getBranchCondition()), Task::getBranchCondition, request.getBranchCondition())
-                    .eq(ObjUtil.isNotEmpty(request.getBranchRoute()), Task::getBranchRoute, request.getBranchRoute())
-                    .eq(ObjUtil.isNotEmpty(request.getRequestParams()), Task::getRequestParams, request.getRequestParams())
-                    .eq(ObjUtil.isNotEmpty(request.getReturnParams()), Task::getReturnParams, request.getReturnParams())
-                    .eq(ObjUtil.isNotEmpty(request.getExecStatus()), Task::getExecStatus, request.getExecStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getFailureReason()), Task::getFailureReason, request.getFailureReason())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), Task::getStatus, request.getStatus()).eq(ObjUtil.isNotEmpty(request.getReserve()), Task::getReserve, request.getReserve())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), Task::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 }
-

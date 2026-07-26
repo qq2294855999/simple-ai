@@ -120,16 +120,7 @@ class MPAgentRuleView implements AgentRuleView {
 
     @Override
     public void delete(DeleteAgentRuleRequest request) {
-        LambdaQueryWrapper<AgentRule> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), AgentRule::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getAgentId()), AgentRule::getAgentId, request.getAgentId())
-                    .eq(ObjUtil.isNotEmpty(request.getDefinitionDesc()), AgentRule::getDefinitionDesc, request.getDefinitionDesc())
-                    .eq(ObjUtil.isNotEmpty(request.getTriggerCondition()), AgentRule::getTriggerCondition, request.getTriggerCondition())
-                    .eq(ObjUtil.isNotEmpty(request.getTriggerAction()), AgentRule::getTriggerAction, request.getTriggerAction())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), AgentRule::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserve()), AgentRule::getReserve, request.getReserve())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), AgentRule::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 
     /**
@@ -188,5 +179,3 @@ class MPAgentRuleView implements AgentRuleView {
         return queryWrapper;
     }
 }
-
-

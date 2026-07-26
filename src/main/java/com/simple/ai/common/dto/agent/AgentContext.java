@@ -1,7 +1,6 @@
 package com.simple.ai.common.dto.agent;
 
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
-import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
@@ -57,23 +56,10 @@ public class AgentContext {
     private List<AgentMemory> memories;
 
     /**
-     * 会话摘要
-     */
-    @Schema(description = "会话摘要")
-    private String sessionSummary;
-
-    /**
      * 提示词内容
      */
     @Schema(description = "提示词内容")
     private String promptContent;
-
-    /**
-     * 执行器类型列表。
-     * <p>当前用户下所有启用的执行器类型，用于 AI 决策时按 executor_type 筛选可用命令。</p>
-     */
-    @Schema(description = "执行器类型列表")
-    private List<AgentExecutor> executors;
 
     /**
      * 当前登录用户ID，用于按用户过滤资产和校验权限。
@@ -88,10 +74,34 @@ public class AgentContext {
     private String clientId;
 
     /**
+     * 当前客户端名称，写入提示词供AI识别客户端身份。
+     */
+    @Schema(description = "当前客户端名称")
+    private String clientName;
+
+    /**
+     * 当前客户端在线状态，写入提示词供AI判断命令是否可达。
+     */
+    @Schema(description = "当前客户端在线状态")
+    private Boolean clientOnline;
+
+    /**
      * 当前客户端关联的执行器类型ID，用于AI决策时了解可用命令范围。
      */
     @Schema(description = "当前执行器类型ID")
     private String executorId;
+
+    /**
+     * 当前执行器编码，写入提示词供AI识别执行器类型。
+     */
+    @Schema(description = "当前执行器编码")
+    private String executorCode;
+
+    /**
+     * 当前执行器名称，写入提示词供AI识别执行器类型。
+     */
+    @Schema(description = "当前执行器名称")
+    private String executorName;
 
     /**
      * 当前会话ID，用于AI调用时传递会话上下文。

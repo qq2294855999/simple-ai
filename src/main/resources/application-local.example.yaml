@@ -38,14 +38,7 @@ spring:
         acknowledge-mode: MANUAL
         prefetch: 1
         default-requeue-rejected: false
-  ai:
-    openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY}
-      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}
-      chat:
-        options:
-          model: ${SPRING_AI_OPENAI_CHAT_MODEL}
-# doc文档配置
+  # doc文档配置
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -78,4 +71,3 @@ simple:
     project-code: ${SIMPLE_AUTH_PROJECT_CODE:simple-ai}
   ai:
     model-encryption-key: "rFPZRGHBTPexORdwm8oK6o0AZsiqO+LTSfW+G/1ECtg="
-

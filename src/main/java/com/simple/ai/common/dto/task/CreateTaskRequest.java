@@ -29,8 +29,8 @@ public class CreateTaskRequest {
     @Schema(description = "下一个任务ID")
     private String nextTaskId;
 
-    @Schema(description = "步骤类型：智能体步骤类型")
-    @NotEmpty(message = "步骤类型：智能体步骤类型不能为空")
+    @Schema(description = "步骤类型")
+    @NotEmpty(message = "步骤类型不能为空")
     private String stepType;
 
     @Schema(description = "分支条件")

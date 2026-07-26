@@ -118,14 +118,7 @@ class MPSubAgentRelationView implements SubAgentRelationView {
 
     @Override
     public void delete(DeleteSubAgentRelationRequest request) {
-        LambdaQueryWrapper<SubAgentRelation> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), SubAgentRelation::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getMainAgentId()), SubAgentRelation::getMainAgentId, request.getMainAgentId())
-                    .eq(ObjUtil.isNotEmpty(request.getSubAgentId()), SubAgentRelation::getSubAgentId, request.getSubAgentId())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), SubAgentRelation::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getReserve()), SubAgentRelation::getReserve, request.getReserve())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), SubAgentRelation::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 
     /**
@@ -176,5 +169,3 @@ class MPSubAgentRelationView implements SubAgentRelationView {
         return queryWrapper;
     }
 }
-
-

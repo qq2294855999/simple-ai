@@ -1,7 +1,6 @@
 package com.simple.ai.service.command;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
 import com.simple.ai.common.dto.agent.AgentContext;
@@ -11,7 +10,6 @@ import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.command.CommandDispatchResponse;
 import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
-import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
@@ -19,7 +17,6 @@ import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
-import com.simple.ai.common.enums.AgentClientStatusProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.agent.AgentAiClient;
@@ -29,13 +26,11 @@ import com.simple.ai.common.service.memory.MemoryDistiller;
 import com.simple.ai.common.service.memory.MemoryExecutor;
 import com.simple.ai.common.service.memory.MemoryMatchResult;
 import com.simple.ai.common.service.memory.MemoryMatcher;
-import com.simple.ai.common.service.session.AgentSessionService;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
 import com.simple.ai.service.agent.AgentContextAssembler;
-import com.simple.ai.view.agentClient.AgentClientRepository;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
@@ -116,18 +111,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private SubAgentDispatchService subAgentDispatchService;
 
     /**
-     * 智能体会话服务
-     */
-    @Autowired
-    private AgentSessionService agentSessionService;
-
-    /**
-     * 客户端实例仓库，用于按用户查询在线客户端
-     */
-    @Autowired
-    private AgentClientRepository agentClientRepository;
-
-    /**
      * 原子命令视图
      */
     @Autowired
@@ -204,9 +187,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         // 校验子智能体递归深度，防止配置环路导致无限调度
         AssertUtils.isTrue(recursionDepth <= MAX_SUB_AGENT_DEPTH, "子智能体递归调度超过安全深度");
 
-        // 解析客户端ID：用户指定优先，否则由后续逻辑自动匹配唯一在线客户端
-        resolveClientIdIfAbsent(request);
-
         // 创建任务主记录并标记执行中
         Task task = createRunningTask(request, parentTaskId);
         publishProgress(progressConsumer, request, task, "TASK_CREATED", "任务已创建", "", Boolean.FALSE, "");
@@ -235,8 +215,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
                 markTaskSuccess(task, responseContent);
             }
 
-            // 保存会话摘要
-            saveSessionSummary(request, responseContent);
             publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
             return buildSuccessResponse(task, responseContent);
         } catch (Exception e) {
@@ -399,10 +377,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             saveAiTaskDetail(task, request, aiRequest, aiResponse);
             AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
             publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
-
-            // 触发记忆沉淀判定：AI 输出的结构化 AgentExecutionPlan 通过校验后，
-            // 由记忆沉淀服务提炼最短执行链并创建 agent_memory (DRAFT)
-            triggerMemoryPrecipitation(task, request, aiResponse);
 
             return aiResponse.getResponseContent();
         } finally {
@@ -657,7 +631,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         aiRequest.setModelId(request.getModelId());
         aiRequest.setPromptContent(context.getPromptContent());
         aiRequest.setCommandContent(request.getCommandContent());
-        aiRequest.setSessionSummary(context.getSessionSummary());
 
         // 传递会话ID和用户ID，供工具回调中获取用户上下文
         aiRequest.setSessionId(request.getSessionId());
@@ -955,58 +928,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         task.setExecStatus(AgentExecutionStatusProcess.FAILED);
         task.setFailureReason(failureReason);
         taskView.updateById(task);
-    }
-
-    /**
-     * 保存会话摘要。
-     *
-     * @param request 命令调度请求
-     * @param responseContent 响应内容
-     */
-    private void saveSessionSummary(CommandDispatchRequest request, String responseContent) {
-
-        // 会话ID为空时不保存会话摘要
-        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            return;
-        }
-        try {
-            agentSessionService.saveSummary(request.getSessionId(), responseContent);
-            agentSessionService.appendMessage(request.getSessionId(), request.getCommandContent());
-        } catch (RuntimeException e) {
-
-            // 会话摘要属于辅助上下文，写入失败不改变核心任务成功状态
-            log.warn("智能体命令调度会话摘要写入失败，会话ID：{}", request.getSessionId(), e);
-        }
-    }
-
-    /**
-     * 解析客户端ID：用户指定优先，未指定时由后续自动匹配。
-     *
-     * @param request 命令调度请求
-     */
-    private void resolveClientIdIfAbsent(CommandDispatchRequest request) {
-
-        // 用户已指定客户端ID时直接使用
-        if (request.getClientId() != null && !request.getClientId().isBlank()) {
-            return;
-        }
-
-        // 根据当前用户ID查询状态为ACTIVE的客户端列表
-        String userId = request.getUserId();
-        if (userId == null || userId.isBlank()) {
-            return;
-        }
-
-        // 查询当前用户下所有ACTIVE状态的客户端
-        LambdaQueryWrapper<AgentClient> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(AgentClient::getUserId, userId).eq(AgentClient::getStatus, AgentClientStatusProcess.ACTIVE);
-        List<AgentClient> activeClients = agentClientRepository.selectList(queryWrapper);
-
-        // 唯一在线时自动绑定，多个在线时暂不绑定由前端指定
-        if (activeClients.size() == 1) {
-            AgentClient client = activeClients.get(0);
-            request.setClientId(client.getId());
-        }
     }
 
     /**

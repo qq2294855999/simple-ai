@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.aiUser;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
@@ -13,43 +14,30 @@ import lombok.Data;
  * @author qty
  */
 @Data
+@Schema(title = "创建AI平台用户请求参数")
 public class CreateAiUserRequest {
 
-    /**
-     * 用户昵称（必填）
-     */
+    @Schema(description = "用户昵称")
     @NotEmpty(message = "昵称不能为空")
     private String nickname;
 
-    /**
-     * 用户账号（登录名，必填，需唯一）
-     */
+    @Schema(description = "用户账号")
     @NotEmpty(message = "用户账号不能为空")
     private String username;
 
-    /**
-     * 手机号码（必填）
-     */
+    @Schema(description = "手机号码")
     @NotEmpty(message = "手机号码不能为空")
     private String phone;
 
-    /**
-     * 头像 URL（非必填，为空则自动生成）
-     */
+    @Schema(description = "头像URL")
     private String avatarUrl;
 
-    /**
-     * 每日 AI 调用次数上限，默认 100
-     */
+    @Schema(description = "每日AI调用次数上限")
     private Integer dailyQuota;
 
-    /**
-     * 用户偏好设置（JSON 文本）
-     */
+    @Schema(description = "用户偏好设置")
     private String preferences;
 
-    /**
-     * 备注
-     */
+    @Schema(description = "备注")
     private String remark;
 }

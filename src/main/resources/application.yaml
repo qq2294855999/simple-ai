@@ -3,6 +3,18 @@ spring:
     name: simple-ai
   profiles:
     active: @spring.active@
+  autoconfigure:
+    exclude:
+      # 排除 OpenAI 自动配置，因为 AI 客户端由 AiModelChatClientFactory 动态创建，
+      # API Key 来自数据库 ai_model_provider 表，不依赖 spring.ai.openai.* 配置项
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+      # ChatClient.Builder 由 AiModelChatClientFactory 通过 ChatClient.create() 静态方法创建，无需自动配置
+      - org.springframework.ai.model.chat.client.autoconfigure.ChatClientAutoConfiguration
 
   # entity时间类型数据格式化
   jackson:
@@ -39,4 +51,3 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: '''DELETE'''
       logic-not-delete-value: '''OK'''
-

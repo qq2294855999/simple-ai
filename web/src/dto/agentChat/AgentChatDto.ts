@@ -15,6 +15,8 @@ export interface AgentChatSessionDto {
     modelId: string;
     /** 客户端主键，会话级默认执行客户端 */
     clientId: string;
+    /** 创建时间 */
+    createTime: string;
 }
 
 export interface AgentChatMessageDto {

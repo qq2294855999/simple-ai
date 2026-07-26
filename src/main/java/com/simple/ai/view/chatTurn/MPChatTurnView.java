@@ -29,6 +29,16 @@ class MPChatTurnView implements ChatTurnView {
     private ChatTurnRepository repository;
 
     @Override
+    public Integer findMaxTurnNumber(String sessionId) {
+
+        // 按轮次序号降序取第一条，获取当前会话的最大轮次序号
+        LambdaQueryWrapper<ChatTurn> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ChatTurn::getSessionId, sessionId).orderByDesc(ChatTurn::getTurnNumber).last("LIMIT 1");
+        ChatTurn maxTurn = repository.selectOne(queryWrapper);
+        return maxTurn != null ? maxTurn.getTurnNumber() : null;
+    }
+
+    @Override
     public IPage<ChatTurn> findAll(PageChatTurnRequest pageRequest) {
         LambdaQueryWrapper<ChatTurn> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.like(ObjUtil.isNotEmpty(pageRequest.getSessionId()), ChatTurn::getSessionId, pageRequest.getSessionId())
@@ -156,17 +166,6 @@ class MPChatTurnView implements ChatTurnView {
 
     @Override
     public void delete(DeleteChatTurnRequest request) {
-        LambdaQueryWrapper<ChatTurn> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), ChatTurn::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getSessionId()), ChatTurn::getSessionId, request.getSessionId())
-                    .eq(ObjUtil.isNotEmpty(request.getTurnNumber()), ChatTurn::getTurnNumber, request.getTurnNumber())
-                    .eq(ObjUtil.isNotEmpty(request.getUserMessageId()), ChatTurn::getUserMessageId, request.getUserMessageId())
-                    .eq(ObjUtil.isNotEmpty(request.getAssistantMessageId()), ChatTurn::getAssistantMessageId, request.getAssistantMessageId())
-                    .eq(ObjUtil.isNotEmpty(request.getTaskId()), ChatTurn::getTaskId, request.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(request.getReasoningSummary()), ChatTurn::getReasoningSummary, request.getReasoningSummary())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), ChatTurn::getStatus, request.getStatus())
-                    .eq(ObjUtil.isNotEmpty(request.getRemark()), ChatTurn::getRemark, request.getRemark());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 }
-

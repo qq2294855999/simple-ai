@@ -244,28 +244,6 @@ class MPExecutionEventView implements ExecutionEventView {
 
     @Override
     public void delete(DeleteExecutionEventRequest request) {
-        LambdaQueryWrapper<ExecutionEvent> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ObjUtil.isNotEmpty(request.getId()), ExecutionEvent::getId, request.getId())
-                    .eq(ObjUtil.isNotEmpty(request.getTurnId()), ExecutionEvent::getTurnId, request.getTurnId())
-                    .eq(ObjUtil.isNotEmpty(request.getTaskId()), ExecutionEvent::getTaskId, request.getTaskId())
-                    .eq(ObjUtil.isNotEmpty(request.getTaskDetailId()), ExecutionEvent::getTaskDetailId, request.getTaskDetailId())
-                    .eq(ObjUtil.isNotEmpty(request.getEventType()), ExecutionEvent::getEventType, request.getEventType())
-                    .eq(ObjUtil.isNotEmpty(request.getStepName()), ExecutionEvent::getStepName, request.getStepName())
-                    .eq(ObjUtil.isNotEmpty(request.getCommandName()), ExecutionEvent::getCommandName, request.getCommandName())
-                    .eq(ObjUtil.isNotEmpty(request.getCommandContent()), ExecutionEvent::getCommandContent, request.getCommandContent())
-                    .eq(ObjUtil.isNotEmpty(request.getResponseContent()), ExecutionEvent::getResponseContent, request.getResponseContent())
-                    .eq(ObjUtil.isNotEmpty(request.getFailureReason()), ExecutionEvent::getFailureReason, request.getFailureReason())
-                    .eq(ObjUtil.isNotEmpty(request.getSequenceNo()), ExecutionEvent::getSequenceNo, request.getSequenceNo())
-                    .eq(ObjUtil.isNotEmpty(request.getStartedAt()), ExecutionEvent::getStartedAt, request.getStartedAt())
-                    .eq(ObjUtil.isNotEmpty(request.getFinishedAt()), ExecutionEvent::getFinishedAt, request.getFinishedAt())
-                    .eq(ObjUtil.isNotEmpty(request.getAtomicCommandId()), ExecutionEvent::getAtomicCommandId, request.getAtomicCommandId())
-                    .eq(ObjUtil.isNotEmpty(request.getAtomicCommandCode()), ExecutionEvent::getAtomicCommandCode, request.getAtomicCommandCode())
-                    .eq(ObjUtil.isNotEmpty(request.getProviderId()), ExecutionEvent::getProviderId, request.getProviderId())
-                    .eq(ObjUtil.isNotEmpty(request.getProviderName()), ExecutionEvent::getProviderName, request.getProviderName())
-                    .eq(ObjUtil.isNotEmpty(request.getModelId()), ExecutionEvent::getModelId, request.getModelId())
-                    .eq(ObjUtil.isNotEmpty(request.getModelCode()), ExecutionEvent::getModelCode, request.getModelCode())
-                    .eq(ObjUtil.isNotEmpty(request.getStatus()), ExecutionEvent::getStatus, request.getStatus());
-        repository.delete(queryWrapper);
+        repository.deleteById(request.getId());
     }
 }
-

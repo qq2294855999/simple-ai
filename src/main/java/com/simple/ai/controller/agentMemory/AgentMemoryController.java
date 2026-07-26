@@ -158,7 +158,7 @@ public class AgentMemoryController {
     @PostMapping("{id}/execute")
     @Operation(summary = "执行记忆")
     @HasAuthority("sys:agent-memory:execute")
-    public R<ExecuteMemoryResponse> execute(@PathVariable String id, @RequestBody ExecuteMemoryRequest request) {
+    public R<ExecuteMemoryResponse> execute(@PathVariable String id, @RequestBody @Validated ExecuteMemoryRequest request) {
         AssertUtils.notEmpty(id, "主键不能为空");
         return R.ok(agentMemoryService.execute(id, request));
     }

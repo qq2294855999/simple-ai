@@ -3,14 +3,15 @@ package com.simple.ai.controller.agentChat;
 import com.simple.ai.common.dto.agentChat.*;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
+import com.simple.ai.common.properties.SimpleAiProperties;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -29,8 +30,11 @@ import java.util.concurrent.TimeoutException;
 @RestController
 public class AgentChatController {
 
-    /** 聊天 SSE 最大等待时长 */
-    private static final long CHAT_STREAM_TIMEOUT_MILLIS = 300000L;
+    /**
+     * 全局配置属性
+     */
+    @Autowired
+    private SimpleAiProperties simpleAiProperties;
 
     /** 聊天服务 */
     @Autowired
@@ -49,7 +53,7 @@ public class AgentChatController {
     @PostMapping("session")
     @Operation(summary = "创建智能体聊天会话")
     @HasAuthority("sys:agent-chat:session")
-    public R<AgentChatSessionResponse> createSession(@RequestBody @Valid CreateAgentChatSessionRequest request) {
+    public R<AgentChatSessionResponse> createSession(@RequestBody @Validated CreateAgentChatSessionRequest request) {
         return R.ok(agentChatService.createSession(request));
     }
 
@@ -98,8 +102,8 @@ public class AgentChatController {
     @PostMapping("send-stream")
     @Operation(summary = "流式发送智能体聊天消息")
     @HasAuthority("sys:agent-chat:send-stream")
-    public SseEmitter sendStream(@RequestBody @Valid SendAgentChatMessageRequest request) {
-        SseEmitter emitter = new SseEmitter(CHAT_STREAM_TIMEOUT_MILLIS);
+    public SseEmitter sendStream(@RequestBody @Validated SendAgentChatMessageRequest request) {
+        SseEmitter emitter = new SseEmitter(simpleAiProperties.getChat().getStreamTimeoutMillis());
 
         // SSE 超时必须以错误终态关闭，避免浏览器无限等待 loading
         emitter.onTimeout(() -> emitter.completeWithError(new TimeoutException("智能体聊天响应超时")));

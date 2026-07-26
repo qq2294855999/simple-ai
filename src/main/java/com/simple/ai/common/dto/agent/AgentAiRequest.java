@@ -17,6 +17,7 @@ public class AgentAiRequest {
      * 智能体主键。
      */
     @Schema(description = "智能体主键")
+    @NotEmpty(message = "智能体主键不能为空")
     private String agentId;
 
     /**
@@ -38,12 +39,6 @@ public class AgentAiRequest {
     @Schema(description = "用户命令内容")
     @NotEmpty(message = "用户命令内容不能为空")
     private String commandContent;
-
-    /**
-     * 会话摘要
-     */
-    @Schema(description = "会话摘要")
-    private String sessionSummary;
 
     /**
      * 会话ID，用于工具回调中获取用户上下文

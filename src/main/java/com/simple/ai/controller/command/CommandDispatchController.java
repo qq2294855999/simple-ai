@@ -8,9 +8,9 @@ import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,7 +50,7 @@ public class CommandDispatchController {
     @PostMapping("dispatch")
     @Operation(summary = "调度智能体命令")
     @HasAuthority("sys:agent-command:dispatch")
-    public R<CommandDispatchResponse> dispatch(@RequestBody @Valid CommandDispatchRequest request) {
+    public R<CommandDispatchResponse> dispatch(@RequestBody @Validated CommandDispatchRequest request) {
 
         // 委托核心服务执行命令调度
         CommandDispatchResponse response = commandDispatchService.dispatch(request);
@@ -66,7 +66,7 @@ public class CommandDispatchController {
     @PostMapping("dispatch-stream")
     @Operation(summary = "流式调度智能体命令")
     @HasAuthority("sys:agent-command:dispatch-stream")
-    public SseEmitter dispatchStream(@RequestBody @Valid CommandDispatchRequest request) {
+    public SseEmitter dispatchStream(@RequestBody @Validated CommandDispatchRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
 
         // 使用 Spring 任务执行器处理长任务，避免请求线程被调度过程占用

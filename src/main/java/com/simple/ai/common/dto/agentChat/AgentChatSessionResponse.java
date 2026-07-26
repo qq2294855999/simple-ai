@@ -38,4 +38,9 @@ public class AgentChatSessionResponse {
      * 客户端主键
      */
     private String clientId;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 }

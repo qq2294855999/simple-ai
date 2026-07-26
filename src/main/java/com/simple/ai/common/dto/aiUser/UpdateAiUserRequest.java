@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.aiUser;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
@@ -9,46 +10,31 @@ import lombok.Data;
  * @author qty
  */
 @Data
+@Schema(title = "更新AI平台用户请求参数")
 public class UpdateAiUserRequest {
 
-    /**
-     * 用户主键（必填）
-     */
+    @Schema(description = "用户主键")
     @NotEmpty(message = "用户ID不能为空")
     private String id;
 
-    /**
-     * 用户昵称
-     */
+    @Schema(description = "用户昵称")
     private String nickname;
 
-    /**
-     * 用户账号（登录名）
-     */
+    @Schema(description = "用户账号")
     private String username;
 
-    /**
-     * 手机号码
-     */
+    @Schema(description = "手机号码")
     private String phone;
 
-    /**
-     * 头像 URL
-     */
+    @Schema(description = "头像URL")
     private String avatarUrl;
 
-    /**
-     * 每日 AI 调用次数上限
-     */
+    @Schema(description = "每日AI调用次数上限")
     private Integer dailyQuota;
 
-    /**
-     * 用户偏好设置（JSON 文本）
-     */
+    @Schema(description = "用户偏好设置")
     private String preferences;
 
-    /**
-     * 备注
-     */
+    @Schema(description = "备注")
     private String remark;
 }
