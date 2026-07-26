@@ -1,10 +1,11 @@
 import type {MenuProps} from "antd";
-import {Button, Descriptions, Dropdown, Form, Input, Modal, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import {Button, Descriptions, Dropdown, Form, Input, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography} from "antd";
 import type {ColumnsType} from "antd/es/table";
 import {CopyOutlined, MoreOutlined} from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useSearchParams} from "react-router-dom";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
 import {AgentClientApi} from "../api/agentClientApi";
 import {AgentExecutorApi} from "../api/agentExecutorApi";
@@ -78,21 +79,22 @@ export function AgentClientManagementPage() {
     const [showSecretModal, setShowSecretModal] = useState(false);
     const [secretData, setSecretData] = useState<AgentClientCreateResponseDto | null>(null);
 
-    // 执行器下拉数据
-    const [executors, setExecutors] = useState<{ id: string; name: string }[]>([]);
+    // 执行器下拉：滚动分页加载
+    const {
+        options: executors,
+        loading: executorsLoading,
+        onPopupScroll: onExecutorsPopupScroll
+    } = useScrollSelect<{ id: string; executorName: string }>(
+        (page, size) => AgentExecutorApi.page({current: page, size}),
+        20,
+        []
+    );
 
-    // 加载执行器下拉
-    const loadExecutors = useCallback(async () => {
-        try {
-            const result = await AgentExecutorApi.page({current: 1, size: 1000});
-            const list = (result.records || [])
-                .filter((a: { executorName?: string }) => a.executorName)
-                .map((a: { id: string; executorName: string }) => ({id: a.id, name: a.executorName}));
-            setExecutors(list);
-        } catch {
-            // 下拉加载失败不影响主流程
-        }
-    }, []);
+    // 仅保留有名称的执行器
+    const executorOptions = useMemo(
+        () => executors.filter(e => e.executorName).map(e => ({id: e.id, name: e.executorName})),
+        [executors]
+    );
 
     // 加载列表数据
     const loadDataRef = useRef<(() => Promise<void>) | null>(null);
@@ -117,15 +119,13 @@ export function AgentClientManagementPage() {
 
     useEffect(() => {
         loadData();
-        loadExecutors().then(() => {
-            // 从执行器页面跳转过来时，自动打开创建弹窗并选中执行器
-            const executorId = searchParams.get("executorId");
-            if (executorId) {
-                form.setFieldsValue({executorId});
-                setShowModal(true);
-            }
-        });
-    }, [loadData, loadExecutors, searchParams, form]);
+        // 从执行器页面跳转过来时，自动打开创建弹窗并选中执行器
+        const executorId = searchParams.get("executorId");
+        if (executorId) {
+            form.setFieldsValue({executorId});
+            setShowModal(true);
+        }
+    }, [loadData, searchParams, form]);
 
     // 搜索
     const handleSearch = useCallback(() => {
@@ -279,7 +279,9 @@ export function AgentClientManagementPage() {
                         onChange={setFilterExecutorId}
                         style={{width: 160, height: 36}}
                         allowClear
-                        options={executors.map(a => ({label: a.name, value: a.id}))}
+                        options={executorOptions.map(a => ({label: a.name, value: a.id}))}
+                        onPopupScroll={onExecutorsPopupScroll}
+                        notFoundContent={executorsLoading ? <Spin size="small"/> : "暂无数据"}
                     />
                     <Select
                         placeholder="状态"
@@ -361,8 +363,10 @@ export function AgentClientManagementPage() {
                             <Select
                                 placeholder="选择执行器"
                                 style={{height: 36}}
-                                options={executors.map(a => ({label: a.name, value: a.id}))}
+                                options={executorOptions.map(a => ({label: a.name, value: a.id}))}
                                 showSearch
+                                onPopupScroll={onExecutorsPopupScroll}
+                                notFoundContent={executorsLoading ? <Spin size="small"/> : "暂无数据"}
                                 filterOption={(input, option) => (option?.label as string || "").includes(input)}
                             />
                         </Form.Item>

@@ -51,7 +51,7 @@ export const AgentExecutorApi = {
     getExecutorProtocol: (executorId: string) =>
         http.get<string>(`/agent/executor/${executorId}/protocol`),
 
-    /** 查询所有启用的协议列表（用于下拉选择） */
-    findAllProtocols: () =>
-        http.get<PageResult<ProtocolPageResponseDto>>("/agent/protocol/page", {params: {current: 1, size: 1000, status: "ON"}})
+    /** 分页查询协议列表（用于下拉滚动加载） */
+    pageProtocols: (params: { current: number; size: number }) =>
+        http.get<PageResult<ProtocolPageResponseDto>>("/agent/protocol/page", {params: {...params, status: "ON"}})
 };

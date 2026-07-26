@@ -1,7 +1,8 @@
-import {Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import {Button, Form, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tag, Tooltip, Typography} from "antd";
 import type {ColumnsType} from "antd/es/table";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
 import {SubAgentRelationApi} from "../api/subAgentRelationApi";
 import {AgentDefinitionApi} from "../api/agentDefinitionApi";
@@ -41,19 +42,21 @@ export function SubAgentRelationManagementPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
-  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+    // 智能体下拉：滚动分页加载
+    const {
+        options: agentsRaw,
+        loading: agentsLoading,
+        onPopupScroll: onAgentsPopupScroll
+    } = useScrollSelect<{ id: string; name?: string }>(
+        (page, size) => AgentDefinitionApi.page({current: page, size}),
+        20,
+        []
+    );
 
-  const loadAgents = useCallback(async () => {
-    try {
-      const result = await AgentDefinitionApi.listAll();
-      const list = (result.records || [])
-        .filter((a: { name?: string }) => a.name)
-        .map((a: { id: string; name: string }) => ({ id: a.id, name: a.name }));
-      setAgents(list);
-    } catch {
-      // ignore
-    }
-  }, []);
+    const agents = useMemo(
+        () => agentsRaw.filter(a => a.name).map(a => ({id: a.id, name: a.name!})),
+        [agentsRaw]
+    );
 
   const loadDataRef = useRef<(() => Promise<void>) | null>(null);
   const loadData = useCallback(async () => {
@@ -77,8 +80,7 @@ export function SubAgentRelationManagementPage() {
 
   useEffect(() => {
     loadData();
-    loadAgents();
-  }, [loadData, loadAgents]);
+  }, [loadData]);
 
   const handleSearch = useCallback(() => {
     setPageIndex(1);
@@ -190,6 +192,8 @@ export function SubAgentRelationManagementPage() {
             style={{ width: 160, height: 36 }}
             allowClear
             options={agents.map(a => ({ label: a.name, value: a.id }))}
+            onPopupScroll={onAgentsPopupScroll}
+            notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
           />
           <Select
             placeholder="状态"
@@ -254,6 +258,8 @@ export function SubAgentRelationManagementPage() {
                 style={{ height: 36 }}
                 options={agents.map(a => ({ label: a.name, value: a.id }))}
                 showSearch
+                onPopupScroll={onAgentsPopupScroll}
+                notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
                 filterOption={(input, option) => (option?.label as string || "").includes(input)}
               />
             </Form.Item>
@@ -268,6 +274,8 @@ export function SubAgentRelationManagementPage() {
                 style={{ height: 36 }}
                 options={agents.map(a => ({ label: a.name, value: a.id }))}
                 showSearch
+                onPopupScroll={onAgentsPopupScroll}
+                notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
                 filterOption={(input, option) => (option?.label as string || "").includes(input)}
               />
             </Form.Item>

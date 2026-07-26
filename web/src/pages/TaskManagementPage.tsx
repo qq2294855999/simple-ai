@@ -1,12 +1,12 @@
-import { Button, Form, Input, Modal, Select, Space, Table, Tooltip, Typography, Popconfirm, Tag } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePreventDoubleClickHook } from "../hooks/usePreventDoubleClickHook";
-import { ToastUtil } from "../utils/ToastUtil";
-import { TaskApi } from "../api/taskApi";
-import { AgentDefinitionApi } from "../api/agentDefinitionApi";
-import type { TaskPageResponseDto } from "../dto/task/TaskDto";
-import type { CreateTaskRequestDto, UpdateTaskRequestDto } from "../dto/task/TaskDto";
+import {Button, Form, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tag, Tooltip, Typography} from "antd";
+import type {ColumnsType} from "antd/es/table";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
+import {ToastUtil} from "../utils/ToastUtil";
+import {TaskApi} from "../api/taskApi";
+import {AgentDefinitionApi} from "../api/agentDefinitionApi";
+import type {CreateTaskRequestDto, TaskPageResponseDto, UpdateTaskRequestDto} from "../dto/task/TaskDto";
 
 /**
  * 步骤类型枚举标签映射。
@@ -68,14 +68,21 @@ export function TaskManagementPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
-  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+    // 智能体下拉：滚动分页加载
+    const {
+        options: agentsRaw,
+        loading: agentsLoading,
+        onPopupScroll: onAgentsPopupScroll
+    } = useScrollSelect<{ id: string; name?: string }>(
+        (page, size) => AgentDefinitionApi.page({current: page, size}),
+        20,
+        []
+    );
 
-  const loadAgents = useCallback(async () => {
-    try {
-      const result = await AgentDefinitionApi.listAll();
-      setAgents((result.records || []).filter((a: { name?: string }) => a.name).map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
-    } catch { /* ignore */ }
-  }, []);
+    const agents = useMemo(
+        () => agentsRaw.filter(a => a.name).map(a => ({id: a.id, name: a.name!})),
+        [agentsRaw]
+    );
 
   const loadDataRef = useRef<(() => Promise<void>) | null>(null);
   const loadData = useCallback(async () => {
@@ -92,7 +99,9 @@ export function TaskManagementPage() {
 
   loadDataRef.current = loadData;
 
-  useEffect(() => { loadData(); loadAgents(); }, [loadData, loadAgents]);
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
   const handleSearch = useCallback(() => { setPageIndex(1); loadDataRef.current?.(); }, []);
   const handleReset = useCallback(() => {
@@ -170,7 +179,12 @@ export function TaskManagementPage() {
       <div className="simple-search-panel">
         <Space wrap>
           <Input placeholder="关键字（任务名称/记忆名称）" value={keyword} onChange={e => setKeyword(e.target.value)} style={{ width: 240, height: 36 }} allowClear />
-          <Select placeholder="所属智能体" value={filterAgentId} onChange={setFilterAgentId} style={{ width: 160, height: 36 }} allowClear options={agents.map(a => ({ label: a.name, value: a.id }))} />
+            <Select
+                placeholder="所属智能体" value={filterAgentId} onChange={setFilterAgentId} style={{width: 160, height: 36}} allowClear
+                options={agents.map(a => ({label: a.name, value: a.id}))}
+                onPopupScroll={onAgentsPopupScroll}
+                notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
+            />
           <Select placeholder="执行状态" value={filterExecStatus} onChange={setFilterExecStatus} style={{ width: 140, height: 36 }} allowClear
             options={Object.entries(execStatusLabels).map(([k, v]) => ({ label: v, value: k }))} />
           <Button type="primary" onClick={handleSearch}>搜索</Button>

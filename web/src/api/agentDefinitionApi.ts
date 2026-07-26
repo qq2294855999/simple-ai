@@ -17,12 +17,6 @@ export const AgentDefinitionApi = {
   page: (params: { current: number; size: number; keyword?: string; status?: number }) =>
     http.get<PageResult<AgentDefinitionPageDto>>("/sys/agent-definition/aggregate-list", { params }),
 
-  /** 聚合全量列表（用于下拉选择） */
-  listAll: () =>
-    http.get<PageResult<AgentDefinitionPageDto>>("/sys/agent-definition/aggregate-list", {
-      params: { current: 1, size: 1000 }
-    }),
-
   /** 查询详情 */
   findOne: (id: string) =>
     http.get<AgentDefinitionInfoDto>(`/sys/agent-definition/find/${id}`),

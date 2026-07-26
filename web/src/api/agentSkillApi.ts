@@ -30,10 +30,6 @@ export const AgentSkillApi = {
   deleteByIds: (ids: string[]) =>
     http.delete("/sys/agent-skill/deletes", { data: ids }),
 
-  /** 全量列表（用于下拉选择） */
-  listAll: () =>
-    http.get<PageResult<AgentSkillPageResponseDto>>("/sys/agent-skill/aggregate-list", { params: { current: 1, size: 1000 } }),
-
   /** 启用 */
   enable: (id: string) =>
     http.put(`/sys/agent-skill/enable/${id}`),

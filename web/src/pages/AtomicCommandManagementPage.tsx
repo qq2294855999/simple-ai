@@ -1,9 +1,10 @@
 import type {MenuProps} from "antd";
-import {Button, Dropdown, Form, Input, Modal, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import {Button, Dropdown, Form, Input, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography} from "antd";
 import type {ColumnsType} from "antd/es/table";
 import {MoreOutlined} from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
 import {AtomicCommandApi} from "../api/atomicCommandApi";
 import {AgentExecutorApi} from "../api/agentExecutorApi";
@@ -41,28 +42,38 @@ export function AtomicCommandManagementPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
-  // 技能下拉数据
-  const [skills, setSkills] = useState<{ id: string; label: string }[]>([]);
-    // 执行器下拉数据
-    const [executors, setExecutors] = useState<{ id: string; name: string }[]>([]);
+    // 技能下拉：滚动分页加载
+    const {
+        options: skills,
+        loading: skillsLoading,
+        onPopupScroll: onSkillsPopupScroll
+    } = useScrollSelect<{ id: string; definitionDesc?: string; agentName?: string }>(
+        (page, size) => AgentSkillApi.page({current: page, size}),
+        20,
+        []
+    );
 
-  const loadSkills = useCallback(async () => {
-    try {
-      const result = await AgentSkillApi.listAll();
-      setSkills((result.records || []).map((s: { id: string; definitionDesc?: string; agentName?: string }) => ({
-        id: s.id,
-        label: `${s.definitionDesc || s.id} (${s.agentName || "-"})`
-      })));
-    } catch { /* ignore */ }
-  }, []);
+    // 转换为下拉选项格式
+    const skillOptions = useMemo(
+        () => skills.map(s => ({id: s.id, label: `${s.definitionDesc || s.id} (${s.agentName || "-"})`})),
+        [skills]
+    );
 
-    const loadExecutors = useCallback(async () => {
-        try {
-            const result = await AgentExecutorApi.page({current: 1, size: 1000});
-            setExecutors((result.records || []).map((e: { id: string; executorName: string }) => ({id: e.id, name: e.executorName})));
-        } catch { /* ignore */
-        }
-    }, []);
+    // 执行器下拉：滚动分页加载
+    const {
+        options: executors,
+        loading: executorsLoading,
+        onPopupScroll: onExecutorsPopupScroll
+    } = useScrollSelect<{ id: string; executorName: string }>(
+        (page, size) => AgentExecutorApi.page({current: page, size}),
+        20,
+        []
+    );
+
+    const executorOptions = useMemo(
+        () => executors.map(e => ({id: e.id, name: e.executorName})),
+        [executors]
+    );
 
   const loadDataRef = useRef<(() => Promise<void>) | null>(null);
   const loadData = useCallback(async () => {
@@ -81,9 +92,7 @@ export function AtomicCommandManagementPage() {
 
     useEffect(() => {
         loadData();
-        loadSkills();
-        loadExecutors();
-    }, [loadData, loadSkills, loadExecutors]);
+    }, [loadData]);
 
   const handleSearch = useCallback(() => { setPageIndex(1); loadDataRef.current?.(); }, []);
   const handleReset = useCallback(() => {
@@ -174,10 +183,17 @@ export function AtomicCommandManagementPage() {
       <div className="simple-search-panel">
         <Space wrap>
           <Input placeholder="关键字（名称/命令）" value={keyword} onChange={e => setKeyword(e.target.value)} style={{ width: 200, height: 36 }} allowClear />
-          <Select placeholder="关联技能" value={filterSkillId} onChange={setFilterSkillId} style={{ width: 200, height: 36 }} allowClear
-            options={skills.map(s => ({ label: s.label, value: s.id }))} showSearch filterOption={(input, option) => (option?.label as string || "").includes(input)} />
-            <Select placeholder="关联执行器" value={filterExecutorId} onChange={setFilterExecutorId} style={{width: 160, height: 36}} allowClear
-                    options={executors.map(e => ({label: e.name, value: e.id}))} showSearch
+            <Select
+                placeholder="关联技能" value={filterSkillId} onChange={setFilterSkillId} style={{width: 200, height: 36}} allowClear
+                options={skillOptions.map(s => ({label: s.label, value: s.id}))} showSearch
+                onPopupScroll={onSkillsPopupScroll}
+                notFoundContent={skillsLoading ? <Spin size="small"/> : "暂无数据"}
+                filterOption={(input, option) => (option?.label as string || "").includes(input)}/>
+            <Select
+                placeholder="关联执行器" value={filterExecutorId} onChange={setFilterExecutorId} style={{width: 160, height: 36}} allowClear
+                options={executorOptions.map(e => ({label: e.name, value: e.id}))} showSearch
+                onPopupScroll={onExecutorsPopupScroll}
+                notFoundContent={executorsLoading ? <Spin size="small"/> : "暂无数据"}
                     filterOption={(input, option) => (option?.label as string || "").includes(input)}/>
           <Select placeholder="状态" value={filterStatus} onChange={setFilterStatus} style={{ width: 120, height: 36 }} allowClear
             options={[{ label: "启用", value: "ENABLE" }, { label: "停用", value: "DISABLE" }]} />
@@ -208,11 +224,16 @@ export function AtomicCommandManagementPage() {
             </Form.Item>
             <Form.Item label="关联技能" name="skillId" style={{ marginBottom: 16 }}>
               <Select placeholder="选择技能（可选）" style={{ height: 36 }} allowClear
-                options={skills.map(s => ({ label: s.label, value: s.id }))} showSearch filterOption={(input, option) => (option?.label as string || "").includes(input)} />
+                      options={skillOptions.map(s => ({label: s.label, value: s.id}))} showSearch
+                      onPopupScroll={onSkillsPopupScroll}
+                      notFoundContent={skillsLoading ? <Spin size="small"/> : "暂无数据"}
+                      filterOption={(input, option) => (option?.label as string || "").includes(input)}/>
             </Form.Item>
               <Form.Item label="关联执行器" name="executorId" style={{marginBottom: 16}}>
                   <Select placeholder="选择执行器（可选）" style={{height: 36}} allowClear
-                          options={executors.map(e => ({label: e.name, value: e.id}))} showSearch
+                          options={executorOptions.map(e => ({label: e.name, value: e.id}))} showSearch
+                          onPopupScroll={onExecutorsPopupScroll}
+                          notFoundContent={executorsLoading ? <Spin size="small"/> : "暂无数据"}
                           filterOption={(input, option) => (option?.label as string || "").includes(input)}/>
             </Form.Item>
             <Form.Item label="备注" name="remark" style={{ marginBottom: 0 }}><Input.TextArea rows={3} /></Form.Item>

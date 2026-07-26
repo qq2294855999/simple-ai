@@ -12,6 +12,7 @@ import {
     UserOutlined
 } from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {AgentChatApi} from "../api/agentChatApi";
 import {AgentClientApi} from "../api/agentClientApi";
 import {AgentDefinitionApi} from "../api/agentDefinitionApi";
@@ -58,11 +59,37 @@ function truncateSessionName(name: string, maxLen: number = maxSessionNameLength
  * @author qty
  */
 export function AgentChatPage() {
-  const [agents, setAgents] = useState<AgentDefinitionPageDto[]>([]);
+    // 智能体下拉：滚动分页加载
+    const {
+        options: agents,
+        loading: agentsLoading,
+        onPopupScroll: onAgentsPopupScroll
+    } = useScrollSelect<AgentDefinitionPageDto>(
+        (page, size) => AgentDefinitionApi.page({current: page, size}),
+        20,
+        []
+    );
+
   const [selectedAgentId, setSelectedAgentId] = useState<string>();
   const [models, setModels] = useState<AiModelResponseDto[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>();
-    const [clients, setClients] = useState<{ id: string; clientName: string }[]>([]);
+
+    // 客户端下拉：滚动分页加载
+    const {
+        options: clientsRaw,
+        loading: clientsLoading,
+        onPopupScroll: onClientsPopupScroll
+    } = useScrollSelect<{ id: string; clientName: string }>(
+        (page, size) => AgentClientApi.page({current: page, size}),
+        20,
+        []
+    );
+
+    const clients = useMemo(
+        () => clientsRaw.map(c => ({id: c.id, clientName: c.clientName})),
+        [clientsRaw]
+    );
+
     const [selectedClientId, setSelectedClientId] = useState<string>();
   const [sessions, setSessions] = useState<AgentChatSessionDto[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>();
@@ -92,24 +119,10 @@ export function AgentChatPage() {
     [selectedSessionId, sessions]
   );
 
-  const loadAgents = useCallback(async () => {
-    const page = await AgentDefinitionApi.listAll();
-    setAgents(page.records);
-  }, []);
-
   const loadModels = useCallback(async (agentId: string) => {
     const result = await AiModelApi.available(agentId);
     setModels(result);
   }, []);
-
-    const loadClients = useCallback(async () => {
-        try {
-            const result = await AgentClientApi.page({current: 1, size: 1000});
-            setClients((result.records || []).map((c: { id: string; clientName: string }) => ({id: c.id, clientName: c.clientName})));
-        } catch {
-            setClients([]);
-        }
-    }, []);
 
     const loadSessions = useCallback(async (agentId: string, modelId?: string, clientId?: string) => {
         const result = await AgentChatApi.findSessions(agentId, modelId, clientId);
@@ -260,9 +273,8 @@ export function AgentChatPage() {
   }, [messages, loadingMore]);
 
   useEffect(() => {
-    void loadAgents().catch(() => setAgents([]));
-      void loadClients().catch(() => setClients([]));
-  }, [loadAgents, loadClients]);
+      // 智能体和客户端下拉已由 useScrollSelect 自动加载
+  }, []);
 
     // 切换智能体时重置模型和会话，并加载新智能体的可用模型
   useEffect(() => {
@@ -734,6 +746,8 @@ export function AgentChatPage() {
             style={{ width: 240, height: 36 }}
             onChange={setSelectedAgentId}
             options={agents.map(agent => ({ label: agent.name, value: agent.id }))}
+            onPopupScroll={onAgentsPopupScroll}
+            notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
           />
           <Select
               placeholder="选择模型"
@@ -753,6 +767,8 @@ export function AgentChatPage() {
                 onChange={setSelectedClientId}
                 options={clients.map(c => ({label: c.clientName, value: c.id}))}
                 showSearch
+                onPopupScroll={onClientsPopupScroll}
+                notFoundContent={clientsLoading ? <Spin size="small"/> : "暂无数据"}
                 filterOption={(input, option) => (option?.label as string || "").includes(input)}
             />
             <Button type="primary" icon={<PlusOutlined/>} loading={creating} disabled={!selectedAgentId || !selectedModelId || !selectedClientId}

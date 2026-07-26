@@ -1,10 +1,11 @@
 import type {MenuProps} from "antd";
-import {Button, Collapse, Descriptions, Dropdown, Form, Input, Modal, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import {Button, Collapse, Descriptions, Dropdown, Form, Input, Modal, Select, Space, Spin, Table, Tag, Tooltip, Typography} from "antd";
 import type {ColumnsType} from "antd/es/table";
 import {BookOutlined, MoreOutlined} from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
 import {AgentExecutorApi} from "../api/agentExecutorApi";
 import type {
@@ -55,8 +56,16 @@ export function AgentExecutorManagementPage() {
     const [protocolData, setProtocolData] = useState<AgentExecutorProtocolResponse | null>(null);
     const [protocolLoading, setProtocolLoading] = useState(false);
 
-    // 协议下拉列表（用于创建/编辑时选择）
-    const [protocolOptions, setProtocolOptions] = useState<ProtocolPageResponseDto[]>([]);
+    // 协议下拉：滚动分页加载
+    const {
+        options: protocolOptions,
+        loading: protocolsLoading,
+        onPopupScroll: onProtocolsPopupScroll
+    } = useScrollSelect<ProtocolPageResponseDto>(
+        (page, size) => AgentExecutorApi.pageProtocols({current: page, size}),
+        20,
+        []
+    );
 
     // 打开协议说明弹窗
     const handleOpenProtocol = useCallback(async () => {
@@ -114,15 +123,6 @@ export function AgentExecutorManagementPage() {
     const openCreateModal = useCallback(async () => {
         setEditingId(null);
         form.resetFields();
-
-        // 加载协议下拉列表
-        try {
-            const result = await AgentExecutorApi.findAllProtocols();
-            setProtocolOptions(result.records || []);
-        } catch {
-            setProtocolOptions([]);
-        }
-
         setShowModal(true);
     }, [form]);
 
@@ -140,14 +140,6 @@ export function AgentExecutorManagementPage() {
     // 打开编辑弹窗
     const openEditModal = useCallback(async (id: string) => {
         setEditingId(id);
-
-        // 加载协议下拉列表
-        try {
-            const result = await AgentExecutorApi.findAllProtocols();
-            setProtocolOptions(result.records || []);
-        } catch {
-            setProtocolOptions([]);
-        }
 
         try {
             const record = await AgentExecutorApi.findOne(id);
@@ -352,6 +344,8 @@ export function AgentExecutorManagementPage() {
                                 style={{height: 36}}
                                 showSearch
                                 allowClear
+                                onPopupScroll={onProtocolsPopupScroll}
+                                notFoundContent={protocolsLoading ? <Spin size="small"/> : "暂无数据"}
                                 filterOption={(input, option) =>
                                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                                 }

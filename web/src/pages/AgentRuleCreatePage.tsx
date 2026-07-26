@@ -1,9 +1,10 @@
-import {Button, Form, Input, Select, Space, Typography} from "antd";
+import {Button, Form, Input, Select, Space, Spin, Typography} from "antd";
 import {ArrowLeftOutlined} from "@ant-design/icons";
-import {useCallback, useEffect, useState} from "react";
+import {useMemo, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
 import {AgentRuleApi} from "../api/agentRuleApi";
 import {AgentDefinitionApi} from "../api/agentDefinitionApi";
@@ -25,25 +26,21 @@ export function AgentRuleCreatePage() {
     // 定义描述 MD 内容
     const [definitionDesc, setDefinitionDesc] = useState("");
 
-    // 智能体下拉数据
-    const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+    // 智能体下拉：滚动分页加载
+    const {
+        options: agentsRaw,
+        loading: agentsLoading,
+        onPopupScroll: onAgentsPopupScroll
+    } = useScrollSelect<{ id: string; name?: string }>(
+        (page, size) => AgentDefinitionApi.page({current: page, size}),
+        20,
+        []
+    );
 
-    // 加载智能体下拉
-    const loadAgents = useCallback(async () => {
-        try {
-            const result = await AgentDefinitionApi.listAll();
-            const list = (result.records || [])
-                .filter((a: { name?: string }) => a.name)
-                .map((a: { id: string; name: string }) => ({id: a.id, name: a.name}));
-            setAgents(list);
-        } catch {
-            // 下拉加载失败不影响主流程
-        }
-    }, []);
-
-    useEffect(() => {
-        loadAgents();
-    }, [loadAgents]);
+    const agents = useMemo(
+        () => agentsRaw.filter(a => a.name).map(a => ({id: a.id, name: a.name!})),
+        [agentsRaw]
+    );
 
     // 提交创建
     const {onClick: handleSubmit, loading: submitLoading} = usePreventDoubleClickHook(async () => {
@@ -103,6 +100,8 @@ export function AgentRuleCreatePage() {
                             style={{width: 200, height: 36}}
                             options={agents.map(a => ({label: a.name, value: a.id}))}
                             showSearch
+                            onPopupScroll={onAgentsPopupScroll}
+                            notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
                             filterOption={(input, option) => (option?.label as string || "").includes(input)}
                         />
                     </Form.Item>

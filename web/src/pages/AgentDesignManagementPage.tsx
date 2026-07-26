@@ -1,10 +1,11 @@
 import type {MenuProps} from "antd";
-import {Button, Dropdown, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography} from "antd";
+import {Button, Dropdown, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tag, Tooltip, Typography} from "antd";
 import {MoreOutlined, PlusOutlined} from "@ant-design/icons";
 import type {ColumnsType} from "antd/es/table";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
+import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
 import {AgentDefinitionApi} from "../api/agentDefinitionApi";
 import {AgentRuleApi} from "../api/agentRuleApi";
@@ -88,10 +89,40 @@ export function AgentDesignManagementPage() {
     // 行内规则/技能管理弹窗状态
     const [ruleModalAgentId, setRuleModalAgentId] = useState<string | null>(null);
     const [skillModalAgentId, setSkillModalAgentId] = useState<string | null>(null);
-    const [rulesDropdown, setRulesDropdown] = useState<{ id: string; label: string }[]>([]);
-    const [skillsDropdown, setSkillsDropdown] = useState<{ id: string; label: string }[]>([]);
     const [selectedRuleIds, setSelectedRuleIds] = useState<string[]>([]);
     const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+
+    // 规则下拉：滚动分页加载（页面加载即开始，用于规则管理弹窗中的 Select）
+    const {
+        options: rulesDropdownRaw,
+        loading: rulesDropdownLoading,
+        onPopupScroll: onRulesDropdownPopupScroll
+    } = useScrollSelect<AgentRulePageResponseDto>(
+        (page, size) => AgentRuleApi.page({current: page, size}),
+        20,
+        []
+    );
+
+    const rulesDropdown = useMemo(
+        () => rulesDropdownRaw.map(r => ({id: r.id, label: r.definitionDesc || r.id})),
+        [rulesDropdownRaw]
+    );
+
+    // 技能下拉：滚动分页加载
+    const {
+        options: skillsDropdownRaw,
+        loading: skillsDropdownLoading,
+        onPopupScroll: onSkillsDropdownPopupScroll
+    } = useScrollSelect<AgentSkillPageResponseDto>(
+        (page, size) => AgentSkillApi.page({current: page, size}),
+        20,
+        []
+    );
+
+    const skillsDropdown = useMemo(
+        () => skillsDropdownRaw.map(s => ({id: s.id, label: s.definitionDesc || s.id})),
+        [skillsDropdownRaw]
+    );
 
     // 该智能体已关联的规则/技能列表
     const [ruleItems, setRuleItems] = useState<AgentRulePageResponseDto[]>([]);
@@ -176,18 +207,10 @@ export function AgentDesignManagementPage() {
         loadDataRef.current?.();
     }, []);
 
-    // 加载该智能体的规则下拉和已关联规则列表
+    // 加载该智能体已关联的规则列表（下拉已由 useScrollSelect 自动加载）
     const loadRuleData = useCallback(async (agentId: string) => {
         try {
-            // 加载全量下拉选项
-            const allResult = await AgentRuleApi.listAll();
-            setRulesDropdown((allResult?.records || []).map((r: AgentRulePageResponseDto) => ({
-                id: r.id,
-                label: r.definitionDesc || r.id
-            })));
-
-            // 加载该智能体已关联的规则
-            const agentResult = await AgentRuleApi.page({current: 1, size: 1000, agentId});
+            const agentResult = await AgentRuleApi.page({current: 1, size: 200, agentId});
             setRuleItems(agentResult?.records || []);
         } catch {
             // 下拉加载失败不影响主流程
@@ -200,18 +223,10 @@ export function AgentDesignManagementPage() {
         await loadRuleData(agentId);
     }, [loadRuleData]);
 
-    // 加载该智能体的技能下拉和已关联技能列表
+    // 加载该智能体已关联的技能列表（下拉已由 useScrollSelect 自动加载）
     const loadSkillData = useCallback(async (agentId: string) => {
         try {
-            // 加载全量下拉选项
-            const allResult = await AgentSkillApi.listAll();
-            setSkillsDropdown((allResult?.records || []).map((s: AgentSkillPageResponseDto) => ({
-                id: s.id,
-                label: s.definitionDesc || s.id
-            })));
-
-            // 加载该智能体已关联的技能
-            const agentResult = await AgentSkillApi.page({current: 1, size: 1000, agentId});
+            const agentResult = await AgentSkillApi.page({current: 1, size: 200, agentId});
             setSkillItems(agentResult?.records || []);
         } catch {
             // 下拉加载失败不影响主流程
@@ -519,6 +534,8 @@ export function AgentDesignManagementPage() {
                             fieldNames={{label: 'label', value: 'id'}}
                             allowClear
                             showSearch
+                            onPopupScroll={onRulesDropdownPopupScroll}
+                            notFoundContent={rulesDropdownLoading ? <Spin size="small"/> : "暂无数据"}
                             filterOption={(input, option) => (option?.label as string || "").includes(input)}
                         />
                         <Button icon={<PlusOutlined/>}
@@ -597,6 +614,8 @@ export function AgentDesignManagementPage() {
                             fieldNames={{label: 'label', value: 'id'}}
                             allowClear
                             showSearch
+                            onPopupScroll={onSkillsDropdownPopupScroll}
+                            notFoundContent={skillsDropdownLoading ? <Spin size="small"/> : "暂无数据"}
                             filterOption={(input, option) => (option?.label as string || "").includes(input)}
                         />
                         <Button icon={<PlusOutlined/>}
