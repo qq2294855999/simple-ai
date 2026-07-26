@@ -391,17 +391,41 @@ export function AgentChatPage() {
       if (event.eventType === "MESSAGE_ACCEPTED") {
           setAiThinking(true);
           setMessages(previousMessages => {
-              // 确认已有或缺失的占位气泡，按顺序插入
-              const hasProgress = previousMessages.some(m => m.bubbleType === "PROGRESS" && (!event.taskId || m.taskId === event.taskId));
-              const hasThinking = previousMessages.some(m => m.bubbleType === "THINKING" && (!event.taskId || m.taskId === event.taskId));
-              const hasReply = previousMessages.some(m => m.id === "streaming-assistant" || (m.bubbleType === "NORMAL" && m.role === "ASSISTANT" && m.content === ""));
+              // 先查找是否有 taskId 为空的占位气泡（由 handleSend 预创建），将其 taskId 更新为真实值
+              // 避免重复创建气泡导致旧气泡（空 taskId）永远无法被 finalize 而一直转圈
+              const hasEmptyTaskIdBubble = previousMessages.some(
+                  m => !m.taskId && (m.bubbleType === "PROGRESS" || m.bubbleType === "THINKING"
+                      || (m.bubbleType === "NORMAL" && m.role === "ASSISTANT" && m.content === ""))
+              );
+
+              let updated = previousMessages;
+              if (hasEmptyTaskIdBubble && event.taskId) {
+                  // 将所有空 taskId 的占位气泡更新为真实 taskId，后续 finalize 可正确匹配
+                  updated = previousMessages.map(m => {
+                      if (!m.taskId && m.bubbleType === "PROGRESS") {
+                          return {...m, taskId: event.taskId};
+                      }
+                      if (!m.taskId && m.bubbleType === "THINKING") {
+                          return {...m, taskId: event.taskId};
+                      }
+                      if (!m.taskId && m.bubbleType === "NORMAL" && m.role === "ASSISTANT" && m.content === "") {
+                          return {...m, taskId: event.taskId};
+                      }
+                      return m;
+                  });
+              }
+
+              // 更新后再次确认是否已有匹配的占位气泡，缺失则补建
+              const hasProgress = updated.some(m => m.bubbleType === "PROGRESS" && (!event.taskId || m.taskId === event.taskId));
+              const hasThinking = updated.some(m => m.bubbleType === "THINKING" && (!event.taskId || m.taskId === event.taskId));
+              const hasReply = updated.some(m => m.id === "streaming-assistant" || (m.bubbleType === "NORMAL" && m.role === "ASSISTANT" && m.content === ""));
 
               const inserts: AgentChatMessageDto[] = [];
               if (!hasProgress) inserts.push(createProgressBubble(event.taskId, event.sessionId));
               if (!hasThinking) inserts.push(createThinkingBubble(event.taskId, event.sessionId));
               if (!hasReply) inserts.push(createReplyBubble(event.taskId, event.sessionId));
 
-              return inserts.length > 0 ? [...previousMessages, ...inserts] : previousMessages;
+              return inserts.length > 0 ? [...updated, ...inserts] : updated;
           });
           return;
       }
