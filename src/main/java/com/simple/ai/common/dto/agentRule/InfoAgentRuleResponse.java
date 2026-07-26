@@ -1,16 +1,12 @@
 package com.simple.ai.common.dto.agentRule;
 
-import java.util.Date;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.common.mp.common.enums.DeleteState;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.util.Map;
-
 import lombok.experimental.Accessors;
+
+import java.util.Date;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -48,4 +44,3 @@ public class InfoAgentRuleResponse {
     @Schema(description = "备注")
     private String remark;
 }
-

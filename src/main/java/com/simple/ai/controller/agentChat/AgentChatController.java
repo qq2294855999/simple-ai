@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -185,6 +186,20 @@ public class AgentChatController {
     @HasAuthority("sys:agent-chat:turn:status")
     public R<AgentChatTurnStatusResponse> findTurnStatus(@PathVariable String turnId) {
         return R.ok(agentChatService.findTurnStatus(turnId));
+    }
+
+    /**
+     * 查询对话客户端在线状态。
+     *
+     * @param clientId 客户端主键
+     * @return 在线状态映射
+     */
+    @GetMapping("client-online")
+    @Operation(summary = "查询对话客户端在线状态")
+    @HasAuthority("sys:agent-chat:client-online")
+    public R<Map<String, Boolean>> isClientOnline(@RequestParam String clientId) {
+        boolean online = agentChatService.isClientOnline(clientId);
+        return R.ok(Map.of("online", online));
     }
 
     /**

@@ -3,14 +3,7 @@ package com.simple.ai.service.agentSkill;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.simple.ai.common.copy.agentSkill.AgentSkillCopyMapper;
 import com.simple.ai.common.dto.agentDefinition.FindOneAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.FindOneAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.InfoAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.UpdateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.*;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
@@ -134,6 +127,24 @@ class DefaultAgentSkillService implements AgentSkillService {
         agentSkillView.updateById(entity);
     }
 
+    @Override
+    public String toggleStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前技能
+        AgentSkill entity = agentSkillView.findById(id);
+        AssertUtils.notEmpty(entity, "技能[{}]不存在", id);
+
+        // 根据当前状态切换：ON ↔ OFF
+        Status newStatus = Status.ON.equals(entity.getStatus()) ? Status.OFF : Status.ON;
+        entity.setStatus(newStatus);
+
+        // 持久化更新
+        agentSkillView.updateById(entity);
+
+        return newStatus.name();
+    }
+
     /**
      * 校验所有技能存在。
      *
@@ -173,4 +184,3 @@ class DefaultAgentSkillService implements AgentSkillService {
         AssertUtils.isTrue(existsSkill == null, "同智能体下技能定义[{}]已存在", createRequest.getDefinitionDesc());
     }
 }
-

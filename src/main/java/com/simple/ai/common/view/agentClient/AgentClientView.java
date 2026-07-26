@@ -5,6 +5,7 @@ import com.simple.ai.common.dto.agentClient.PageAgentClientRequest;
 import com.simple.ai.common.dto.agentClient.PageAgentClientResponse;
 import com.simple.ai.common.entity.agentClient.AgentClient;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -60,4 +61,13 @@ public interface AgentClientView {
      * @param id 主键
      */
     void deleteById(String id);
+
+    /**
+     * 更新客户端在线状态及最后断开时间。
+     *
+     * @param clientId           客户端主键
+     * @param isOnline           在线状态
+     * @param lastDisconnectedAt 最后断开时间，仅离线时传入
+     */
+    void updateOnlineStatus(String clientId, Boolean isOnline, Date lastDisconnectedAt);
 }

@@ -1,15 +1,7 @@
 package com.simple.ai.common.service.agentDefinition;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.DeleteCascadeAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.InfoAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.InfoAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentDefinition.PageAggregateAgentDefinitionResponse;
-import com.simple.ai.common.dto.agentDefinition.UpdateAgentDefinitionRequest;
+import com.simple.ai.common.dto.agentDefinition.*;
 
 import java.util.List;
 
@@ -96,5 +88,13 @@ public interface AgentDefinitionService {
      * @param id 主键
      */
     void disableStatus(String id);
-}
 
+    /**
+     * 切换智能体定义启用/停用状态。
+     * <p>ON 切换为 OFF，OFF 切换为 ON。</p>
+     *
+     * @param id 主键
+     * @return 切换后的状态
+     */
+    String toggleStatus(String id);
+}

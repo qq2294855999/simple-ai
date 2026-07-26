@@ -26,10 +26,8 @@ public class CreateAgentRuleRequest {
     private String triggerCondition;
 
     @Schema(description = "触发动作")
-    @NotEmpty(message = "触发动作不能为空")
     private String triggerAction;
 
     @Schema(description = "备注")
     private String remark;
 }
-

@@ -1,6 +1,7 @@
 package com.simple.ai.view.agentClient;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.simple.ai.common.dto.agentClient.PageAgentClientRequest;
 import com.simple.ai.common.dto.agentClient.PageAgentClientResponse;
@@ -9,6 +10,7 @@ import com.simple.ai.common.view.agentClient.AgentClientView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -50,5 +52,15 @@ class MPAgentClientView implements AgentClientView {
     @Override
     public void deleteById(String id) {
         repository.deleteById(id);
+    }
+
+    @Override
+    public void updateOnlineStatus(String clientId, Boolean isOnline, Date lastDisconnectedAt) {
+
+        // 使用 LambdaUpdateWrapper 更新在线状态及最后断开时间，通过 repository 执行
+        repository.update(null, Wrappers.lambdaUpdate(AgentClient.class)
+                                        .eq(AgentClient::getId, clientId)
+                                        .set(AgentClient::getIsOnline, isOnline)
+                                        .set(lastDisconnectedAt != null, AgentClient::getLastDisconnectedAt, lastDisconnectedAt));
     }
 }

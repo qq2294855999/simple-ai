@@ -1,10 +1,10 @@
-import { http } from "./http";
-import type { PageResult } from "../dto/common/R";
+import {http} from "./http";
+import type {PageResult} from "../dto/common/R";
 import type {
-  AgentDefinitionPageDto,
-  AgentDefinitionInfoDto,
-  CreateAgentDefinitionDto,
-  UpdateAgentDefinitionDto
+    AgentDefinitionInfoDto,
+    AgentDefinitionPageDto,
+    CreateAgentDefinitionDto,
+    UpdateAgentDefinitionDto
 } from "../dto/agentDefinition/AgentDefinitionDto";
 
 /**
@@ -53,5 +53,9 @@ export const AgentDefinitionApi = {
 
   /** 禁用 */
   disable: (id: string) =>
-    http.put(`/sys/agent-definition/disable/${id}`)
+      http.put(`/sys/agent-definition/disable/${id}`),
+
+    /** 切换启用/停用状态 */
+    toggleStatus: (id: string) =>
+        http.put<string>(`/sys/agent-definition/toggle-status/${id}`)
 };

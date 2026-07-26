@@ -1,13 +1,7 @@
 package com.simple.ai.controller.agentSkill;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.InfoAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.UpdateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.*;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
@@ -19,14 +13,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -158,6 +145,18 @@ public class AgentSkillController {
         agentSkillService.disableStatus(id);
         return R.ok();
     }
+
+    /**
+     * 切换智能体技能启用/停用状态。
+     *
+     * @param id 主键
+     * @return 切换后的状态
+     */
+    @PutMapping("toggle-status/{id}")
+    @Operation(summary = "切换智能体技能启用/停用状态")
+    @HasAuthority("sys:agent-skill:toggle-status")
+    public R<String> toggleStatus(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        return R.ok(agentSkillService.toggleStatus(id));
+    }
 }
-
-

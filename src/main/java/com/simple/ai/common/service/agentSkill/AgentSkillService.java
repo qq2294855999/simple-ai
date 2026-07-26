@@ -1,13 +1,7 @@
 package com.simple.ai.common.service.agentSkill;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.InfoAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillRequest;
-import com.simple.ai.common.dto.agentSkill.PageAggregateAgentSkillResponse;
-import com.simple.ai.common.dto.agentSkill.UpdateAgentSkillRequest;
+import com.simple.ai.common.dto.agentSkill.*;
 
 import java.util.List;
 
@@ -76,5 +70,13 @@ public interface AgentSkillService {
      * @param id 主键
      */
     void disableStatus(String id);
-}
 
+    /**
+     * 切换智能体技能启用/停用状态。
+     * <p>ON 切换为 OFF，OFF 切换为 ON。</p>
+     *
+     * @param id 主键
+     * @return 切换后的状态
+     */
+    String toggleStatus(String id);
+}

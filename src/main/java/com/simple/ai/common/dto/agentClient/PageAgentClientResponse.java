@@ -48,8 +48,14 @@ public class PageAgentClientResponse {
     @Schema(description = "执行器软件版本号")
     private String agentVersion;
 
-    @Schema(description = "机器名称")
-    private String machineName;
+    @Schema(description = "在线状态")
+    private Boolean isOnline;
+
+    @Schema(description = "执行器名称")
+    private String executorName;
+
+    @Schema(description = "执行器编码")
+    private String executorCode;
 
     @Schema(description = "创建人用户ID")
     private String createUserId;

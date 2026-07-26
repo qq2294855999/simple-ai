@@ -92,4 +92,3 @@ public class AgentRule {
     private String remark;
 
 }
-

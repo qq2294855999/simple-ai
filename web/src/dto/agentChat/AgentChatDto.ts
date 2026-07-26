@@ -1,3 +1,10 @@
+/**
+ * 人机会话相关 DTO 类型集合。
+ * 包含会话、消息、进度事件、执行轨迹、轮次状态等前端契约。
+ *
+ * @author qty
+ */
+
 export interface AgentChatSessionDto {
   id: string;
   agentId: string;
@@ -26,6 +33,12 @@ export interface AgentChatMessageDto {
   modelCode: string;
     /** 该消息关联的执行事件列表，用于内嵌折叠轨迹展示 */
     executionEvents: AgentChatExecutionEventDto[];
+    /** AI 思考推理过程完整文本（bubbleType=THINKING 时使用） */
+    thinkingContent: string;
+    /** 思考内容格式，与 contentFormat 对应 */
+    thinkingContentFormat: "PLAIN_TEXT" | "RESTRICTED_MARKDOWN";
+    /** 气泡类型：NORMAL 正常用户/回复；PROGRESS 进度特殊气泡；THINKING 思考特殊气泡 */
+    bubbleType: "NORMAL" | "PROGRESS" | "THINKING";
 }
 
 export interface CreateAgentChatSessionRequestDto {

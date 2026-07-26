@@ -86,10 +86,10 @@ public class AgentClient {
     private String agentVersion;
 
     /**
-     * 机器名称。
+     * 在线状态（true 在线，false 离线）。
      */
-    @TableField(value = "machine_name")
-    private String machineName;
+    @TableField(value = "is_online")
+    private Boolean isOnline;
 
     /**
      * 创建人用户ID。

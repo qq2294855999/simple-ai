@@ -26,10 +26,8 @@ public class CreateAgentSkillRequest {
     private String execContent;
 
     @Schema(description = "返回的数据格式")
-    @NotEmpty(message = "返回的数据格式不能为空")
     private String returnDataFormat;
 
     @Schema(description = "备注")
     private String remark;
 }
-

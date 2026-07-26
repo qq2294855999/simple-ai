@@ -96,6 +96,18 @@ public class AgentChatMessage {
     private String modelCode;
 
     /**
+     * AI 思考推理过程完整文本（reasoning content）
+     */
+    @TableField(value = "thinking_content")
+    private String thinkingContent;
+
+    /**
+     * 思考内容格式（PLAIN_TEXT / RESTRICTED_MARKDOWN）
+     */
+    @TableField(value = "thinking_content_format")
+    private AgentChatMessageFormatProcess thinkingContentFormat;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

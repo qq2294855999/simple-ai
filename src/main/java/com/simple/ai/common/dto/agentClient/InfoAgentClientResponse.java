@@ -48,8 +48,8 @@ public class InfoAgentClientResponse {
     @Schema(description = "执行器软件版本号")
     private String agentVersion;
 
-    @Schema(description = "机器名称")
-    private String machineName;
+    @Schema(description = "在线状态")
+    private Boolean isOnline;
 
     @Schema(description = "创建人用户ID")
     private String createUserId;

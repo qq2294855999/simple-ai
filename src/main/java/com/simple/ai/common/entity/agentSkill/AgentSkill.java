@@ -92,4 +92,3 @@ public class AgentSkill {
     private String remark;
 
 }
-

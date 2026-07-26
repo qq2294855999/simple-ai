@@ -29,6 +29,7 @@ import com.simple.common.auth.client.util.LoginUserUtils;
 import com.simple.common.core.common.service.lock.LockService;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.mp.common.enums.Status;
+import com.simple.common.websocket.utils.WebSocketUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -621,12 +622,19 @@ class DefaultAgentChatService implements AgentChatService {
     private AgentChatMessage buildFinalMessage(String sessionId, CommandDispatchResponse response, Long sequenceNo) {
         boolean success = AgentExecutionStatusProcess.SUCCESS.equals(response.getExecStatus());
         String content = success ? normalizeRestrictedMarkdown(response.getResponseContent()) : response.getFailureReason();
+
+        // 思考内容：优先取 response 已汇总内容（为空则兜底空字符串，后续 SDK reasoning 功能接入后自动生效）
+        String thinkingContent = response.getThinkingContent() != null ? response.getThinkingContent() : "";
+        AgentChatMessageFormatProcess thinkingFormat = response.getThinkingContentFormat() != null ? response.getThinkingContentFormat() : AgentChatMessageFormatProcess.PLAIN_TEXT;
+
         AgentChatMessage message = new AgentChatMessage();
         message.setSessionId(sessionId);
         message.setTaskId(response.getTaskId());
         message.setRole(resolveFinalMessageRole(success));
         message.setContent(content);
         message.setContentFormat(resolveFinalMessageFormat(success));
+        message.setThinkingContent(thinkingContent);
+        message.setThinkingContentFormat(thinkingFormat);
         message.setSequenceNo(sequenceNo);
         message.setProviderId(response.getProviderId());
         message.setProviderName(response.getProviderName());
@@ -833,6 +841,8 @@ class DefaultAgentChatService implements AgentChatService {
             response.setRole(message.getRole());
             response.setContent(message.getContent());
             response.setContentFormat(message.getContentFormat());
+            response.setThinkingContent(message.getThinkingContent());
+            response.setThinkingContentFormat(message.getThinkingContentFormat());
             response.setSequenceNo(message.getSequenceNo());
             response.setProviderName(message.getProviderName());
             response.setModelCode(message.getModelCode());
@@ -902,5 +912,12 @@ class DefaultAgentChatService implements AgentChatService {
             dtos.add(dto);
         }
         return dtos;
+    }
+
+    @Override
+    public Boolean isClientOnline(String clientId) {
+
+        // 通过 WebSocket ChannelMap 判断客户端是否保持活跃连接
+        return WebSocketUtils.isOnline("agent-executor", clientId);
     }
 }

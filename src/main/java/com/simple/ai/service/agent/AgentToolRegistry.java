@@ -60,7 +60,7 @@ public class AgentToolRegistry {
     public ToolCallback createRule(AgentRuleService agentRuleService) {
         return FunctionToolCallback.builder("createRule", agentRuleService::save)
                                    .description("创建新的智能体规则。参数：agentId（智能体定义主键ID，必填，注意：不是执行器ID，" + "可通过 queryAgentDefinition 查询已有智能体获取）、definitionDesc（定义描述，必填）、"
-                                                + "triggerCondition（触发条件，必填）、triggerAction（触发动作，必填）、remark（备注，可选）")
+                                                + "triggerCondition（触发条件，必填）、triggerAction（触发动作，可选）、remark（备注，可选）")
                                    .inputType(CreateAgentRuleRequest.class)
                                    .build();
     }
@@ -75,7 +75,7 @@ public class AgentToolRegistry {
     public ToolCallback createSkill(AgentSkillService agentSkillService) {
         return FunctionToolCallback.builder("createSkill", agentSkillService::save)
                                    .description("创建新的智能体技能。参数：agentId（智能体定义主键ID，必填，注意：不是执行器ID，" + "可通过 queryAgentDefinition 查询已有智能体获取）、definitionDesc（定义描述，必填）、"
-                                                + "execContent（执行内容，必填）、returnDataFormat（返回的数据格式，必填）、remark（备注，可选）")
+                                                + "execContent（执行内容，必填）、returnDataFormat（返回的数据格式，可选）、remark（备注，可选）")
                                    .inputType(CreateAgentSkillRequest.class)
                                    .build();
     }

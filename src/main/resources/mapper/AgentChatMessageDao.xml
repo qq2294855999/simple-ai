@@ -4,6 +4,13 @@
     <select id="selectAllBySessionId" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
         select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
                sequence_no as sequenceNo,
+               turn_id                 as turnId,
+               provider_id             as providerId,
+               provider_name           as providerName,
+               model_id                as modelId,
+               model_code              as modelCode,
+               thinking_content        as thinkingContent,
+               thinking_content_format as thinkingContentFormat,
                create_time as createTime,
                update_time as updateTime,
                status,
@@ -23,7 +30,12 @@
 
     <select id="selectAllBySessionIds" resultType="com.simple.ai.common.entity.agentChatMessage.AgentChatMessage">
         select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
-        sequence_no as sequenceNo, create_time as createTime, update_time as updateTime, status, reserve, remark
+        sequence_no as sequenceNo,
+        turn_id as turnId,
+        provider_id as providerId, provider_name as providerName,
+        model_id as modelId, model_code as modelCode,
+        thinking_content as thinkingContent, thinking_content_format as thinkingContentFormat,
+        create_time as createTime, update_time as updateTime, status, reserve, remark
         from agent_chat_message
         where session_id in
         <foreach collection="sessionIds" item="sid" open="(" separator="," close=")">
@@ -37,6 +49,13 @@
         <![CDATA[
         select id, session_id as sessionId, task_id as taskId, role, content, content_format as contentFormat,
                sequence_no as sequenceNo,
+               turn_id                 as turnId,
+               provider_id             as providerId,
+               provider_name           as providerName,
+               model_id                as modelId,
+               model_code              as modelCode,
+               thinking_content        as thinkingContent,
+               thinking_content_format as thinkingContentFormat,
                create_time as createTime,
                update_time as updateTime,
                status,

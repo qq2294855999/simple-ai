@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.command;
 
+import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -48,5 +49,15 @@ public class CommandDispatchResponse {
 
     /** 运行模型编码快照 */
     private String modelCode;
+
+    /**
+     * AI 思考推理过程完整文本（当前 SDK 返回为空，后续 Spring AI reasoning 升级后自动回填）
+     */
+    private String thinkingContent;
+
+    /**
+     * 思考内容格式（PLAIN_TEXT / RESTRICTED_MARKDOWN）
+     */
+    private AgentChatMessageFormatProcess thinkingContentFormat;
 
 }

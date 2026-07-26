@@ -18,6 +18,7 @@ import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
+import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentClientStatusProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
@@ -376,7 +377,22 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         com.simple.ai.service.agent.AgentSessionContext.setCurrentSessionId(request.getSessionId());
         try {
             AgentAiRequest aiRequest = buildAiRequest(request, context);
-            AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, token -> publishAiTokenProgress(progressConsumer, request, task, token));
+            AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, token -> publishAiTokenProgress(progressConsumer, request, task, token),
+                                                                  thinkingChunk -> publishAiThinkingProgress(progressConsumer, request, task, thinkingChunk));
+
+            // 将 AI 思考推理完整文本暂存到 task.reserve（内存+DB 双传递，
+            // 后续 buildSuccessResponse 读出写入 CommandDispatchResponse，再落库到 agent_chat_message.thinking_content）
+            if (aiResponse.getThinkingContent() != null && !aiResponse.getThinkingContent().isBlank()) {
+                String safeThinking = aiResponse.getThinkingContent();
+                String existingReserve = task.getReserve();
+                if (existingReserve == null || existingReserve.isBlank()) {
+                    task.setReserve(safeThinking);
+                } else {
+                    // 保留已有 reserve 内容，末尾拼接 thinkingContent，防止与其它扩展字段写入冲突
+                    task.setReserve(existingReserve + "\n===THINKING===\n" + safeThinking);
+                }
+                taskView.updateById(task);
+            }
 
             // 持久化当前 AI 调用的不可变供应商和模型快照
             persistRuntimeSnapshot(task, aiResponse);
@@ -410,6 +426,24 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             return;
         }
         publishProgress(progressConsumer, request, task, "AI_TOKEN", "AI 生成内容片段", token, Boolean.FALSE, "");
+    }
+
+    /**
+     * 发布 AI 推理思考过程 token 进度事件（reasoning content）。
+     * <p>AI_THINKING_TOKEN 不进入 ExecutionEvent 白名单，仅聊天层 THINKING 气泡消费。</p>
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request          命令调度请求
+     * @param task             任务主记录
+     * @param thinkingChunk    思考内容片段
+     */
+    private void publishAiThinkingProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request, Task task, String thinkingChunk) {
+
+        // 思考内容为空时不发布流式事件
+        if (thinkingChunk == null || thinkingChunk.isBlank()) {
+            return;
+        }
+        publishProgress(progressConsumer, request, task, "AI_THINKING_TOKEN", "AI 推理思考片段", thinkingChunk, Boolean.FALSE, "");
     }
 
     /**
@@ -1079,6 +1113,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         response.setExecStatus(AgentExecutionStatusProcess.SUCCESS);
         response.setResponseContent(responseContent);
         response.setFailureReason("");
+        // 从 task.reserve 中提取已暂存的 thinkingContent（AI 探索路径执行 AI 后写入）
+        response.setThinkingContent(extractThinkingFromReserve(task.getReserve()));
+        response.setThinkingContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT);
         fillResponseRuntimeSnapshot(response, task);
         return response;
     }
@@ -1096,8 +1133,31 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         response.setExecStatus(AgentExecutionStatusProcess.FAILED);
         response.setResponseContent("");
         response.setFailureReason(failureReason);
+        // 失败场景：如之前已写入 thinkingContent（部分流式失败）也一并带回，便于前端展示
+        response.setThinkingContent(extractThinkingFromReserve(task.getReserve()));
+        response.setThinkingContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT);
         fillResponseRuntimeSnapshot(response, task);
         return response;
+    }
+
+    /**
+     * 从 task.reserve 扩展字段中分离出 thinkingContent 正文。
+     * 兼容两种形式：
+     * 1) reserve 整体就是 thinkingContent（无分隔标记）；
+     * 2) reserve 前置其它扩展字段，末尾 "\n===THINKING===\n" 之后才是 thinkingContent。
+     *
+     * @param reserve task.reserve 原始值
+     * @return 分离后的 thinkingContent 正文（不会为 null）
+     */
+    private String extractThinkingFromReserve(String reserve) {
+        if (reserve == null || reserve.isBlank()) {
+            return "";
+        }
+        int sepIdx = reserve.indexOf("\n===THINKING===\n");
+        if (sepIdx >= 0) {
+            return reserve.substring(sepIdx + "\n===THINKING===\n".length());
+        }
+        return reserve;
     }
 
     /**

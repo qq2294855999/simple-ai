@@ -1,6 +1,12 @@
-import { http } from "./http";
-import type { PageResult } from "../dto/common/R";
-import type { AgentRulePageRequestDto, AgentRulePageResponseDto, CreateAgentRuleRequestDto, UpdateAgentRuleRequestDto } from "../dto/agentRule/AgentRuleDto";
+import {http} from "./http";
+import type {PageResult} from "../dto/common/R";
+import type {
+    AgentRuleInfoResponseDto,
+    AgentRulePageRequestDto,
+    AgentRulePageResponseDto,
+    CreateAgentRuleRequestDto,
+    UpdateAgentRuleRequestDto
+} from "../dto/agentRule/AgentRuleDto";
 
 /**
  * 智能体规则 API 封装。
@@ -12,9 +18,9 @@ export const AgentRuleApi = {
   page: (params: AgentRulePageRequestDto) =>
     http.get<PageResult<AgentRulePageResponseDto>>("/sys/agent-rule/aggregate-list", { params }),
 
-  /** 查询单个 */
+    /** 查询单个详情 */
   findOne: (id: string) =>
-    http.get<AgentRulePageResponseDto>(`/sys/agent-rule/find/${id}`),
+        http.get<AgentRuleInfoResponseDto>(`/sys/agent-rule/find/${id}`),
 
   /** 创建 */
   create: (data: CreateAgentRuleRequestDto) =>
@@ -38,5 +44,9 @@ export const AgentRuleApi = {
 
   /** 禁用 */
   disable: (id: string) =>
-    http.put(`/sys/agent-rule/disable/${id}`)
+      http.put(`/sys/agent-rule/disable/${id}`),
+
+    /** 切换启用/停用状态 */
+    toggleStatus: (id: string) =>
+        http.put<string>(`/sys/agent-rule/toggle-status/${id}`)
 };

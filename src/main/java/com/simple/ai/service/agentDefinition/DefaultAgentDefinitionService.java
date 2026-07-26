@@ -133,6 +133,24 @@ class DefaultAgentDefinitionService implements AgentDefinitionService {
     }
 
     @Override
+    public String toggleStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前智能体定义
+        AgentDefinition entity = agentDefinitionView.findById(id);
+        AssertUtils.notEmpty(entity, "智能体定义[{}]不存在", id);
+
+        // 根据当前状态切换：ON ↔ OFF
+        Status newStatus = Status.ON.equals(entity.getStatus()) ? Status.OFF : Status.ON;
+        entity.setStatus(newStatus);
+
+        // 持久化更新
+        agentDefinitionView.updateById(entity);
+
+        return newStatus.name();
+    }
+
+    @Override
     public DeleteCascadeAgentDefinitionResponse deleteCascadeByIds(List<String> ids) {
         AssertUtils.notEmpty(ids, "主键不能为空");
 

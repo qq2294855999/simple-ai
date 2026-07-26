@@ -19,6 +19,15 @@ import {AtomicCommandManagementPage} from "../pages/AtomicCommandManagementPage"
 import {TaskManagementPage} from "../pages/TaskManagementPage";
 import {AiModelProviderManagementPage} from "../pages/AiModelProviderManagementPage";
 import {AiModelManagementPage} from "../pages/AiModelManagementPage";
+import {AgentSkillCreatePage} from "../pages/AgentSkillCreatePage";
+import {AgentSkillEditPage} from "../pages/AgentSkillEditPage";
+import {AgentSkillDetailPage} from "../pages/AgentSkillDetailPage";
+import {AgentRuleCreatePage} from "../pages/AgentRuleCreatePage";
+import {AgentRuleEditPage} from "../pages/AgentRuleEditPage";
+import {AgentRuleDetailPage} from "../pages/AgentRuleDetailPage";
+import {AgentDefinitionCreatePage} from "../pages/AgentDefinitionCreatePage";
+import {AgentDefinitionEditPage} from "../pages/AgentDefinitionEditPage";
+import {AgentDefinitionDetailPage} from "../pages/AgentDefinitionDetailPage";
 
 export const AppRouter = createBrowserRouter([
   {
@@ -29,9 +38,18 @@ export const AppRouter = createBrowserRouter([
       { path: "workbench", element: <AgentWorkbenchPage /> },
       { path: "agent-chat", element: <AgentChatPage /> },
       { path: "agent-design", element: <AgentDesignManagementPage /> },
+        {path: "agent-design/create", element: <AgentDefinitionCreatePage/>},
+        {path: "agent-design/:id/edit", element: <AgentDefinitionEditPage/>},
+        {path: "agent-design/:id", element: <AgentDefinitionDetailPage/>},
       { path: "command-dispatch", element: <CommandDispatchPage /> },
       { path: "agent-skill", element: <AgentSkillManagementPage /> },
+        {path: "agent-skill/create", element: <AgentSkillCreatePage/>},
+        {path: "agent-skill/:id/edit", element: <AgentSkillEditPage/>},
+        {path: "agent-skill/:id", element: <AgentSkillDetailPage/>},
       { path: "agent-rule", element: <AgentRuleManagementPage /> },
+        {path: "agent-rule/create", element: <AgentRuleCreatePage/>},
+        {path: "agent-rule/:id/edit", element: <AgentRuleEditPage/>},
+        {path: "agent-rule/:id", element: <AgentRuleDetailPage/>},
       { path: "sub-agent-relation", element: <SubAgentRelationManagementPage /> },
       { path: "agent-memory", element: <AgentMemoryManagementPage /> },
         {path: "agent-executor", element: <AgentExecutorManagementPage/>},

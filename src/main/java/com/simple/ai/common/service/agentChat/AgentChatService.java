@@ -87,4 +87,12 @@ public interface AgentChatService {
      * @return 轮次状态响应
      */
     AgentChatTurnStatusResponse findTurnStatus(String turnId);
+
+    /**
+     * 判断指定客户端是否在线。
+     *
+     * @param clientId 客户端主键
+     * @return true 在线，false 离线
+     */
+    Boolean isClientOnline(String clientId);
 }

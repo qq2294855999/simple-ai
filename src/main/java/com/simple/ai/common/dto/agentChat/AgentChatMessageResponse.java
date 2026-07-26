@@ -63,6 +63,16 @@ public class AgentChatMessageResponse {
     private String modelCode;
 
     /**
+     * AI 思考推理过程完整文本（reasoning content）
+     */
+    private String thinkingContent;
+
+    /**
+     * 思考内容格式
+     */
+    private AgentChatMessageFormatProcess thinkingContentFormat;
+
+    /**
      * 创建时间
      */
     private Date createTime;

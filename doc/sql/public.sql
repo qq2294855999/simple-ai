@@ -12,7 +12,7 @@
  Target Server Version : 140018 (140018)
  File Encoding         : 65001
 
- Date: 25/07/2026 10:13:18
+ Date: 26/07/2026 11:34:00
 */
 
 
@@ -21,9 +21,9 @@
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_chat_message";
 CREATE TABLE "public"."agent_chat_message" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "session_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "id"          varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+                                               "session_id"  varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "task_id"     varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "role" varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "content" text COLLATE "pg_catalog"."default" NOT NULL,
   "content_format" varchar(64) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
@@ -33,11 +33,11 @@ CREATE TABLE "public"."agent_chat_message" (
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "provider_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "provider_id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "provider_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "model_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "model_id"    varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "model_code" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "turn_id" varchar(64) COLLATE "pg_catalog"."default"
+                                               "turn_id"     varchar(32) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT
@@ -86,19 +86,19 @@ VALUES ('2080642642179567616', '2080642554497642496', '2080642571761397760', 'SY
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_chat_session";
 CREATE TABLE "public"."agent_chat_session" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "id"             varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+                                               "agent_id"       varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "session_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "last_message_at" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
-  "reserve"   text COLLATE "pg_catalog"."default",
+                                               "reserve"        text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id"   varchar(255) COLLATE "pg_catalog"."default",
-  "create_user_id" varchar(64) COLLATE "pg_catalog"."default",
-  "model_id"  varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "client_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
+                                               "user_id"        varchar(32) COLLATE "pg_catalog"."default",
+                                               "create_user_id" varchar(32) COLLATE "pg_catalog"."default",
+                                               "model_id"       varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "client_id"      varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
 )
 ;
 COMMENT ON COLUMN "public"."agent_chat_session"."id" IS '主键';
@@ -213,7 +213,7 @@ VALUES ('2080625787096334336', '1', '2079542278239834112', '家用', '$2a$10$873
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_definition";
 CREATE TABLE "public"."agent_definition" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+                                             "id"               varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
   "name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "definition_desc" text COLLATE "pg_catalog"."default" NOT NULL,
   "first_principle" text COLLATE "pg_catalog"."default",
@@ -226,8 +226,8 @@ CREATE TABLE "public"."agent_definition" (
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "default_model_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id" varchar(255) COLLATE "pg_catalog"."default"
+                                             "default_model_id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                             "user_id"          varchar(32) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."agent_definition"."id" IS '主键';
@@ -325,18 +325,24 @@ VALUES ('2079542278239834112', 'win_rpa', 'WinRPA执行器', 'Win10的RPA执行�
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_memory";
 CREATE TABLE "public"."agent_memory" (
-                                         "id"                varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-                                         "agent_id"          varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                         "id"                varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+                                         "agent_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
                                          "memory_name"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-                                         "step_name"         varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-                                         "trigger_condition" text COLLATE "pg_catalog"."default"         NOT NULL,
-                                         "trigger_action"    text COLLATE "pg_catalog"."default"         NOT NULL,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
                                          "remark"            varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-                                         "user_id"           varchar(255) COLLATE "pg_catalog"."default"
+                                         "user_id"           varchar(32) COLLATE "pg_catalog"."default",
+                                         "params_definition" jsonb,
+                                         "version_no"        int4                                        NOT NULL DEFAULT 1,
+                                         "version_status"    int2                                        NOT NULL DEFAULT 1,
+                                         "source_task_id"    varchar(32) COLLATE "pg_catalog"."default"           DEFAULT ''::character varying,
+                                         "summary"           text COLLATE "pg_catalog"."default"         NOT NULL DEFAULT ''::text,
+                                         "create_reason"     varchar(64) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT 'MANUAL'::character varying,
+                                         "client_id"         varchar(32) COLLATE "pg_catalog"."default"           DEFAULT ''::character varying,
+                                         "create_user_id"    varchar(32) COLLATE "pg_catalog"."default"           DEFAULT ''::character varying,
+                                         "parent_memory_id"  varchar(32) COLLATE "pg_catalog"."default"           DEFAULT ''::character varying
 )
 ;
 COMMENT
@@ -344,13 +350,7 @@ ON COLUMN "public"."agent_memory"."id" IS '主键';
 COMMENT
 ON COLUMN "public"."agent_memory"."agent_id" IS '智能体ID';
 COMMENT
-ON COLUMN "public"."agent_memory"."memory_name" IS '记忆名称';
-COMMENT
-ON COLUMN "public"."agent_memory"."step_name" IS '步骤名称';
-COMMENT
-ON COLUMN "public"."agent_memory"."trigger_condition" IS '触发条件';
-COMMENT
-ON COLUMN "public"."agent_memory"."trigger_action" IS '触发动作';
+ON COLUMN "public"."agent_memory"."memory_name" IS '记忆名称模板，支持{param}占位符';
 COMMENT ON COLUMN "public"."agent_memory"."create_time" IS '创建时间';
 COMMENT ON COLUMN "public"."agent_memory"."update_time" IS '修改时间';
 COMMENT
@@ -360,6 +360,24 @@ ON COLUMN "public"."agent_memory"."reserve" IS '扩展字段，JSON格式';
 COMMENT ON COLUMN "public"."agent_memory"."remark" IS '备注';
 COMMENT
 ON COLUMN "public"."agent_memory"."user_id" IS '用户归属ID，确保每个用户的记忆私域隔离';
+COMMENT
+ON COLUMN "public"."agent_memory"."params_definition" IS '参数定义JSON，描述每个占位符的类型和含义';
+COMMENT
+ON COLUMN "public"."agent_memory"."version_no" IS '当前版本号，同一记忆下递增，从1开始';
+COMMENT
+ON COLUMN "public"."agent_memory"."version_status" IS '版本状态: 1-DRAFT(草稿) / 2-PUBLISHED(已发布) / 3-RETIRED(已退役)';
+COMMENT
+ON COLUMN "public"."agent_memory"."source_task_id" IS '来源任务主键，记录该版本由哪个任务产生';
+COMMENT
+ON COLUMN "public"."agent_memory"."summary" IS '记忆摘要，步骤名称拼接的简要描述';
+COMMENT
+ON COLUMN "public"."agent_memory"."create_reason" IS '创建原因: MANUAL(手动) / AI_EXPLORATION(AI探索沉淀) / MEMORY_REVISE(失败修订)';
+COMMENT
+ON COLUMN "public"."agent_memory"."client_id" IS '执行客户端主键，关联 agent_client.id';
+COMMENT
+ON COLUMN "public"."agent_memory"."create_user_id" IS '创建人用户ID';
+COMMENT
+ON COLUMN "public"."agent_memory"."parent_memory_id" IS '父记忆ID，修订场景下指向被修订的旧版本记忆，首次探索沉淀时为空';
 COMMENT ON TABLE "public"."agent_memory" IS '智能体记忆';
 
 -- ----------------------------
@@ -367,174 +385,63 @@ COMMENT ON TABLE "public"."agent_memory" IS '智能体记忆';
 -- ----------------------------
 
 -- ----------------------------
--- Table structure for agent_memory_detail
+-- Table structure for agent_memory_step
 -- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_detail";
-CREATE TABLE "public"."agent_memory_detail"
-(
-    "id"                 varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-    "agent_memory_id"    varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-    "step_name"          varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-    "step_type"          int2                                        NOT NULL DEFAULT 1,
-    "exec_content"       text COLLATE "pg_catalog"."default"         NOT NULL,
-    "return_data_format" text COLLATE "pg_catalog"."default"         NOT NULL,
-    "parent_step_id"     varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-    "next_step_id"       varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-    "branch_condition"   text COLLATE "pg_catalog"."default"         NOT NULL,
-    "branch_route"       text COLLATE "pg_catalog"."default"         NOT NULL,
-    "model"              varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-    "create_time"        timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "update_time"        timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status"             int2                                        NOT NULL DEFAULT 1,
-    "reserve"            text COLLATE "pg_catalog"."default",
-    "remark"             varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying
-)
-;
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."id" IS '主键';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."agent_memory_id" IS '智能体记忆ID';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."step_name" IS '步骤名称';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."step_type" IS '步骤类型：智能体记忆步骤类型';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."exec_content" IS '执行内容';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."return_data_format" IS '返回的数据格式';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."parent_step_id" IS '父步骤ID';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."next_step_id" IS '下一个步骤ID';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."branch_condition" IS '分支条件';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."branch_route" IS '分支路由';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."model" IS '模型';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."create_time" IS '创建时间';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."update_time" IS '修改时间';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."status" IS '状态';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."reserve" IS '扩展字段，JSON格式';
-COMMENT
-ON COLUMN "public"."agent_memory_detail"."remark" IS '备注';
-COMMENT
-ON TABLE "public"."agent_memory_detail" IS '智能体记忆详情';
-
--- ----------------------------
--- Records of agent_memory_detail
--- ----------------------------
-
--- ----------------------------
--- Table structure for agent_memory_version
--- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_version";
-CREATE TABLE "public"."agent_memory_version"
-(
-    "id"                varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
-    "memory_id"         varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
-    "version_no"        int4                                       NOT NULL DEFAULT 1,
-    "version_status"    int2                                       NOT NULL DEFAULT 1,
-    "source_task_id"    varchar(32) COLLATE "pg_catalog"."default",
-    "success_assertion" text COLLATE "pg_catalog"."default",
-    "summary"           text COLLATE "pg_catalog"."default",
-    "create_reason"     text COLLATE "pg_catalog"."default",
-    "create_user_id"    varchar(32) COLLATE "pg_catalog"."default",
-    "create_time"       timestamp(6),
-    "update_time"       timestamp(6)
-)
-;
-COMMENT
-ON COLUMN "public"."agent_memory_version"."id" IS '主键';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."memory_id" IS '关联的记忆主键，对应 agent_memory.id';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."version_no" IS '版本号，同一记忆下递增，从1开始';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."version_status" IS '版本状态: 1-DRAFT(草稿) / 2-PUBLISHED(已发布) / 3-RETIRED(已淘汰)';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."source_task_id" IS '来源任务主键，记录该版本由哪个任务产生';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."success_assertion" IS '成功判定规则，用于验证记忆执行是否成功的条件';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."summary" IS '版本摘要，AI生成的该版本简要描述';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."create_reason" IS '创建原因: AI_EXPLORATION(AI探索沉淀) / MEMORY_REVISE(失败修订)';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."create_user_id" IS '创建人用户ID';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."create_time" IS '创建时间';
-COMMENT
-ON COLUMN "public"."agent_memory_version"."update_time" IS '修改时间';
-COMMENT
-ON TABLE "public"."agent_memory_version" IS '记忆版本';
-
--- ----------------------------
--- Records of agent_memory_version
--- ----------------------------
-
--- ----------------------------
--- Table structure for agent_memory_version_detail
--- ----------------------------
-DROP TABLE IF EXISTS "public"."agent_memory_version_detail";
-CREATE TABLE "public"."agent_memory_version_detail"
+DROP TABLE IF EXISTS "public"."agent_memory_step";
+CREATE TABLE "public"."agent_memory_step"
 (
     "id"                  varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-    "version_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "memory_id"           varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
     "sequence_no"         int4                                        NOT NULL,
-    "atomic_command_id"   varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
-    "atomic_command_code" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
-    "args_template"       text COLLATE "pg_catalog"."default",
+    "atomic_command_id"   varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
+    "atomic_command_code" varchar(128) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "step_name"           varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+    "args_template"       jsonb,
     "delay_min_ms"        int4                                                 DEFAULT 100,
     "delay_max_ms"        int4                                                 DEFAULT 500,
     "timeout_ms"          int4                                                 DEFAULT 30000,
-    "idempotency_key"     varchar(256) COLLATE "pg_catalog"."default",
     "success_assertion"   text COLLATE "pg_catalog"."default",
     "failure_strategy"    varchar(32) COLLATE "pg_catalog"."default"           DEFAULT 'STOP'::character varying,
     "status"              varchar(16) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT 'ON'::character varying,
-    "create_time"         timestamp(6),
-    "update_time"         timestamp(6)
+    "create_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "update_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 ;
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."id" IS '主键';
+ON COLUMN "public"."agent_memory_step"."id" IS '主键';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."version_id" IS '关联的记忆版本主键，对应 agent_memory_version.id';
+ON COLUMN "public"."agent_memory_step"."memory_id" IS '记忆主键，关联 agent_memory.id';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."sequence_no" IS '步骤序号，同一版本内从10开始递增，决定执行顺序';
+ON COLUMN "public"."agent_memory_step"."sequence_no" IS '步骤序号，同一记忆内从10开始递增，决定执行顺序';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."atomic_command_id" IS '原子命令主键，对应 atomic_command.id';
+ON COLUMN "public"."agent_memory_step"."atomic_command_id" IS '原子命令主键，关联 atomic_command.id';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."atomic_command_code" IS '原子命令编码，冗余字段，如 window.find';
+ON COLUMN "public"."agent_memory_step"."atomic_command_code" IS '原子命令编码（冗余），如 weixin_search_contact';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."args_template" IS '参数模板JSON，运行时变量替换后传给执行器';
+ON COLUMN "public"."agent_memory_step"."step_name" IS '步骤名称，如"搜索联系人"';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."delay_min_ms" IS '执行前随机延迟最小值（毫秒），默认100';
+ON COLUMN "public"."agent_memory_step"."args_template" IS '参数模板JSON，支持{param}占位符，运行时替换为实际参数';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."delay_max_ms" IS '执行前随机延迟最大值（毫秒），默认500';
+ON COLUMN "public"."agent_memory_step"."delay_min_ms" IS '执行前随机延迟最小值（毫秒），默认100';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."timeout_ms" IS '命令超时时间（毫秒），默认30000';
+ON COLUMN "public"."agent_memory_step"."delay_max_ms" IS '执行前随机延迟最大值（毫秒），默认500';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."idempotency_key" IS '幂等键，同一任务+步骤序号固定值，防止重复执行';
+ON COLUMN "public"."agent_memory_step"."timeout_ms" IS '命令超时时间（毫秒），默认30000';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."success_assertion" IS '成功断言规则，用于判断该步骤是否执行成功';
+ON COLUMN "public"."agent_memory_step"."success_assertion" IS '成功断言规则，用于判断该步骤是否执行成功';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."failure_strategy" IS '失败处理策略: STOP(停止) / RETRY(重试) / SKIP(跳过)';
+ON COLUMN "public"."agent_memory_step"."failure_strategy" IS '失败处理策略: STOP(停止) / RETRY(重试) / SKIP(跳过)';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."status" IS '状态: ON(启用) / OFF(停用)';
+ON COLUMN "public"."agent_memory_step"."status" IS '状态: ON(启用) / OFF(停用)';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."create_time" IS '创建时间';
+ON COLUMN "public"."agent_memory_step"."create_time" IS '创建时间';
 COMMENT
-ON COLUMN "public"."agent_memory_version_detail"."update_time" IS '修改时间';
+ON COLUMN "public"."agent_memory_step"."update_time" IS '修改时间';
 COMMENT
-ON TABLE "public"."agent_memory_version_detail" IS '记忆版本步骤';
+ON TABLE "public"."agent_memory_step" IS '智能体记忆步骤';
 
 -- ----------------------------
--- Records of agent_memory_version_detail
+-- Records of agent_memory_step
 -- ----------------------------
 
 -- ----------------------------
@@ -548,7 +455,6 @@ CREATE TABLE "public"."agent_protocol"
     "protocol_name"    varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
     "protocol_version" varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
     "content"          text COLLATE "pg_catalog"."default"         NOT NULL,
-    "description"      text COLLATE "pg_catalog"."default",
     "create_user_id"   varchar(32) COLLATE "pg_catalog"."default",
     "create_user_name" varchar(64) COLLATE "pg_catalog"."default",
     "create_time"      timestamp(6),
@@ -556,7 +462,6 @@ CREATE TABLE "public"."agent_protocol"
     "update_user_name" varchar(64) COLLATE "pg_catalog"."default",
     "update_time"      timestamp(6),
     "reserve"          text COLLATE "pg_catalog"."default",
-    "remark"           text COLLATE "pg_catalog"."default",
     "status"           int2                                        NOT NULL DEFAULT 1
 )
 ;
@@ -570,8 +475,6 @@ COMMENT
 ON COLUMN "public"."agent_protocol"."protocol_version" IS '协议版本，如 v1.0、v2.0';
 COMMENT
 ON COLUMN "public"."agent_protocol"."content" IS '协议内容，JSON格式，包含消息结构、消息类型、命令列表等完整协议定义';
-COMMENT
-ON COLUMN "public"."agent_protocol"."description" IS '协议描述，说明该协议的主要特点和适用范围';
 COMMENT
 ON COLUMN "public"."agent_protocol"."create_user_id" IS '创建人用户ID';
 COMMENT
@@ -587,8 +490,6 @@ ON COLUMN "public"."agent_protocol"."update_time" IS '修改时间';
 COMMENT
 ON COLUMN "public"."agent_protocol"."reserve" IS '扩展字段，JSON格式';
 COMMENT
-ON COLUMN "public"."agent_protocol"."remark" IS '备注';
-COMMENT
 ON COLUMN "public"."agent_protocol"."status" IS '状态: 1(启用) / 0(停用)';
 COMMENT
 ON TABLE "public"."agent_protocol" IS '执行器协议';
@@ -596,239 +497,14 @@ ON TABLE "public"."agent_protocol" IS '执行器协议';
 -- ----------------------------
 -- Records of agent_protocol
 -- ----------------------------
-INSERT INTO "public"."agent_protocol"
-VALUES ('2080577692820090880', 'RPA', '执行器通用协议', 'v1.0', '# Simple Executor Protocol v1.0
-
-## 协议概述
-
-SEP v1.0 是智能体系统与远程执行器之间的标准通信协议。基于 WebSocket 全双工通道，采用 JSON 格式的 messageType/payload 双层结构，支持批量命令下发、逐项结果回传、心跳保活和内置系统命令。
-
----
-
-## 外层消息结构
-
-所有 WebSocket 业务消息均使用统一的外层结构包裹，通过 messageType 字段区分消息类型，payload 字段承载具体业务数据。
-
-### JSON 示例
-
-```json
-{
-  "messageType": "COMMAND_BATCH",
-  "payload": { ... }
-}
-```
-
-### 字段说明
-
-| 字段名 | 类型 | 必填 | 描述 |
-|--------|------|------|------|
-| messageType | String | 是 | 协议消息类型，取值：COMMAND_BATCH、COMMAND_RESULT、HEARTBEAT、HEARTBEAT_ACK |
-| payload | Object | 是 | 消息负载，结构随 messageType 变化 |
-
----
-
-## 消息类型
-
-### 1. COMMAND_BATCH
-
-- **方向**：Server → Executor
-- **描述**：服务端向执行器下发批量命令。执行器收到后按顺序逐条执行，每条命令执行完毕后单独回传 COMMAND_RESULT。
-
-#### JSON 示例
-
-```json
-{
-  "dispatchId": "1901234567890",
-  "taskId": "1901234567890",
-  "clientId": "client_001",
-  "stopOnFailure": true,
-  "minDelayMs": 100,
-  "maxDelayMs": 500,
-  "commands": [{
-    "commandId": "1901234567891",
-    "sequenceNo": 10,
-    "atomicCommandCode": "window.find",
-    "args": {},
-    "timeoutMs": 10000,
-    "idempotencyKey": "taskId+seq"
-  }]
-}
-```
-
-#### 字段说明
-
-| 字段名 | 类型 | 必填 | 描述 |
-|--------|------|------|------|
-| dispatchId | String | 是 | 调度ID（雪花ID），唯一标识一次命令调度 |
-| taskId | String | 是 | 任务ID，关联的任务主键 |
-| clientId | String | 是 | 目标客户端ID，WebSocket 点对点路由依据 |
-| stopOnFailure | Boolean | 否 | 是否失败即停止后续命令执行 |
-| minDelayMs | Integer | 否 | 执行前最小随机延迟(毫秒)，用于模拟人工操作间隔 |
-| maxDelayMs | Integer | 否 | 执行前最大随机延迟(毫秒) |
-| commands | Array<ExecutorCommandItem> | 是 | 命令列表，按顺序执行 |
-|   └─ commandId | String | 是 | 命令ID（雪花ID），用于关联回执 |
-|   └─ sequenceNo | Integer | 是 | 步骤序号，从10递增 |
-|   └─ atomicCommandCode | String | 是 | 原子命令编码，如 window.find、control.click |
-|   └─ args | Map<String,Object> | 否 | 命令参数，键值对形式 |
-|   └─ timeoutMs | Integer | 否 | 命令超时时间(毫秒)，超时视为失败 |
-|   └─ idempotencyKey | String | 否 | 幂等键，用于去重 |
-
----
-
-### 2. COMMAND_RESULT
-
-- **方向**：Executor → Server
-- **描述**：执行器向服务端回传单条命令的执行结果。每条命令独立回传，包含执行状态、返回数据和错误详情。
-
-#### JSON 示例
-
-```json
-{
-  "dispatchId": "1901234567890",
-  "taskId": "1901234567890",
-  "commandId": "1901234567891",
-  "sequenceNo": 10,
-  "success": true,
-  "message": "窗口已找到",
-  "data": { "handle": "0x123ABC" },
-  "error": null,
-  "startedAt": "2026-07-21T10:00:00Z",
-  "finishedAt": "2026-07-21T10:00:01Z"
-}
-```
-
-#### 字段说明
-
-| 字段名 | 类型 | 必填 | 描述 |
-|--------|------|------|------|
-| dispatchId | String | 是 | 调度ID，与 COMMAND_BATCH 中的 dispatchId 对应 |
-| taskId | String | 是 | 任务ID，与 COMMAND_BATCH 中的 taskId 对应 |
-| commandId | String | 是 | 命令ID，与 ExecutorCommandItem.commandId 对应 |
-| sequenceNo | Integer | 是 | 步骤序号 |
-| success | Boolean | 是 | 是否执行成功 |
-| message | String | 否 | 执行说明，成功时为成功描述，失败时为错误简述 |
-| data | Map<String,Object> | 否 | 返回数据，包含执行结果的关键信息 |
-| error | ExecutorCommandError | 否 | 错误详情，失败时包含 error.code、error.detail、error.recoverable |
-| startedAt | Instant | 是 | 开始执行时间（ISO8601 UTC） |
-| finishedAt | Instant | 是 | 执行完成时间（ISO8601 UTC） |
-
----
-
-### 3. HEARTBEAT
-
-- **方向**：Server → Executor
-- **描述**：服务端向执行器发送心跳探测。执行器收到后应立即回复 HEARTBEAT_ACK。心跳用于检测 WebSocket 连接的活跃状态，超时未回复视为断连。
-
-#### JSON 示例
-
-```json
-{
-  "messageType": "HEARTBEAT",
-  "payload": {}
-}
-```
-
-#### 字段说明
-
-| 字段名 | 类型 | 必填 | 描述 |
-|--------|------|------|------|
-| payload | Object | 否 | 心跳消息负载为空对象 |
-
----
-
-### 4. HEARTBEAT_ACK
-
-- **方向**：Executor → Server
-- **描述**：执行器对心跳探测的确认回复，表示执行器仍在运行且 WebSocket 连接正常。
-
-#### JSON 示例
-
-```json
-{
-  "messageType": "HEARTBEAT_ACK",
-  "payload": {}
-}
-```
-
-#### 字段说明
-
-| 字段名 | 类型 | 必填 | 描述 |
-|--------|------|------|------|
-| payload | Object | 否 | 心跳确认消息负载为空对象 |
-
----
-
-## 内置系统命令
-
-### system.capability
-
-- **描述**：返回执行器支持的全部原子命令列表。握手鉴权通过后，服务端自动下发此命令以同步执行器能力清单。
-- **参数**：（无参数）— system.capability 不需要额外参数
-- **返回数据**：返回原子命令列表，每条包含命令 code、name、description、argsSchema、resultSchema、riskLevel、isIdempotent 等元信息
-
-#### JSON 示例
-
-```json
-{
-  "messageType": "COMMAND_BATCH",
-  "payload": {
-    "dispatchId": "system",
-    "commands": [{
-      "commandId": "sys_cap_001",
-      "sequenceNo": 0,
-      "atomicCommandCode": "system.capability",
-      "args": {}
-    }]
-  }
-}
-```
-
----
-
-### system.health
-
-- **描述**：返回执行器的健康状态，包括进程状态、系统资源使用情况和当前检查时间。
-- **参数**：（无参数）— system.health 不需要额外参数
-- **返回数据**：返回健康检查结果，包含 status（健康状态）、checkedAt（检查时间）、process（进程信息）等
-
-#### JSON 示例
-
-```json
-{
-  "messageType": "COMMAND_BATCH",
-  "payload": {
-    "dispatchId": "system",
-    "commands": [{
-      "commandId": "sys_health_001",
-      "sequenceNo": 0,
-      "atomicCommandCode": "system.health",
-      "args": {}
-    }]
-  }
-}
-```
-
----
-
-## 通信流程
-
-1. WebSocket 连接建立，携带 type=agent-executor、cliKey=clientId、token=secret 鉴权参数
-2. 服务端鉴权通过后，自动下发 system.capability 命令
-3. 执行器执行 system.capability 并返回支持的命令列表
-4. 服务端 upsert 原子命令表，同步执行器能力
-5. 正常运行期间，服务端按需下发 COMMAND_BATCH 批量命令
-6. 执行器逐条执行命令，每条完成后回传 COMMAND_RESULT
-7. 服务端按 commandId 完成等待器，AI 根据结果继续决策
-8. 服务端定期发送 HEARTBEAT，执行器回复 HEARTBEAT_ACK
-9. 断连后服务端清理等待器，执行器自动重连后重新握手', NULL, '1', NULL, '2026-07-24 16:55:51.889', NULL, NULL, '2026-07-24 16:55:51.89', NULL, NULL, 1);
 
 -- ----------------------------
 -- Table structure for agent_rule
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_rule";
 CREATE TABLE "public"."agent_rule" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                       "id"       varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+                                       "agent_id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "definition_desc" text COLLATE "pg_catalog"."default" NOT NULL,
   "trigger_condition" text COLLATE "pg_catalog"."default" NOT NULL,
   "trigger_action" text COLLATE "pg_catalog"."default" NOT NULL,
@@ -861,8 +537,8 @@ COMMENT ON TABLE "public"."agent_rule" IS '智能体规则';
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."agent_skill";
 CREATE TABLE "public"."agent_skill" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                        "id"       varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+                                        "agent_id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "definition_desc" text COLLATE "pg_catalog"."default" NOT NULL,
   "exec_content" text COLLATE "pg_catalog"."default" NOT NULL,
   "return_data_format" text COLLATE "pg_catalog"."default" NOT NULL,
@@ -871,7 +547,7 @@ CREATE TABLE "public"."agent_skill" (
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id" varchar(255) COLLATE "pg_catalog"."default",
+                                        "user_id"  varchar(32) COLLATE "pg_catalog"."default",
   "plan_output_schema" text COLLATE "pg_catalog"."default",
   "observation_schema" text COLLATE "pg_catalog"."default"
 )
@@ -910,8 +586,8 @@ VALUES ('2080291159512735744', '2079806936913846272',
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."ai_model";
 CREATE TABLE "public"."ai_model" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "provider_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+                                     "id"          varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+                                     "provider_id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
   "model_code" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "model_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "capability_config" text COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::text,
@@ -966,7 +642,7 @@ VALUES ('2077431632937414656', '2077379712738693120', 'deepseek-v4-pro', 'deepse
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."ai_model_provider";
 CREATE TABLE "public"."ai_model_provider" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+                                              "id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
   "provider_code" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
   "provider_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "protocol_type" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
@@ -1024,7 +700,7 @@ VALUES ('2077379712738693120', 'cyzh', '词元之河', 'OPENAI_COMPATIBLE', 'htt
 DROP TABLE IF EXISTS "public"."ai_user";
 CREATE TABLE "public"."ai_user"
 (
-    "id"          varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+    "id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
     "nickname"    varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
     "avatar_url"  varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
     "daily_quota" int4                                        NOT NULL DEFAULT 100,
@@ -1069,18 +745,18 @@ ON TABLE "public"."ai_user" IS 'AI平台用户';
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."atomic_command";
 CREATE TABLE "public"."atomic_command" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+                                           "id"          varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
   "name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "command" text COLLATE "pg_catalog"."default" NOT NULL,
   "role" text COLLATE "pg_catalog"."default" NOT NULL,
-  "skill_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                           "skill_id"    varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
   "reserve" text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id" varchar(255) COLLATE "pg_catalog"."default",
-  "executor_id" varchar(255) COLLATE "pg_catalog"."default"
+                                           "user_id"     varchar(32) COLLATE "pg_catalog"."default",
+                                           "executor_id" varchar(32) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."atomic_command"."id" IS '主键';
@@ -1147,12 +823,12 @@ VALUES ('2080625529511542784', '按下回车键', 'keyboard.press.enter', '模�
 DROP TABLE IF EXISTS "public"."chat_turn";
 CREATE TABLE "public"."chat_turn"
 (
-    "id"                   varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-    "session_id"           varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
+    "id"                   varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "session_id"           varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
     "turn_number"          int4                                        NOT NULL,
-    "user_message_id"      varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
-    "assistant_message_id" varchar(64) COLLATE "pg_catalog"."default",
-    "task_id"              varchar(64) COLLATE "pg_catalog"."default",
+    "user_message_id"      varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+    "assistant_message_id" varchar(32) COLLATE "pg_catalog"."default",
+    "task_id"              varchar(32) COLLATE "pg_catalog"."default",
     "reasoning_summary"    jsonb,
     "create_time"          timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "update_time"          timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1240,27 +916,27 @@ VALUES ('2080642571732037632', '2080642554497642496', 1, '2080642571690094592', 
 DROP TABLE IF EXISTS "public"."execution_event";
 CREATE TABLE "public"."execution_event"
 (
-    "id"                  varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-    "turn_id"             varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
-    "task_id"             varchar(64) COLLATE "pg_catalog"."default",
-    "task_detail_id"      varchar(64) COLLATE "pg_catalog"."default",
-    "event_type"          varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
+    "id"                  varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+    "turn_id"             varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+    "task_id"             varchar(32) COLLATE "pg_catalog"."default",
+    "task_detail_id"      varchar(32) COLLATE "pg_catalog"."default",
+    "event_type"          varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
     "step_name"           varchar(255) COLLATE "pg_catalog"."default",
     "command_name"        varchar(255) COLLATE "pg_catalog"."default",
     "command_content"     text COLLATE "pg_catalog"."default",
     "response_content"    text COLLATE "pg_catalog"."default",
     "failure_reason"      text COLLATE "pg_catalog"."default",
-    "sequence_no"         int4                                        NOT NULL,
+    "sequence_no"         int4                                       NOT NULL,
     "started_at"          timestamp(6),
     "finished_at"         timestamp(6),
-    "atomic_command_id"   varchar(64) COLLATE "pg_catalog"."default",
+    "atomic_command_id"   varchar(32) COLLATE "pg_catalog"."default",
     "atomic_command_code" varchar(128) COLLATE "pg_catalog"."default",
-    "provider_id"         varchar(64) COLLATE "pg_catalog"."default",
+    "provider_id"         varchar(32) COLLATE "pg_catalog"."default",
     "provider_name"       varchar(128) COLLATE "pg_catalog"."default",
-    "model_id"            varchar(64) COLLATE "pg_catalog"."default",
+    "model_id"            varchar(32) COLLATE "pg_catalog"."default",
     "model_code"          varchar(128) COLLATE "pg_catalog"."default",
-    "create_time"         timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status"              int2                                        NOT NULL DEFAULT 1
+    "create_time"         timestamp(6)                               NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status"              int2                                       NOT NULL DEFAULT 1
 )
 ;
 COMMENT
@@ -1707,52 +1383,13 @@ VALUES ('2080642642162790400', '2080642571732037632', '2080642571761397760', '',
         '2026-07-24 21:13:57.019', 1);
 
 -- ----------------------------
--- Table structure for memory_evidence
--- ----------------------------
-DROP TABLE IF EXISTS "public"."memory_evidence";
-CREATE TABLE "public"."memory_evidence"
-(
-    "id"                varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-    "turn_id"           varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
-    "memory_version_id" varchar(64) COLLATE "pg_catalog"."default",
-    "evidence_type"     varchar(64) COLLATE "pg_catalog"."default"  NOT NULL,
-    "evidence_content"  jsonb                                       NOT NULL,
-    "quality_score"     numeric(3, 2),
-    "create_time"       timestamp(6)                                NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status"            int2                                        NOT NULL DEFAULT 1
-)
-;
-COMMENT
-ON COLUMN "public"."memory_evidence"."id" IS '证据主键，UUID';
-COMMENT
-ON COLUMN "public"."memory_evidence"."turn_id" IS '轮次主键，关联 chat_turn.id';
-COMMENT
-ON COLUMN "public"."memory_evidence"."memory_version_id" IS '记忆版本主键，关联 agent_memory_version.id';
-COMMENT
-ON COLUMN "public"."memory_evidence"."evidence_type" IS '证据类型: EXECUTION_TRACE/REASONING_SUMMARY';
-COMMENT
-ON COLUMN "public"."memory_evidence"."evidence_content" IS '证据内容: 原子命令调用链+结果摘要';
-COMMENT
-ON COLUMN "public"."memory_evidence"."quality_score" IS '质量评分 0.00-1.00';
-COMMENT
-ON COLUMN "public"."memory_evidence"."create_time" IS '创建时间';
-COMMENT
-ON COLUMN "public"."memory_evidence"."status" IS '状态: ON/DISABLE';
-COMMENT
-ON TABLE "public"."memory_evidence" IS '记忆证据';
-
--- ----------------------------
--- Records of memory_evidence
--- ----------------------------
-
--- ----------------------------
 -- Table structure for sub_agent_relation
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."sub_agent_relation";
 CREATE TABLE "public"."sub_agent_relation" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "main_agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "sub_agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "id"            varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+                                               "main_agent_id" varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                               "sub_agent_id"  varchar(32) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
@@ -1781,37 +1418,35 @@ COMMENT ON TABLE "public"."sub_agent_relation" IS '子智能体关联';
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."task";
 CREATE TABLE "public"."task" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "agent_memory_id"   varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "agent_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                 "id"                varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+                                 "agent_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
   "task_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "parent_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "next_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "step_type"         int2                                        NOT NULL DEFAULT 1,
+                                 "parent_task_id"    varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
+                                 "next_task_id"      varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
+                                 "step_type"         int2                                        NOT NULL DEFAULT 1,
   "branch_condition" text COLLATE "pg_catalog"."default" NOT NULL,
   "branch_route" text COLLATE "pg_catalog"."default" NOT NULL,
   "request_params" text COLLATE "pg_catalog"."default" NOT NULL,
   "return_params" text COLLATE "pg_catalog"."default" NOT NULL,
-  "exec_status"       int2                                        NOT NULL DEFAULT 1,
+                                 "exec_status"       int2                                        NOT NULL DEFAULT 1,
   "failure_reason" text COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::text,
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
-  "reserve"           text COLLATE "pg_catalog"."default",
+                                 "reserve"           text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "provider_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                 "provider_id"       varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
   "provider_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "model_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "model_code"        varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "user_id"           varchar(255) COLLATE "pg_catalog"."default",
-  "client_id"         varchar(255) COLLATE "pg_catalog"."default",
-  "memory_version_id" varchar(255) COLLATE "pg_catalog"."default",
-  "dispatch_id" varchar(255) COLLATE "pg_catalog"."default"
+                                 "model_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
+                                 "model_code"        varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                 "user_id"           varchar(32) COLLATE "pg_catalog"."default",
+                                 "client_id"         varchar(32) COLLATE "pg_catalog"."default",
+                                 "dispatch_id"       varchar(32) COLLATE "pg_catalog"."default",
+                                 "memory_id"         varchar(32) COLLATE "pg_catalog"."default"           DEFAULT ''::character varying,
+                                 "memory_version_no" int4
 )
 ;
 COMMENT ON COLUMN "public"."task"."id" IS '主键';
-COMMENT
-ON COLUMN "public"."task"."agent_memory_id" IS '智能体记忆主键';
 COMMENT ON COLUMN "public"."task"."agent_id" IS '智能体主键';
 COMMENT ON COLUMN "public"."task"."task_name" IS '任务名称';
 COMMENT ON COLUMN "public"."task"."parent_task_id" IS '父任务ID';
@@ -1843,30 +1478,32 @@ ON COLUMN "public"."task"."user_id" IS '用户归属ID，确保任务归属到�
 COMMENT
 ON COLUMN "public"."task"."client_id" IS '执行客户端主键，关联 agent_client.id，记录由哪个客户端执行';
 COMMENT
-ON COLUMN "public"."task"."memory_version_id" IS '记忆版本主键，关联 agent_memory_version.id，记录命中哪个记忆版本';
-COMMENT
 ON COLUMN "public"."task"."dispatch_id" IS '下发批次标识，服务端雪花ID，关联一次 WebSocket 批量命令下发';
+COMMENT
+ON COLUMN "public"."task"."memory_id" IS '关联记忆主键，对应 agent_memory.id';
+COMMENT
+ON COLUMN "public"."task"."memory_version_no" IS '执行时的记忆版本号快照';
 COMMENT ON TABLE "public"."task" IS '任务';
 
 -- ----------------------------
 -- Records of task
 -- ----------------------------
 INSERT INTO "public"."task"
-VALUES ('2080642571761397760', '', '2079806936913846272', '人机对话', '', '', 2, '', '',
+VALUES ('2080642571761397760', '2079806936913846272', '人机对话', '', '', 2, '', '',
         '{"agentId":"2079806936913846272","commandName":"人机对话","commandContent":"打开微信","clientId":"2080625787096334336","sessionId":"2080642554497642496","modelId":"2077431632937414656"}',
         '', 4, '客户端实例[2079542278239834112]不存在', '2026-07-24 21:13:40.234', '2026-07-24 21:13:40.234', 1, '', '智能体命令调度任务', '', '', '', '', NULL,
-        NULL, NULL, NULL);
+        NULL, NULL, '', NULL);
 
 -- ----------------------------
 -- Table structure for task_detail
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."task_detail";
 CREATE TABLE "public"."task_detail" (
-  "id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                        "id"                varchar(32) COLLATE "pg_catalog"."default"  NOT NULL,
+                                        "task_id"           varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
   "task_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "parent_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "next_task_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                        "parent_task_id"    varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
+                                        "next_task_id"      varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
   "branch_condition" text COLLATE "pg_catalog"."default" NOT NULL,
   "branch_route" text COLLATE "pg_catalog"."default" NOT NULL,
   "request_params" text COLLATE "pg_catalog"."default" NOT NULL,
@@ -1874,19 +1511,19 @@ CREATE TABLE "public"."task_detail" (
   "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "status" int2 NOT NULL DEFAULT 1,
-  "reserve"     text COLLATE "pg_catalog"."default",
+                                        "reserve"           text COLLATE "pg_catalog"."default",
   "remark" varchar(500) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "provider_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                        "provider_id"       varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
   "provider_name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "model_id" varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "model_code"  varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "command_id"  varchar(255) COLLATE "pg_catalog"."default",
-  "atomic_command_id" varchar(255) COLLATE "pg_catalog"."default",
-  "client_id"   varchar(255) COLLATE "pg_catalog"."default",
+                                        "model_id"          varchar(32) COLLATE "pg_catalog"."default"  NOT NULL DEFAULT ''::character varying,
+                                        "model_code"        varchar(255) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+                                        "command_id"        varchar(32) COLLATE "pg_catalog"."default",
+                                        "atomic_command_id" varchar(32) COLLATE "pg_catalog"."default",
+                                        "client_id"         varchar(32) COLLATE "pg_catalog"."default",
   "sequence_no" int4,
-  "dispatch_id" varchar(255) COLLATE "pg_catalog"."default",
-  "step_type"   int2                                        NOT NULL DEFAULT 1,
-  "exec_status" int2                                        NOT NULL DEFAULT 1
+                                        "dispatch_id"       varchar(32) COLLATE "pg_catalog"."default",
+                                        "step_type"         int2                                        NOT NULL DEFAULT 1,
+                                        "exec_status"       int2                                        NOT NULL DEFAULT 1
 )
 ;
 COMMENT ON COLUMN "public"."task_detail"."id" IS '主键';
@@ -2033,6 +1670,16 @@ CREATE INDEX "idx_agent_memory_agent_status" ON "public"."agent_memory" USING bt
   "agent_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "status" "pg_catalog"."int2_ops" ASC NULLS LAST
 );
+CREATE INDEX "idx_agent_memory_parent_memory_id" ON "public"."agent_memory" USING btree (
+    "parent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+CREATE INDEX "idx_agent_memory_user_id" ON "public"."agent_memory" USING btree (
+    "user_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+    );
+CREATE INDEX "idx_agent_memory_version_status" ON "public"."agent_memory" USING btree (
+    "agent_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+    "version_status" "pg_catalog"."int2_ops" ASC NULLS LAST
+    );
 
 -- ----------------------------
 -- Primary Key structure for table agent_memory
@@ -2040,50 +1687,18 @@ CREATE INDEX "idx_agent_memory_agent_status" ON "public"."agent_memory" USING bt
 ALTER TABLE "public"."agent_memory" ADD CONSTRAINT "agent_memory_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
--- Indexes structure for table agent_memory_detail
+-- Indexes structure for table agent_memory_step
 -- ----------------------------
-CREATE INDEX "idx_agent_memory_detail_memory_status" ON "public"."agent_memory_detail" USING btree (
-    "agent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
-    "status" "pg_catalog"."int2_ops" ASC NULLS LAST
-    );
-CREATE INDEX "idx_agent_memory_detail_next_step" ON "public"."agent_memory_detail" USING btree (
-    "next_step_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-    );
-CREATE INDEX "idx_agent_memory_detail_parent_step" ON "public"."agent_memory_detail" USING btree (
-    "parent_step_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-    );
-
--- ----------------------------
--- Primary Key structure for table agent_memory_detail
--- ----------------------------
-ALTER TABLE "public"."agent_memory_detail"
-    ADD CONSTRAINT "agent_memory_detail_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
--- Uniques structure for table agent_memory_version
--- ----------------------------
-ALTER TABLE "public"."agent_memory_version"
-    ADD CONSTRAINT "agent_memory_version_memory_id_version_no_key" UNIQUE ("memory_id", "version_no");
-
--- ----------------------------
--- Primary Key structure for table agent_memory_version
--- ----------------------------
-ALTER TABLE "public"."agent_memory_version"
-    ADD CONSTRAINT "agent_memory_version_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
--- Indexes structure for table agent_memory_version_detail
--- ----------------------------
-CREATE INDEX "idx_mvd_version" ON "public"."agent_memory_version_detail" USING btree (
-    "version_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+CREATE INDEX "idx_agent_memory_step_memory_seq" ON "public"."agent_memory_step" USING btree (
+    "memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
     "sequence_no" "pg_catalog"."int4_ops" ASC NULLS LAST
     );
 
 -- ----------------------------
--- Primary Key structure for table agent_memory_version_detail
+-- Primary Key structure for table agent_memory_step
 -- ----------------------------
-ALTER TABLE "public"."agent_memory_version_detail"
-    ADD CONSTRAINT "agent_memory_version_detail_pkey" PRIMARY KEY ("id");
+ALTER TABLE "public"."agent_memory_step"
+    ADD CONSTRAINT "agent_memory_step_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Uniques structure for table agent_protocol
@@ -2233,22 +1848,6 @@ ALTER TABLE "public"."execution_event"
     ADD CONSTRAINT "execution_event_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
--- Indexes structure for table memory_evidence
--- ----------------------------
-CREATE INDEX "idx_memory_evidence_turn" ON "public"."memory_evidence" USING btree (
-    "turn_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-    );
-CREATE INDEX "idx_memory_evidence_version" ON "public"."memory_evidence" USING btree (
-    "memory_version_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-    );
-
--- ----------------------------
--- Primary Key structure for table memory_evidence
--- ----------------------------
-ALTER TABLE "public"."memory_evidence"
-    ADD CONSTRAINT "memory_evidence_pkey" PRIMARY KEY ("id");
-
--- ----------------------------
 -- Indexes structure for table sub_agent_relation
 -- ----------------------------
 CREATE INDEX "idx_sub_agent_relation_main_status" ON "public"."sub_agent_relation" USING btree (
@@ -2268,9 +1867,8 @@ CREATE INDEX "idx_task_agent_update" ON "public"."task" USING btree (
   "agent_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "update_time" "pg_catalog"."timestamp_ops" DESC NULLS FIRST
 );
-CREATE INDEX "idx_task_memory_status" ON "public"."task" USING btree (
-    "agent_memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
-    "exec_status" "pg_catalog"."int2_ops" ASC NULLS LAST
+CREATE INDEX "idx_task_memory_id" ON "public"."task" USING btree (
+    "memory_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 CREATE INDEX "idx_task_model_snapshot" ON "public"."task" USING btree (
   "model_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,

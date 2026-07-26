@@ -118,4 +118,3 @@ public class AgentDefinition {
     private String remark;
 
 }
-

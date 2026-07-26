@@ -25,3 +25,29 @@ export interface UpdateAgentSkillRequestDto extends CreateAgentSkillRequestDto {
   /** 主键 */
   id: string;
 }
+
+/**
+ * 智能体技能详情响应。
+ *
+ * @author qty
+ */
+export interface AgentSkillInfoResponseDto {
+    /** 主键 */
+    id: string;
+    /** 智能体ID */
+    agentId: string;
+    /** 定义描述 */
+    definitionDesc: string;
+    /** 执行内容 */
+    execContent: string;
+    /** 返回的数据格式 */
+    returnDataFormat: string;
+    /** 创建时间 */
+    createTime?: string;
+    /** 修改时间 */
+    updateTime?: string;
+    /** 状态 */
+    status?: string;
+    /** 备注 */
+    remark?: string;
+}

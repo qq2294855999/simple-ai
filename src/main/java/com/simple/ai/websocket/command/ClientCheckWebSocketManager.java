@@ -158,7 +158,7 @@ public class ClientCheckWebSocketManager extends DefaultCheckWebSocketManager {
     }
 
     /**
-     * 更新最后连接时间。
+     * 更新最后连接时间及在线状态。
      *
      * @param cliKey 客户端ID
      */
@@ -166,6 +166,9 @@ public class ClientCheckWebSocketManager extends DefaultCheckWebSocketManager {
         AgentClient updateEntity = new AgentClient();
         updateEntity.setId(cliKey);
         updateEntity.setLastConnectedAt(new Date());
+
+        // 鉴权通过，标记客户端在线
+        updateEntity.setIsOnline(true);
         agentClientView.updateById(updateEntity);
     }
 

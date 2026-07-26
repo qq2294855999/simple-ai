@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.simple.ai.view.agentClient.AgentClientRepository">
 
-    <!-- 客户端实例分页查询 -->
+    <!-- 客户端实例分页查询（含执行器名称和在线状态） -->
     <select id="selectPage" resultType="com.simple.ai.common.dto.agentClient.PageAgentClientResponse">
         SELECT
         c.id,
@@ -15,7 +15,9 @@
         c.last_disconnected_at AS lastDisconnectedAt,
         c.last_handshake_error AS lastHandshakeError,
         c.agent_version AS agentVersion,
-        c.machine_name AS machineName,
+        c.is_online AS isOnline,
+        e.executor_code AS executorCode,
+        e.executor_name AS executorName,
         c.create_user_id AS createUserId,
         c.create_user_name AS createUserName,
         c.create_time AS createTime,
@@ -25,6 +27,7 @@
         c.reserve,
         c.remark
         FROM agent_client c
+        LEFT JOIN agent_executor e ON c.executor_id = e.id
         <where>
             <if test="pageRequest.clientName != null and pageRequest.clientName != ''">
                 AND c.client_name LIKE CONCAT('%', #{pageRequest.clientName}, '%')
@@ -36,7 +39,7 @@
                 AND c.executor_id = #{pageRequest.executorId}
             </if>
         </where>
-        ORDER BY c.create_time DESC
+        ORDER BY c.is_online DESC, c.create_time DESC
     </select>
 
 </mapper>

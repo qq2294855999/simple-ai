@@ -1,5 +1,16 @@
 import {Button, Card, Checkbox, Collapse, Empty, Input, List, Popconfirm, Select, Space, Spin, Tag, Tooltip, Typography} from "antd";
-import {CloseOutlined, DeleteOutlined, LoadingOutlined, PlusOutlined, RightOutlined, RobotOutlined, SendOutlined, UserOutlined} from "@ant-design/icons";
+import {
+    BulbOutlined,
+    CloseOutlined,
+    DeleteOutlined,
+    LoadingOutlined,
+    PlusOutlined,
+    RightOutlined,
+    RobotOutlined,
+    SendOutlined,
+    ThunderboltOutlined,
+    UserOutlined
+} from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AgentChatApi} from "../api/agentChatApi";
 import {AgentClientApi} from "../api/agentClientApi";
@@ -17,7 +28,18 @@ import type {AgentDefinitionPageDto} from "../dto/agentDefinition/AgentDefinitio
 import type {AiModelResponseDto} from "../dto/aiModel/AiModelDto";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
 import {ToastUtil} from "../utils/ToastUtil";
-import {appendAssistantToken, progressEventsToExecutionEvents, replaceFinalMessage, stripProtocolJson} from "../utils/agentChatStreamUtil";
+import {
+    appendAssistantToken,
+    appendProgressEvent,
+    appendThinkingToken,
+    createProgressBubble,
+    createReplyBubble,
+    createThinkingBubble,
+    finalizeProgressBubble,
+    finalizeThinkingBubble,
+    replaceFinalMessage,
+    stripProtocolJson
+} from "../utils/agentChatStreamUtil";
 
 const maxSessionNameLength = 14;
 const messagePageSize = 50;
@@ -51,8 +73,6 @@ export function AgentChatPage() {
   const [aiThinking, setAiThinking] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-    const [progressEvents, setProgressEvents] = useState<AgentChatProgressEventDto[]>([]);
-    const progressEventsRef = useRef<AgentChatProgressEventDto[]>([]);
   const streamAbortControllerRef = useRef<AbortController | undefined>(undefined);
   const messageListRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -137,9 +157,71 @@ export function AgentChatPage() {
     }, [models, clients]);
 
   const loadMessages = useCallback(async (sessionId: string) => {
-    const result = await AgentChatApi.findMessagesPage(sessionId, messagePageSize, Number.MAX_SAFE_INTEGER);
-    setMessages(result);
-    setHasMore(result.length >= messagePageSize);
+      const rawMessages = await AgentChatApi.findMessagesPage(sessionId, messagePageSize, Number.MAX_SAFE_INTEGER);
+
+      // 为后端消息补齐默认字段（旧数据没有 bubbleType / thinkingContent）
+      const normalizedMessages: AgentChatMessageDto[] = rawMessages.map(msg => ({
+          ...msg,
+          thinkingContent: msg.thinkingContent ?? "",
+          thinkingContentFormat: msg.thinkingContentFormat ?? "PLAIN_TEXT",
+          bubbleType: (msg.bubbleType ?? "NORMAL") as AgentChatMessageDto["bubbleType"]
+      }));
+
+      // 历史回放：ASSISTANT 消息如果有 executionEvents 或 thinkingContent，
+      // 在 ASSISTANT 消息之前合成 PROGRESS / THINKING 独立气泡（保持时序：进度 → 思考 → 回复）
+      const composed: AgentChatMessageDto[] = [];
+      normalizedMessages.forEach(msg => {
+          if (msg.role === "ASSISTANT" && msg.bubbleType === "NORMAL") {
+              // executionEvents 已存在（旧数据）时，单独合成一个 PROGRESS 气泡放在回复之前
+              if (msg.executionEvents && msg.executionEvents.length > 0) {
+                  composed.push({
+                      id: `composed-progress-${msg.id}`,
+                      taskId: msg.taskId,
+                      turnId: msg.turnId,
+                      role: "ASSISTANT",
+                      content: `✅ 执行详情 (${msg.executionEvents.length} 步)`,
+                      contentFormat: "PLAIN_TEXT",
+                      sequenceNo: msg.sequenceNo - 2,
+                      createTime: msg.createTime,
+                      providerName: "",
+                      modelCode: "",
+                      executionEvents: msg.executionEvents,
+                      thinkingContent: "",
+                      thinkingContentFormat: "PLAIN_TEXT",
+                      bubbleType: "PROGRESS"
+                  });
+              }
+
+              // thinkingContent 有值时，单独合成一个 THINKING 气泡放在回复之前
+              if (msg.thinkingContent && msg.thinkingContent.trim().length > 0) {
+                  const charCount = msg.thinkingContent.trim().length;
+                  composed.push({
+                      id: `composed-thinking-${msg.id}`,
+                      taskId: msg.taskId,
+                      turnId: msg.turnId,
+                      role: "ASSISTANT",
+                      content: `✅ 思考过程 (约 ${charCount} 字)`,
+                      contentFormat: "PLAIN_TEXT",
+                      sequenceNo: msg.sequenceNo - 1,
+                      createTime: msg.createTime,
+                      providerName: "",
+                      modelCode: "",
+                      executionEvents: [],
+                      thinkingContent: msg.thinkingContent,
+                      thinkingContentFormat: msg.thinkingContentFormat,
+                      bubbleType: "THINKING"
+                  });
+              }
+
+              // 回复气泡本身保持原样（executionEvents 字段保留用于锚点提示，不会再内嵌折叠）
+              composed.push(msg);
+          } else {
+              composed.push(msg);
+          }
+      });
+
+      setMessages(composed);
+      setHasMore(normalizedMessages.length >= messagePageSize);
   }, []);
 
   /** 上滑加载更早的消息。 */
@@ -291,39 +373,71 @@ export function AgentChatPage() {
   }, []);
 
   const handleProgress = useCallback((event: AgentChatProgressEventDto) => {
-      // token 仅进入对话消息流
+      // 思考 token 直接写入 THINKING 气泡 thinkingContent（如果没有该气泡，先跳过等待 MESSAGE_ACCEPTED 占位推送）
+      if (event.eventType === "AI_THINKING_TOKEN") {
+          setAiThinking(true);
+          setMessages(previousMessages => appendThinkingToken(previousMessages, event.payload || "", event.taskId));
+          return;
+      }
+
+      // AI 输出 token：写入回复气泡 content，同时 aiThinking 标记关闭（说明模型已进入最终答复阶段）
     if (event.eventType === "AI_TOKEN") {
       setAiThinking(false);
       setMessages(previousMessages => appendAssistantToken(previousMessages, event));
       return;
     }
 
-      // 收集非 token 的进度事件（实时展示执行过程）
-      if (event.eventType !== "MESSAGE_COMPLETED" && event.eventType !== "CHAT_FAILED") {
-          setProgressEvents(previous => {
-              const updated = [...previous, event];
-              progressEventsRef.current = updated;
-              return updated;
+      // 消息被接受时：确保三路占位气泡已存在（进度 → 思考 → 回复）
+      if (event.eventType === "MESSAGE_ACCEPTED") {
+          setAiThinking(true);
+          setMessages(previousMessages => {
+              // 确认已有或缺失的占位气泡，按顺序插入
+              const hasProgress = previousMessages.some(m => m.bubbleType === "PROGRESS" && (!event.taskId || m.taskId === event.taskId));
+              const hasThinking = previousMessages.some(m => m.bubbleType === "THINKING" && (!event.taskId || m.taskId === event.taskId));
+              const hasReply = previousMessages.some(m => m.id === "streaming-assistant" || (m.bubbleType === "NORMAL" && m.role === "ASSISTANT" && m.content === ""));
+
+              const inserts: AgentChatMessageDto[] = [];
+              if (!hasProgress) inserts.push(createProgressBubble(event.taskId, event.sessionId));
+              if (!hasThinking) inserts.push(createThinkingBubble(event.taskId, event.sessionId));
+              if (!hasReply) inserts.push(createReplyBubble(event.taskId, event.sessionId));
+
+              return inserts.length > 0 ? [...previousMessages, ...inserts] : previousMessages;
           });
+          return;
       }
 
-      // 消息完成或失败时，将进度事件附加到最终消息
-    if (event.eventType === "MESSAGE_COMPLETED" || event.eventType === "CHAT_FAILED") {
+      // 进度事件（非消息流事件）：推入 PROGRESS 气泡
+      if (event.eventType !== "MESSAGE_COMPLETED" && event.eventType !== "CHAT_FAILED"
+          && event.eventType !== "TASK_COMPLETED" && event.eventType !== "TASK_FAILED") {
+          setMessages(previousMessages => appendProgressEvent(previousMessages, event));
+          return;
+      }
+
+      // 消息完成或任务完成/失败时：分别 finalize 三个气泡，不再把进度合并到回复气泡内部
+      if (event.eventType === "MESSAGE_COMPLETED" || event.eventType === "CHAT_FAILED"
+          || event.eventType === "TASK_COMPLETED" || event.eventType === "TASK_FAILED") {
       setAiThinking(false);
         setMessages(previousMessages => {
-            // 从 ref 读取最新收集的进度事件，避免闭包过期
-            const executionEvents = progressEventsToExecutionEvents(progressEventsRef.current, event.taskId);
-            const finalMessage = replaceFinalMessage(previousMessages, event);
-            // 将 executionEvents 附加到最后一条消息
-            if (finalMessage.length > 0) {
-                const lastMsg = finalMessage[finalMessage.length - 1];
-                finalMessage[finalMessage.length - 1] = {...lastMsg, executionEvents};
+            let updated = previousMessages;
+            const progressStatus = (event.eventType === "MESSAGE_COMPLETED" || event.eventType === "TASK_COMPLETED") ? "OK" : "FAILED";
+
+            // 先完成进度气泡（状态折叠）
+            updated = finalizeProgressBubble(updated, event.taskId, progressStatus);
+            // 完成思考气泡（无内容则整条移除）
+            updated = finalizeThinkingBubble(updated, event.taskId);
+            // 完成回复气泡（替换最终消息内容）
+            updated = replaceFinalMessage(updated, event);
+
+            // 事件失败时，确保回复气泡写入失败原因（CHAT_FAILED/TASK_FAILED）
+            if ((event.eventType === "CHAT_FAILED" || event.eventType === "TASK_FAILED") && updated.length > 0) {
+                const last = updated[updated.length - 1];
+                if (!last.content && event.failureReason) {
+                    updated[updated.length - 1] = {...last, role: "SYSTEM_ERROR", content: event.failureReason, contentFormat: "PLAIN_TEXT"};
+                }
             }
-            return finalMessage;
+
+            return updated;
         });
-        // 清空进度事件，为下一轮对话做准备
-        setProgressEvents([]);
-        progressEventsRef.current = [];
     }
   }, []);
 
@@ -337,7 +451,16 @@ export function AgentChatPage() {
     streamAbortControllerRef.current = abortController;
     setInput("");
     setAiThinking(true);
-    setMessages(previousMessages => [...previousMessages, buildOptimisticUserMessage(content)]);
+
+      // 发送时预先创建四路占位气泡（按真实时序：用户 → 进度 → 思考 → 回复）
+      // 这样进度条从一开始就在用户气泡下方、AI 回复气泡上方，流式和完成后位置一致
+      setMessages(previousMessages => [
+          ...previousMessages,
+          buildOptimisticUserMessage(content),
+          createProgressBubble("", selectedSessionId),
+          createThinkingBubble("", selectedSessionId),
+          createReplyBubble("", selectedSessionId)
+      ]);
     scrollMessagesToBottom();
 
       // 生成唯一幂等键，防止断线重连后产生重复消息
@@ -397,6 +520,184 @@ export function AgentChatPage() {
     () => sessions.length > 0 && selectedSessionIds.length === sessions.length,
     [sessions, selectedSessionIds]
   );
+
+    /** 渲染 PROGRESS 进度特殊气泡：⚡虚线框蓝灰色背景 + Collapse Timeline。 */
+    const renderProgressBubble = useCallback((message: AgentChatMessageDto): React.ReactNode => {
+        const events = message.executionEvents || [];
+        const totalSteps = events.length;
+        const isFinal = message.id.startsWith("final-progress") || message.id.startsWith("composed-progress");
+        const isStreaming = !isFinal && message.id.startsWith("streaming-progress");
+        const statusTag = message.content.includes("❌") ? "error"
+            : message.content.includes("✅") ? "success" : "processing";
+        const collapseTitle = message.content
+            ? message.content
+            : (isStreaming ? `执行中 (${totalSteps} 步)` : `执行详情 (${totalSteps} 步)`);
+
+        return (
+            <div
+                key={`${message.id}-${message.sequenceNo}`}
+                className="agent-chat-message agent-chat-message-assistant"
+                style={{
+                    background: "rgba(114,166,255,0.08)",
+                    border: "1px dashed #72a6ff",
+                    borderRadius: 8
+                }}
+            >
+                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0}}>
+                    <Space>
+                        <ThunderboltOutlined style={{color: "#72a6ff"}}/>
+                        <Typography.Text strong style={{color: "#1d39c4"}}>
+                            执行进度
+                        </Typography.Text>
+                        {isStreaming ? (
+                            <Spin indicator={<LoadingOutlined style={{fontSize: 12, color: "#72a6ff"}} spin/>}/>
+                        ) : (
+                            <Tag color={statusTag} style={{margin: 0, padding: "0 6px", fontSize: 11}}>
+                                {statusTag === "success" ? "已完成" : statusTag === "error" ? "失败" : "处理中"}
+                            </Tag>
+                        )}
+                    </Space>
+                </div>
+                <Collapse
+                    ghost
+                    size="small"
+                    style={{marginTop: 4}}
+                    defaultActiveKey={isStreaming ? ["progress"] : undefined}
+                    expandIcon={({isActive}) => <RightOutlined rotate={isActive ? 90 : 0} style={{color: "#72a6ff"}}/>}
+                    items={[{
+                        key: "progress",
+                        label: <Typography.Text type="secondary" style={{fontSize: 12}}>{collapseTitle}</Typography.Text>,
+                        children: renderExecutionEvents(events)
+                    }]}
+                />
+            </div>
+        );
+    }, []);
+
+    /** 渲染 THINKING 思考特殊气泡：💡紫色虚线框。无内容时返回 null 不渲染。 */
+    const renderThinkingBubble = useCallback((message: AgentChatMessageDto): React.ReactNode => {
+        const hasContent = (message.thinkingContent || "").trim().length > 0;
+        // 流式期间 THINKING 占位气泡即使还没内容，也显示 loading 提示（给用户"AI 在思考"的视觉锚点）
+        // final 状态且空内容已在 finalizeThinkingBubble 时整段 splice，此处基本不会命中空内容
+        if (!hasContent && message.id.startsWith("final-thinking")) {
+            return null;
+        }
+
+        const isStreaming = message.id.startsWith("streaming-thinking");
+        const charCount = (message.thinkingContent || "").trim().length;
+        const collapseTitle = message.content
+            ? message.content
+            : (hasContent ? `思考过程 (约 ${charCount} 字)` : "思考中…");
+
+        return (
+            <div
+                key={`${message.id}-${message.sequenceNo}`}
+                className="agent-chat-message agent-chat-message-assistant"
+                style={{
+                    background: "rgba(170,120,255,0.08)",
+                    border: "1px dashed #aa78ff",
+                    borderRadius: 8
+                }}
+            >
+                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0}}>
+                    <Space>
+                        <BulbOutlined style={{color: "#aa78ff"}}/>
+                        <Typography.Text strong style={{color: "#531dab"}}>
+                            思考过程
+                        </Typography.Text>
+                        {isStreaming && !hasContent ? (
+                            <Spin indicator={<LoadingOutlined style={{fontSize: 12, color: "#aa78ff"}} spin/>}/>
+                        ) : null}
+                    </Space>
+                    {aiThinking && isStreaming && !hasContent ? (
+                        <Typography.Text type="secondary" style={{fontSize: 12}}>
+                            AI 正在思考中…
+                        </Typography.Text>
+                    ) : null}
+                </div>
+                {/* 已有思考内容则折叠展示，避免气泡整体空白突兀 */}
+                {hasContent ? (
+                    <Collapse
+                        ghost
+                        size="small"
+                        style={{marginTop: 4}}
+                        defaultActiveKey={isStreaming ? ["thinking"] : undefined}
+                        expandIcon={({isActive}) => <RightOutlined rotate={isActive ? 90 : 0} style={{color: "#aa78ff"}}/>}
+                        items={[{
+                            key: "thinking",
+                            label: <Typography.Text type="secondary" style={{fontSize: 12}}>{collapseTitle}</Typography.Text>,
+                            children: (
+                                <div style={{paddingLeft: 4}}>
+                                    {message.thinkingContentFormat === "RESTRICTED_MARKDOWN"
+                                        ? <RestrictedMarkdownComponent content={message.thinkingContent || ""}/>
+                                        : <Typography.Paragraph
+                                            style={{whiteSpace: "pre-wrap", marginBottom: 0, fontSize: 12, color: "#595959"}}>
+                                            {message.thinkingContent}
+                                        </Typography.Paragraph>}
+                                </div>
+                            )
+                        }]}
+                    />
+                ) : null}
+            </div>
+        );
+    }, [aiThinking]);
+
+    /** 渲染正常用户/AI 回复气泡（bubbleType=NORMAL）。 */
+    const renderNormalBubble = useCallback((message: AgentChatMessageDto): React.ReactNode => {
+        const hasExecutionAnchor = message.executionEvents && message.executionEvents.length > 0;
+        return (
+            <div
+                key={`${message.id}-${message.sequenceNo}`}
+                className={`agent-chat-message agent-chat-message-${message.role.toLowerCase()}`}
+            >
+                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8}}>
+                    <Space>
+                        {message.role === "USER"
+                            ? <UserOutlined style={{color: "#1677ff"}}/>
+                            : <RobotOutlined style={{color: "#52c41a"}}/>}
+                        <Typography.Text strong>{getMessageRolePrefix(message.role)}</Typography.Text>
+                    </Space>
+                    {message.role === "ASSISTANT" && message.providerName && (
+                        <Tooltip title="本次调用实际使用的供应商·模型">
+                            <Tag color="geekblue">{message.providerName} · {message.modelCode}</Tag>
+                        </Tooltip>
+                    )}
+                </div>
+                {message.contentFormat === "RESTRICTED_MARKDOWN"
+                    ? <RestrictedMarkdownComponent content={stripProtocolJson(message.content)}/>
+                    : <Typography.Paragraph style={{whiteSpace: "pre-wrap", marginBottom: 0}}>
+                        {stripProtocolJson(message.content)}
+                    </Typography.Paragraph>}
+                {/* 回复气泡不再内嵌完整折叠轨迹，改为一行锚点提示（避免进度搬家造成割裂） */}
+                {message.role === "ASSISTANT" && hasExecutionAnchor ? (
+                    <Typography.Link
+                        type="secondary"
+                        style={{fontSize: 12, marginTop: 8, display: "inline-block"}}
+                        onClick={() => {
+                            // 在消息列表中滚动到本条回复之前最近的一个 PROGRESS 气泡
+                            const progressEl = document.querySelector(`[class*="agent-chat-message-assistant"] [style*="rgba(114,166,255"]`);
+                            progressEl?.scrollIntoView({behavior: "smooth", block: "center"});
+                        }}
+                    >
+                        <ThunderboltOutlined style={{marginRight: 4}}/>
+                        执行详情见上方 ({message.executionEvents!.length} 步)
+                    </Typography.Link>
+                ) : null}
+            </div>
+        );
+    }, [getMessageRolePrefix]);
+
+    /** 统一分派渲染入口：按 bubbleType 分发到三个专用渲染。 */
+    const renderMessageBubble = useCallback((message: AgentChatMessageDto): React.ReactNode => {
+        if (message.bubbleType === "PROGRESS") {
+            return renderProgressBubble(message);
+        }
+        if (message.bubbleType === "THINKING") {
+            return renderThinkingBubble(message);
+        }
+        return renderNormalBubble(message);
+    }, [renderProgressBubble, renderThinkingBubble, renderNormalBubble]);
 
   return (
     <div>
@@ -519,94 +820,7 @@ export function AgentChatPage() {
                 <Typography.Text type="secondary" style={{ marginLeft: 8 }}>加载历史消息…</Typography.Text>
               </div>
             )}
-            {messages.length === 0 && !aiThinking ? <Empty description="选择或创建会话后开始对话" /> : messages.map(message => (
-              <div key={`${message.id}-${message.sequenceNo}`} className={`agent-chat-message agent-chat-message-${message.role.toLowerCase()}`}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <Space>
-                    {message.role === "USER" ? <UserOutlined style={{ color: "#1677ff" }} /> : <RobotOutlined style={{ color: "#52c41a" }} />}
-                    <Typography.Text strong>{getMessageRolePrefix(message.role)}</Typography.Text>
-                  </Space>
-                  {message.role === "ASSISTANT" && message.providerName && (
-                    <Tooltip title="本次调用实际使用的供应商·模型">
-                      <Tag color="geekblue">{message.providerName} · {message.modelCode}</Tag>
-                    </Tooltip>
-                  )}
-                </div>
-                {message.contentFormat === "RESTRICTED_MARKDOWN"
-                    ? <RestrictedMarkdownComponent content={stripProtocolJson(message.content)}/>
-                    : <Typography.Paragraph style={{whiteSpace: "pre-wrap", marginBottom: 0}}>{stripProtocolJson(message.content)}</Typography.Paragraph>}
-                  {/* AI 消息内嵌折叠执行轨迹 */}
-                  {message.role === "ASSISTANT" && message.executionEvents && message.executionEvents.length > 0 && (
-                      <Collapse
-                          ghost
-                          size="small"
-                          style={{marginTop: 12}}
-                          expandIcon={({isActive}) => <RightOutlined rotate={isActive ? 90 : 0}/>}
-                          items={[{
-                              key: `exec-${message.id}`,
-                              label: <Typography.Text type="secondary" style={{fontSize: 12}}>执行详情 ({message.executionEvents.length} 步)</Typography.Text>,
-                              children: renderExecutionEvents(message.executionEvents)
-                          }]}
-                      />
-                  )}
-              </div>
-            ))}
-            {aiThinking && (
-                <div className="agent-chat-message agent-chat-message-assistant" style={{display: "flex", alignItems: "center", gap: 10}}>
-                    <Spin indicator={<LoadingOutlined style={{fontSize: 20, color: "#52c41a"}} spin/>}/>
-                <Typography.Text type="secondary">AI 正在思考中…</Typography.Text>
-              </div>
-            )}
-              {/* 实时执行进度面板（流式展示） */}
-              {aiThinking && progressEvents.length > 0 && (
-                  <div className="agent-chat-message agent-chat-message-assistant" style={{marginTop: 8}}>
-                      <Collapse
-                          ghost
-                          size="small"
-                          defaultActiveKey={["progress"]}
-                          expandIcon={({isActive}) => <RightOutlined rotate={isActive ? 90 : 0}/>}
-                          items={[{
-                              key: "progress",
-                              label: (
-                                  <Space>
-                                      <Spin indicator={<LoadingOutlined style={{fontSize: 14}} spin/>}/>
-                                      <Typography.Text type="secondary" style={{fontSize: 12}}>
-                                          执行中 ({progressEvents.length} 步)
-                                      </Typography.Text>
-                                  </Space>
-                              ),
-                              children: (
-                                  <div style={{paddingLeft: 4}}>
-                                      {progressEvents.map((event, idx) => {
-                                          const isFailed = event.eventType.includes("FAILED") || event.failureReason;
-                                          const color = isFailed ? "red" : event.eventType.includes("AI") ? "purple" : "blue";
-                                          return (
-                                              <div key={`${event.taskId}-${idx}`}
-                                                   style={{display: "flex", alignItems: "center", padding: "3px 0", fontSize: 12}}>
-                                                  <Tag color={color} style={{fontSize: 11, marginRight: 8, minWidth: 100, textAlign: "center"}}>
-                                                      {event.stepName || event.message || event.eventType}
-                                                  </Tag>
-                                                  {event.payload && (
-                                                      <Tooltip title={event.payload}>
-                                                          <Typography.Text type="secondary" style={{
-                                                              maxWidth: 200,
-                                                              overflow: "hidden",
-                                                              textOverflow: "ellipsis",
-                                                              whiteSpace: "nowrap"
-                                                          }}>
-                                                              {event.payload.length > 30 ? event.payload.substring(0, 30) + "..." : event.payload}
-                                                          </Typography.Text>
-                                                      </Tooltip>
-                                                  )}
-                                              </div>
-                                          );
-                                      })}
-                                  </div>
-                              )
-                          }]}
-                      />
-                  </div>
-            )}
+              {messages.length === 0 && !aiThinking ? <Empty description="选择或创建会话后开始对话"/> : messages.map(message => renderMessageBubble(message))}
           </div>
           <Input.TextArea
             ref={inputRef as React.Ref<any>}
@@ -727,7 +941,10 @@ function buildOptimisticUserMessage(content: string): AgentChatMessageDto {
         createTime: "",
         providerName: "",
         modelCode: "",
-        executionEvents: []
+        executionEvents: [],
+        thinkingContent: "",
+        thinkingContentFormat: "PLAIN_TEXT",
+        bubbleType: "NORMAL"
     };
 }
 

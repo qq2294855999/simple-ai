@@ -1,13 +1,7 @@
 package com.simple.ai.common.service.agentRule;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.InfoAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.*;
 
 import java.util.List;
 
@@ -76,5 +70,13 @@ public interface AgentRuleService {
      * @param id 主键
      */
     void disableStatus(String id);
-}
 
+    /**
+     * 切换智能体规则启用/停用状态。
+     * <p>ON 切换为 OFF，OFF 切换为 ON。</p>
+     *
+     * @param id 主键
+     * @return 切换后的状态
+     */
+    String toggleStatus(String id);
+}

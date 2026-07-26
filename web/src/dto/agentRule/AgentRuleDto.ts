@@ -71,3 +71,29 @@ export interface UpdateAgentRuleRequestDto extends CreateAgentRuleRequestDto {
   /** 主键 */
   id: string;
 }
+
+/**
+ * 智能体规则详情响应。
+ *
+ * @author qty
+ */
+export interface AgentRuleInfoResponseDto {
+    /** 主键 */
+    id: string;
+    /** 智能体ID */
+    agentId: string;
+    /** 定义描述 */
+    definitionDesc: string;
+    /** 触发条件 */
+    triggerCondition: string;
+    /** 触发动作 */
+    triggerAction: string;
+    /** 创建时间 */
+    createTime?: string;
+    /** 修改时间 */
+    updateTime?: string;
+    /** 状态 */
+    status?: string;
+    /** 备注 */
+    remark?: string;
+}

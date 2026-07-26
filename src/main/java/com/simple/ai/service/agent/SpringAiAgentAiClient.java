@@ -8,16 +8,25 @@ import com.simple.ai.service.aiModel.AiModelChatClientFactory;
 import com.simple.ai.service.aiModel.AiModelRoutingService;
 import com.simple.common.core.utils.AssertUtils;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
  * Spring AI 智能体 AI 调用客户端实现。
+ * 从 ChatResponse / AssistantMessage.metadata 分别抽取 content 与 reasoning（thinkingContent），
+ * 流式时分别推送给 tokenConsumer 与 thinkingTokenConsumer。
  *
  * @author qty
  */
@@ -36,6 +45,11 @@ class SpringAiAgentAiClient implements AgentAiClient {
     @Autowired
     private AgentSessionContextHolder agentSessionContextHolder;
 
+    /**
+     * AssistantMessage / ChatResponse metadata 中推理内容 key 白名单（兼容 OpenAI 兼容推理模型）。
+     */
+    private static final List<String> REASONING_METADATA_KEYS = List.of("reasoning_content", "reasoning", "thinking_content", "thinking", "reasoningContent", "thinkingContent");
+
     @Override
     public AgentAiResponse chat(AgentAiRequest request) {
 
@@ -46,15 +60,19 @@ class SpringAiAgentAiClient implements AgentAiClient {
         AiModelRuntimeConfig config = resolveRuntimeConfig(request);
         ChatClient chatClient = aiModelChatClientFactory.create(config);
 
-        // 调用 Spring AI 获取模型响应内容
-        String content = callSpringAi(chatClient, request);
+        // 调用 Spring AI 获取完整 ChatResponse
+        ChatResponse chatResponse = callSpringAiChatResponse(chatClient, request);
+
+        // 抽取 content 与 reasoning
+        String content = extractAssistantContent(chatResponse);
+        String thinking = extractAssistantReasoning(chatResponse);
 
         // 构建成功响应对象
-        return buildSuccessResponse(content, config);
+        return buildSuccessResponse(content, thinking, config);
     }
 
     @Override
-    public AgentAiResponse chatStream(AgentAiRequest request, Consumer<String> tokenConsumer) {
+    public AgentAiResponse chatStream(AgentAiRequest request, Consumer<String> tokenConsumer, Consumer<String> thinkingTokenConsumer) {
 
         // 校验 AI 调用请求中的必填业务内容
         assertAiRequest(request);
@@ -63,11 +81,11 @@ class SpringAiAgentAiClient implements AgentAiClient {
         AiModelRuntimeConfig config = resolveRuntimeConfig(request);
         ChatClient chatClient = aiModelChatClientFactory.create(config);
 
-        // 调用 Spring AI 流式接口并聚合完整响应内容
-        String content = callSpringAiStream(chatClient, request, tokenConsumer);
+        // 调用 Spring AI 流式接口，按 token 分类推送（content / reasoning）
+        String[] aggregated = callSpringAiChatResponseStream(chatClient, request, tokenConsumer, thinkingTokenConsumer);
 
         // 构建成功响应对象
-        return buildSuccessResponse(content, config);
+        return buildSuccessResponse(aggregated[0], aggregated[1], config);
     }
 
     /**
@@ -93,33 +111,35 @@ class SpringAiAgentAiClient implements AgentAiClient {
     }
 
     /**
-     * 调用 Spring AI 获取响应内容。
+     * 调用 Spring AI 获取完整同步 ChatResponse（不再只取 .content()，避免丢 reasoning）。
      *
      * @param chatClient 动态聊天客户端
      * @param request AI 调用请求
-     * @return 响应内容
+     * @return Spring AI ChatResponse
      */
-    private String callSpringAi(ChatClient chatClient, AgentAiRequest request) {
+    private ChatResponse callSpringAiChatResponse(ChatClient chatClient, AgentAiRequest request) {
         String userContent = buildUserContent(request);
         // 注册工具回调，让 AI 在对话中自主调用工具完成数据操作
         ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
         ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
         ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks);
-        return toolSpec.call()
-                .content();
+        return toolSpec.call().chatResponse();
     }
 
     /**
-     * 调用 Spring AI 获取流式响应内容。
+     * 调用 Spring AI 获取流式 ChatResponse Flux，分别把 content token 与 reasoning token 推送出去。
+     * 返回 [aggregatedContent, aggregatedThinking] 用于落库。
      *
      * @param chatClient 动态聊天客户端
      * @param request AI 调用请求
-     * @param tokenConsumer token 内容消费者
-     * @return 聚合后的完整响应内容
+     * @param tokenConsumer content token 消费者
+     * @param thinkingTokenConsumer reasoning token 消费者（可为 null）
+     * @return [完整content, 完整thinking] 聚合字符串
      */
-    private String callSpringAiStream(ChatClient chatClient, AgentAiRequest request, Consumer<String> tokenConsumer) {
+    private String[] callSpringAiChatResponseStream(ChatClient chatClient, AgentAiRequest request, Consumer<String> tokenConsumer, Consumer<String> thinkingTokenConsumer) {
         String userContent = buildUserContent(request);
         StringBuilder contentBuilder = new StringBuilder();
+        StringBuilder thinkingBuilder = new StringBuilder();
 
         // 将完整会话上下文存入 Redis，供 ToolCallback 在异步线程中获取
         if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
@@ -136,7 +156,7 @@ class SpringAiAgentAiClient implements AgentAiClient {
         }
 
         try {
-            // 构建 Spring AI 流式请求，保留原生 token 输出能力
+            // 构建 Spring AI 流式请求，获取完整 ChatResponse（而不是仅 content 字符串）
             ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
             ChatClient.ChatClientRequestSpec userSpec = requestSpec.user(userContent);
 
@@ -149,12 +169,12 @@ class SpringAiAgentAiClient implements AgentAiClient {
             // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
             ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(wrappedCallbacks).toolContext(toolContext);
             ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
-            Flux<String> contentFlux = streamSpec.content();
+            Flux<ChatResponse> chatResponseFlux = streamSpec.chatResponse();
 
-            // 消费模型输出片段，同时聚合完整响应用于任务最终落库
-            Flux<String> consumedFlux = contentFlux.doOnNext(token -> acceptStreamToken(tokenConsumer, contentBuilder, token));
-            consumedFlux.blockLast();
-            return contentBuilder.toString();
+            // 消费每一片 ChatResponse，分别提取 content token / reasoning token
+            chatResponseFlux.doOnNext(chatResponse -> acceptStreamChatResponse(tokenConsumer, thinkingTokenConsumer, contentBuilder, thinkingBuilder, chatResponse)).blockLast();
+
+            return new String[] { contentBuilder.toString(), thinkingBuilder.toString() };
         } finally {
             // 清理 Redis 中的会话上下文，防止数据残留
             if (request.getSessionId() != null) {
@@ -164,21 +184,260 @@ class SpringAiAgentAiClient implements AgentAiClient {
     }
 
     /**
-     * 处理流式 token 内容。
+     * 处理流式单帧 ChatResponse：抽取 content / reasoning 两个维度的 token，
+     * 分别推送给两个消费者并聚合用于最终落库。
      *
-     * @param tokenConsumer token 内容消费者
-     * @param contentBuilder 完整响应内容构建器
-     * @param token 当前 token 内容
+     * @param tokenConsumer content token 消费者（可能为 null）
+     * @param thinkingTokenConsumer reasoning token 消费者（可能为 null）
+     * @param contentBuilder content 聚合器
+     * @param thinkingBuilder reasoning 聚合器
+     * @param chatResponse 当前帧
      */
-    private void acceptStreamToken(Consumer<String> tokenConsumer, StringBuilder contentBuilder, String token) {
-        if (token == null || token.isBlank()) {
+    private void acceptStreamChatResponse(Consumer<String> tokenConsumer, Consumer<String> thinkingTokenConsumer, StringBuilder contentBuilder, StringBuilder thinkingBuilder,
+                                          ChatResponse chatResponse) {
+        if (chatResponse == null || chatResponse.getResults() == null) {
             return;
         }
-        contentBuilder.append(token);
-        if (tokenConsumer == null) {
-            return;
+
+        // 对 Spring AI 返回的每条 AssistantMessage 结果分别提取
+        for (var generation : chatResponse.getResults()) {
+            if (generation == null || generation.getOutput() == null) {
+                continue;
+            }
+            AssistantMessage message = generation.getOutput();
+
+            // 正常回复文本 token
+            String contentPiece = message.getText();
+            if (contentPiece != null && !contentPiece.isEmpty()) {
+                contentBuilder.append(contentPiece);
+                if (tokenConsumer != null) {
+                    tokenConsumer.accept(contentPiece);
+                }
+            }
+
+            // 思考推理 token（来自 AssistantMessage.metadata）
+            String reasoningPiece = extractReasoningFromMapMetadata(message.getMetadata());
+            if (reasoningPiece != null && !reasoningPiece.isEmpty()) {
+                thinkingBuilder.append(reasoningPiece);
+                if (thinkingTokenConsumer != null) {
+                    thinkingTokenConsumer.accept(reasoningPiece);
+                }
+            }
         }
-        tokenConsumer.accept(token);
+
+        // ChatResponse 顶层 metadata 兜底（少数供应商把推理放整包响应里）
+        String topReasoning = extractReasoningFromChatResponseMetadata(chatResponse.getMetadata());
+        if (topReasoning != null && !topReasoning.isEmpty()) {
+            thinkingBuilder.append(topReasoning);
+            if (thinkingTokenConsumer != null) {
+                thinkingTokenConsumer.accept(topReasoning);
+            }
+        }
+    }
+
+    /**
+     * 从同步 ChatResponse 中抽取主 Assistant 文本内容。
+     *
+     * @param chatResponse Spring AI ChatResponse
+     * @return 文本内容或空串
+     */
+    private String extractAssistantContent(ChatResponse chatResponse) {
+        if (chatResponse == null || chatResponse.getResults() == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (var generation : chatResponse.getResults()) {
+            if (generation != null && generation.getOutput() != null && generation.getOutput().getText() != null) {
+                sb.append(generation.getOutput().getText());
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 从同步 ChatResponse 的 AssistantMessage.metadata / ChatResponse.metadata 中抽取 reasoning。
+     *
+     * @param chatResponse Spring AI ChatResponse
+     * @return reasoning 内容或空串
+     */
+    private String extractAssistantReasoning(ChatResponse chatResponse) {
+        if (chatResponse == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+
+        if (chatResponse.getResults() != null) {
+            for (var generation : chatResponse.getResults()) {
+                if (generation != null && generation.getOutput() != null) {
+                    String piece = extractReasoningFromMapMetadata(generation.getOutput().getMetadata());
+                    if (piece != null) {
+                        sb.append(piece);
+                    }
+                }
+            }
+        }
+
+        String top = extractReasoningFromChatResponseMetadata(chatResponse.getMetadata());
+        if (top != null) {
+            sb.append(top);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 从 AssistantMessage 的 Map<String, Object> metadata 中按白名单顺序取第一个非空 reasoning 片段。
+     * 支持嵌套 map 递归查找。
+     *
+     * @param metadata Map 形式 metadata
+     * @return reasoning 文本片段或 null
+     */
+    private String extractReasoningFromMapMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+        for (String key : REASONING_METADATA_KEYS) {
+            Object value = metadata.get(key);
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String s && !s.isEmpty()) {
+                return s;
+            }
+            if (value instanceof Map<?, ?> nestedMap) {
+                // 兼容嵌套结构，递归搜索一次
+                @SuppressWarnings("unchecked") Map<String, Object> casted = (Map<String, Object>) nestedMap;
+                String nested = extractReasoningFromMapMetadata(casted);
+                if (nested != null) {
+                    return nested;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从 ChatResponseMetadata 中按白名单顺序取第一个非空 reasoning 片段。
+     * Spring AI 1.0.0 ChatResponseMetadata 不是 Map，
+     * 这里通过反射调用其 get(Object key) 方法（Spring 元数据接口通用约定）兜底取值，
+     * 失败时再回退使用 keySet() + 反射 getMethod 取值。
+     *
+     * @param metadata ChatResponse 顶层元数据
+     * @return reasoning 文本片段或 null
+     */
+    private String extractReasoningFromChatResponseMetadata(ChatResponseMetadata metadata) {
+        if (metadata == null) {
+            return null;
+        }
+        Method getMethod;
+        try {
+            getMethod = metadata.getClass().getMethod("get", Object.class);
+        } catch (NoSuchMethodException ignored) {
+            // 没有通用 get(Object) 方法时，回退为通过 keySet 找并通过同名 getter 反射取
+            return extractReasoningFromMetadataByKeyset(metadata);
+        }
+
+        for (String key : REASONING_METADATA_KEYS) {
+            Object value;
+            try {
+                value = getMethod.invoke(metadata, key);
+            } catch (Exception ignored) {
+                continue;
+            }
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String s && !s.isEmpty()) {
+                return s;
+            }
+            if (value instanceof Map<?, ?> nestedMap) {
+                @SuppressWarnings("unchecked") Map<String, Object> casted = (Map<String, Object>) nestedMap;
+                String nested = extractReasoningFromMapMetadata(casted);
+                if (nested != null) {
+                    return nested;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * ChatResponseMetadata.get(Object) 不存在时的兜底：通过 keySet() 或通过反射遍历 REASONING_METADATA_KEYS
+     * 调用同名 getter（getReasoningContent / getReasoning / ...）。
+     *
+     * @param metadata ChatResponseMetadata
+     * @return reasoning 文本片段或 null
+     */
+    private String extractReasoningFromMetadataByKeyset(ChatResponseMetadata metadata) {
+        if (metadata == null) {
+            return null;
+        }
+        Set<String> availableKeys = new HashSet<>();
+
+        // 获取 keySet（如果有的话）
+        try {
+            Method keySetMethod = metadata.getClass().getMethod("keySet");
+            Object keySetResult = keySetMethod.invoke(metadata);
+            if (keySetResult instanceof Set<?> set) {
+                for (Object o : set) {
+                    if (o instanceof String s) {
+                        availableKeys.add(s);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // keySet 取不到时用 REASONING_METADATA_KEYS 全集尝试
+        }
+
+        for (String key : REASONING_METADATA_KEYS) {
+            if (!availableKeys.isEmpty() && !availableKeys.contains(key)) {
+                continue;
+            }
+            // 优先 get(String) 或 get(Object)
+            String direct = invokeStringGetter(metadata, "get", new Class<?>[] { Object.class }, key);
+            if (direct != null) {
+                return direct;
+            }
+            direct = invokeStringGetter(metadata, "get", new Class<?>[] { String.class }, key);
+            if (direct != null) {
+                return direct;
+            }
+            // 再尝试 Bean getter：reasoningContent -> getReasoningContent
+            String beanGetter = "get" + Character.toUpperCase(key.charAt(0)) + key.substring(1);
+            direct = invokeStringGetter(metadata, beanGetter, new Class<?>[0]);
+            if (direct != null) {
+                return direct;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 反射调用指定名称方法并将返回值在非空 String 或 Map 情况下抽取。
+     *
+     * @param target     目标对象
+     * @param methodName 方法名
+     * @param paramTypes 参数类型
+     * @param args       实参
+     * @return 字符串 reasoning 或 null
+     */
+    private String invokeStringGetter(Object target, String methodName, Class<?>[] paramTypes, Object... args) {
+        try {
+            Method m = target.getClass().getMethod(methodName, paramTypes);
+            Object value = m.invoke(target, args);
+            if (value == null) {
+                return null;
+            }
+            if (value instanceof String s && !s.isEmpty()) {
+                return s;
+            }
+            if (value instanceof Map<?, ?> nestedMap) {
+                @SuppressWarnings("unchecked") Map<String, Object> casted = (Map<String, Object>) nestedMap;
+                return extractReasoningFromMapMetadata(casted);
+            }
+            return null;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     /**
@@ -210,13 +469,15 @@ class SpringAiAgentAiClient implements AgentAiClient {
      * 构建成功响应对象。
      *
      * @param content 响应内容
+     * @param thinkingContent 思考推理过程完整文本
      * @param config 实际运行模型配置
      * @return AI 调用响应
      */
-    private AgentAiResponse buildSuccessResponse(String content, AiModelRuntimeConfig config) {
+    private AgentAiResponse buildSuccessResponse(String content, String thinkingContent, AiModelRuntimeConfig config) {
         AgentAiResponse response = new AgentAiResponse();
         response.setSuccess(Boolean.TRUE);
         response.setResponseContent(content);
+        response.setThinkingContent(thinkingContent == null ? "" : thinkingContent);
         response.setFailureReason("");
         response.setProviderId(config.getProviderId());
         response.setProviderName(config.getProviderName());

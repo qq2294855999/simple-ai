@@ -3,14 +3,7 @@ package com.simple.ai.service.agentRule;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.simple.ai.common.copy.agentRule.AgentRuleCopyMapper;
 import com.simple.ai.common.dto.agentDefinition.FindOneAgentDefinitionRequest;
-import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.FindOneAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.InfoAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.*;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentRule.AgentRule;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
@@ -122,6 +115,24 @@ class DefaultAgentRuleService implements AgentRuleService {
         agentRuleView.updateById(entity);
     }
 
+    @Override
+    public String toggleStatus(String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+
+        // 查询当前规则
+        AgentRule entity = agentRuleView.findById(id);
+        AssertUtils.notEmpty(entity, "规则[{}]不存在", id);
+
+        // 根据当前状态切换：ON ↔ OFF
+        Status newStatus = Status.ON.equals(entity.getStatus()) ? Status.OFF : Status.ON;
+        entity.setStatus(newStatus);
+
+        // 持久化更新
+        agentRuleView.updateById(entity);
+
+        return newStatus.name();
+    }
+
     /**
      * 校验智能体存在性。
      *
@@ -147,4 +158,3 @@ class DefaultAgentRuleService implements AgentRuleService {
         AssertUtils.isTrue(existsRule == null, "同智能体下规则定义[{}]已存在", createRequest.getDefinitionDesc());
     }
 }
-

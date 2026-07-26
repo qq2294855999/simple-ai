@@ -42,4 +42,9 @@ public class AgentAiResponse {
     /** 运行模型编码快照 */
     private String modelCode;
 
+    /**
+     * AI 思考推理过程完整文本（reasoning content），Spring AI ChatResponse.metadata#reasoning_content/reasoning
+     */
+    private String thinkingContent;
+
 }

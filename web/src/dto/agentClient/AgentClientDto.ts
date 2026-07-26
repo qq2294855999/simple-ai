@@ -30,16 +30,20 @@ export interface AgentClientPageResponseDto {
     executorId: string;
     /** 执行器名称 */
     executorName?: string;
+    /** 执行器编码 */
+    executorCode?: string;
     /** 客户端名称 */
     clientName: string;
+    /** 在线状态 */
+    isOnline?: boolean;
     /** 客户端状态 */
     status: string;
     /** 过期时间 */
     expireTime: string;
     /** 最后成功连接时间 */
     lastConnectedAt?: string;
-    /** 机器名称 */
-    machineName?: string;
+    /** 最后断开连接时间 */
+    lastDisconnectedAt?: string;
     /** 创建时间 */
     createTime: string;
     /** 更新时间 */

@@ -169,4 +169,18 @@ public class AgentDefinitionController {
         agentDefinitionService.disableStatus(id);
         return R.ok();
     }
+
+    /**
+     * 切换智能体定义启用/停用状态。
+     *
+     * @param id 主键
+     * @return 切换后的状态
+     */
+    @PutMapping("toggle-status/{id}")
+    @Operation(summary = "切换智能体定义启用/停用状态")
+    @HasAuthority("sys:agent-definition:toggle-status")
+    public R<String> toggleStatus(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        return R.ok(agentDefinitionService.toggleStatus(id));
+    }
 }

@@ -222,9 +222,15 @@ export function AgentClientManagementPage() {
 
     // 表格列定义
     const columns = useMemo<ColumnsType<AgentClientPageResponseDto>>(() => [
-        {title: "客户端名称", dataIndex: "clientName", width: 140},
         {title: "执行器", dataIndex: "executorName", width: 140, render: value => value || "-"},
-        {title: "机器名称", dataIndex: "machineName", width: 140, render: value => value || "-"},
+        {title: "客户端名称", dataIndex: "clientName", width: 140},
+        {title: "客户端编码", dataIndex: "executorCode", width: 140, render: value => value || "-"},
+        {
+            title: "在线状态", dataIndex: "isOnline", width: 90,
+            render: (online: boolean) => online
+                ? <Tag color="green">在线</Tag>
+                : <Tag color="red">离线</Tag>
+        },
         {title: "状态", dataIndex: "status", width: 90, render: (status: string) => <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>},
         {title: "过期时间", dataIndex: "expireTime", width: 160},
         {title: "最近连接", dataIndex: "lastConnectedAt", width: 160, render: value => value || "-"},

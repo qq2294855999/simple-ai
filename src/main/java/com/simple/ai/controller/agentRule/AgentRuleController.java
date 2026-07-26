@@ -1,13 +1,7 @@
 package com.simple.ai.controller.agentRule;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.InfoAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleRequest;
-import com.simple.ai.common.dto.agentRule.PageAggregateAgentRuleResponse;
-import com.simple.ai.common.dto.agentRule.UpdateAgentRuleRequest;
+import com.simple.ai.common.dto.agentRule.*;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
@@ -19,14 +13,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -158,6 +145,18 @@ public class AgentRuleController {
         agentRuleService.disableStatus(id);
         return R.ok();
     }
+
+    /**
+     * 切换智能体规则启用/停用状态。
+     *
+     * @param id 主键
+     * @return 切换后的状态
+     */
+    @PutMapping("toggle-status/{id}")
+    @Operation(summary = "切换智能体规则启用/停用状态")
+    @HasAuthority("sys:agent-rule:toggle-status")
+    public R<String> toggleStatus(@PathVariable String id) {
+        AssertUtils.notEmpty(id, "主键不能为空");
+        return R.ok(agentRuleService.toggleStatus(id));
+    }
 }
-
-
