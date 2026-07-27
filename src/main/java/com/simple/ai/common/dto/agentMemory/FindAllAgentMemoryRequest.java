@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.agentMemory;
 
+import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -29,8 +30,8 @@ public class FindAllAgentMemoryRequest {
     @Schema(description = "记忆名称模板")
     private String memoryName;
 
-    @Schema(description = "版本状态：1=DRAFT, 2=PUBLISHED")
-    private Integer versionStatus;
+    @Schema(description = "版本状态")
+    private AgentMemoryVersionStatusProcess versionStatus;
 
     @Schema(description = "用户ID，用于多用户数据隔离")
     private String userId;

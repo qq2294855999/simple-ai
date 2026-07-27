@@ -70,7 +70,6 @@ class DefaultAgentSkillService implements AgentSkillService {
 
         // 保存技能配置
         AgentSkill entity = copy.toEntity(createRequest);
-        entity.
         agentSkillView.save(entity);
         return entity.getId();
     }

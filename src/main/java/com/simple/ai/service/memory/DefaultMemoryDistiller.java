@@ -1,4 +1,4 @@
-package com.simple.ai.service.memory;
+﻿package com.simple.ai.service.memory;
 
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
@@ -12,6 +12,7 @@ import com.simple.ai.common.entity.executionEvent.ExecutionEvent;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.service.memory.MemoryDistiller;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
@@ -176,9 +177,10 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         // 修订场景下，在事务内重新读取旧记忆并退役，确保操作原子性
         if (isRevision && oldMemory != null) {
             AgentMemory freshOldMemory = agentMemoryView.findById(oldMemory.getId());
-            if (freshOldMemory != null && (Integer.valueOf(1).equals(freshOldMemory.getVersionStatus()) || Integer.valueOf(2).equals(freshOldMemory.getVersionStatus()))) {
-                int previousStatus = freshOldMemory.getVersionStatus();
-                freshOldMemory.setVersionStatus(3);
+            if (freshOldMemory != null && (AgentMemoryVersionStatusProcess.DRAFT.equals(freshOldMemory.getVersionStatus()) || AgentMemoryVersionStatusProcess.PUBLISHED.equals(
+                            freshOldMemory.getVersionStatus()))) {
+                AgentMemoryVersionStatusProcess previousStatus = freshOldMemory.getVersionStatus();
+                freshOldMemory.setVersionStatus(AgentMemoryVersionStatusProcess.RETIRED);
                 agentMemoryView.updateById(freshOldMemory);
                 log.info("旧版本记忆已退役：memoryId={}, versionNo={}, previousStatus={}", freshOldMemory.getId(), freshOldMemory.getVersionNo(), previousStatus);
             }
@@ -394,7 +396,7 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         int nextVersionNo = isRevision && oldMemory != null ? calcNextVersionNo(oldMemory) : 1;
         memory.setVersionNo(nextVersionNo);
 
-        memory.setVersionStatus(1);
+        memory.setVersionStatus(AgentMemoryVersionStatusProcess.DRAFT);
 
         // 填充父记忆ID：修订场景指向旧记忆，首次探索为空字符串
         // 使用空字符串而非null，与数据库DEFAULT ''保持一致，避免MyBatis-Plus NOT_NULL策略导致null不写入

@@ -39,6 +39,6 @@ public class SimpleAiProperties {
          * 注入 AI 上下文的对话历史最大轮数。
          * <p>每轮包含一条 USER 消息和一条 ASSISTANT 消息。</p>
          */
-        private int maxHistoryTurns = 10;
+        private int maxHistoryTurns = 20;
     }
 }

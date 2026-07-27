@@ -9,6 +9,7 @@ import com.simple.ai.common.entity.agentMemoryStep.AgentMemoryStep;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.command.AtomicCommandExecutor;
 import com.simple.ai.common.service.memory.MemoryExecutor;
@@ -100,7 +101,7 @@ class DefaultMemoryExecutor implements MemoryExecutor {
         }
 
         // 防御性校验：仅已发布状态的记忆可执行
-        if (!Integer.valueOf(2).equals(memory.getVersionStatus())) {
+        if (!AgentMemoryVersionStatusProcess.PUBLISHED.equals(memory.getVersionStatus())) {
             log.error("记忆执行失败：记忆未发布，memoryId={}, versionStatus={}", memoryId, memory.getVersionStatus());
             return new MemoryExecutionResult().setSuccess(false).setDetail("记忆未发布，无法执行");
         }

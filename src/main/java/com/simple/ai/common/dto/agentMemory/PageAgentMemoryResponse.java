@@ -1,5 +1,6 @@
 package com.simple.ai.common.dto.agentMemory;
 
+import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -33,8 +34,8 @@ public class PageAgentMemoryResponse {
     @Schema(description = "版本号")
     private Integer versionNo;
 
-    @Schema(description = "版本状态：1=DRAFT, 2=PUBLISHED")
-    private Integer versionStatus;
+    @Schema(description = "版本状态")
+    private AgentMemoryVersionStatusProcess versionStatus;
 
     @Schema(description = "记忆摘要")
     private String summary;

@@ -1,20 +1,71 @@
 package com.simple.ai.service.agent;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * 智能体会话上下文持有者。
- * <p>通过 ThreadLocal 存储当前会话的 sessionId，供 ToolCallback 在异步线程中获取会话信息。
- * 由调度服务在调用 AI 前设置，工具回调通过 getCurrentSessionId() 获取。</p>
+ * <p>通过 ThreadLocal 存储当前会话完整上下文（sessionId、userId、agentId），
+ * 供 ToolCallback 在异步线程（boundedElastic）中获取会话信息，
+ * 替代原有的 Redis + ThreadLocal 双层传递方案，简化架构。</p>
  *
  * @author qty
  */
 public final class AgentSessionContext {
 
     /**
-     * 当前会话ID线程本地变量
+     * 完整会话上下文内部类，包含工具回调所需的会话级参数。
+     *
+     * @author qty
      */
-    private static final ThreadLocal<String> CURRENT_SESSION_ID = new ThreadLocal<>();
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SessionContext {
+
+        /**
+         * 会话ID
+         */
+        private String sessionId;
+
+        /**
+         * 用户ID
+         */
+        private String userId;
+
+        /**
+         * 智能体定义ID
+         */
+        private String agentId;
+    }
+
+    /**
+     * 会话上下文线程本地变量
+     */
+    private static final ThreadLocal<SessionContext> CURRENT_SESSION = new ThreadLocal<>();
 
     private AgentSessionContext() {
+    }
+
+    /**
+     * 设置当前会话完整上下文。
+     *
+     * @param sessionId 会话ID
+     * @param userId    用户ID
+     * @param agentId   智能体ID
+     */
+    public static void set(String sessionId, String userId, String agentId) {
+        CURRENT_SESSION.set(new SessionContext(sessionId, userId, agentId));
+    }
+
+    /**
+     * 获取当前会话完整上下文。
+     *
+     * @return 会话上下文，未设置时返回 null
+     */
+    public static SessionContext get() {
+        return CURRENT_SESSION.get();
     }
 
     /**
@@ -23,22 +74,50 @@ public final class AgentSessionContext {
      * @return 会话ID
      */
     public static String getCurrentSessionId() {
-        return CURRENT_SESSION_ID.get();
+        SessionContext ctx = CURRENT_SESSION.get();
+        return ctx != null ? ctx.getSessionId() : null;
     }
 
     /**
-     * 设置当前会话ID。
+     * 获取当前用户ID。
+     *
+     * @return 用户ID
+     */
+    public static String getCurrentUserId() {
+        SessionContext ctx = CURRENT_SESSION.get();
+        return ctx != null ? ctx.getUserId() : null;
+    }
+
+    /**
+     * 获取当前智能体ID。
+     *
+     * @return 智能体ID
+     */
+    public static String getCurrentAgentId() {
+        SessionContext ctx = CURRENT_SESSION.get();
+        return ctx != null ? ctx.getAgentId() : null;
+    }
+
+    /**
+     * 设置当前会话ID（保持向后兼容）。
      *
      * @param sessionId 会话ID
+     * @deprecated 使用 {@link #set(String, String, String)} 替代
      */
+    @Deprecated
     public static void setCurrentSessionId(String sessionId) {
-        CURRENT_SESSION_ID.set(sessionId);
+        SessionContext ctx = CURRENT_SESSION.get();
+        if (ctx == null) {
+            ctx = new SessionContext();
+            CURRENT_SESSION.set(ctx);
+        }
+        ctx.setSessionId(sessionId);
     }
 
     /**
-     * 清除当前会话ID。
+     * 清除当前会话上下文。
      */
     public static void clear() {
-        CURRENT_SESSION_ID.remove();
+        CURRENT_SESSION.remove();
     }
 }

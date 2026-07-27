@@ -10,6 +10,7 @@ import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentMemoryStep.AgentMemoryStep;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.agentMemory.AgentMemoryService;
 import com.simple.ai.common.service.memory.MemoryDistiller;
@@ -128,7 +129,7 @@ class DefaultAgentMemoryService implements AgentMemoryService {
     public String save(CreateAgentMemoryRequest createRequest) {
         AgentMemory entity = copy.toEntity(createRequest);
         entity.setVersionNo(1);
-        entity.setVersionStatus(1);
+        entity.setVersionStatus(AgentMemoryVersionStatusProcess.DRAFT);
         entity.setCreateReason("MANUAL");
         entity.setStatus(Status.ON);
         entity.setReserve("");
@@ -152,7 +153,7 @@ class DefaultAgentMemoryService implements AgentMemoryService {
         // 校验版本状态：PUBLISHED 状态的记忆不允许删除，防止关联任务悬空引用
         for (String id : ids) {
             AgentMemory memory = agentMemoryView.findById(id);
-            if (memory != null && Integer.valueOf(2).equals(memory.getVersionStatus())) {
+            if (memory != null && AgentMemoryVersionStatusProcess.PUBLISHED.equals(memory.getVersionStatus())) {
                 AssertUtils.error("记忆[{}]处于已发布状态，请先退役后再删除", id);
             }
         }
@@ -186,9 +187,9 @@ class DefaultAgentMemoryService implements AgentMemoryService {
         AssertUtils.notEmpty(memory, "主键为[{}]的数据为空", id);
 
         // 仅 DRAFT 状态可发布
-        AssertUtils.isTrue(Integer.valueOf(1).equals(memory.getVersionStatus()), "记忆[{}]不是草稿状态，无法发布", id);
+        AssertUtils.isTrue(AgentMemoryVersionStatusProcess.DRAFT.equals(memory.getVersionStatus()), "记忆[{}]不是草稿状态，无法发布", id);
 
-        memory.setVersionStatus(2);
+        memory.setVersionStatus(AgentMemoryVersionStatusProcess.PUBLISHED);
         agentMemoryView.updateById(memory);
 
         log.info("记忆发布成功：memoryId={}, memoryName={}", id, memory.getMemoryName());
@@ -200,9 +201,9 @@ class DefaultAgentMemoryService implements AgentMemoryService {
         AssertUtils.notEmpty(memory, "主键为[{}]的数据为空", id);
 
         // 仅 PUBLISHED 状态可退役
-        AssertUtils.isTrue(Integer.valueOf(2).equals(memory.getVersionStatus()), "记忆[{}]不是已发布状态，无法退役", id);
+        AssertUtils.isTrue(AgentMemoryVersionStatusProcess.PUBLISHED.equals(memory.getVersionStatus()), "记忆[{}]不是已发布状态，无法退役", id);
 
-        memory.setVersionStatus(3);
+        memory.setVersionStatus(AgentMemoryVersionStatusProcess.RETIRED);
         agentMemoryView.updateById(memory);
 
         log.info("记忆退役成功：memoryId={}, memoryName={}", id, memory.getMemoryName());
@@ -214,7 +215,7 @@ class DefaultAgentMemoryService implements AgentMemoryService {
         AssertUtils.notEmpty(memory, "主键为[{}]的数据为空", id);
 
         // 仅已发布状态的记忆可获取参数定义
-        AssertUtils.isTrue(Integer.valueOf(2).equals(memory.getVersionStatus()), "记忆[{}]不是已发布状态，无法获取参数定义", id);
+        AssertUtils.isTrue(AgentMemoryVersionStatusProcess.PUBLISHED.equals(memory.getVersionStatus()), "记忆[{}]不是已发布状态，无法获取参数定义", id);
 
         ParamsDefinitionResponse response = new ParamsDefinitionResponse();
         response.setMemoryId(memory.getId());
@@ -234,7 +235,7 @@ class DefaultAgentMemoryService implements AgentMemoryService {
         AssertUtils.notEmpty(memory, "主键为[{}]的数据为空", id);
 
         // 仅已发布状态的记忆可执行
-        AssertUtils.isTrue(Integer.valueOf(2).equals(memory.getVersionStatus()), "记忆[{}]不是已发布状态，无法执行", id);
+        AssertUtils.isTrue(AgentMemoryVersionStatusProcess.PUBLISHED.equals(memory.getVersionStatus()), "记忆[{}]不是已发布状态，无法执行", id);
 
         // 参数校验：检查必填参数和占位符完整性
         validateParams(memory, request.getParams());

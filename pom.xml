@@ -23,6 +23,7 @@
 
     <properties>
         <spring-ai.version>1.0.0</spring-ai.version>
+        <spring-oauth.version>1.0.0</spring-oauth.version>
     </properties>
 
     <dependencyManagement>
@@ -42,7 +43,7 @@
         <dependency>
             <groupId>com.simple.common</groupId>
             <artifactId>simple-common-oauth-start</artifactId>
-            <version>1.0.0</version>
+            <version>${spring-oauth.version}</version>
         </dependency>
 
         <dependency>
@@ -63,6 +64,11 @@
         <dependency>
             <groupId>com.simple.common</groupId>
             <artifactId>simple-common-websocket</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.simple.common</groupId>
+            <artifactId>simple-common-cache</artifactId>
         </dependency>
 
         <dependency>

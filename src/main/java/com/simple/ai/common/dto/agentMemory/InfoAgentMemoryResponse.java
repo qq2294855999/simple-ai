@@ -1,6 +1,7 @@
 package com.simple.ai.common.dto.agentMemory;
 
 import com.simple.ai.common.entity.agentMemoryStep.AgentMemoryStep;
+import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -39,7 +40,7 @@ public class InfoAgentMemoryResponse {
     private Integer versionNo;
 
     @Schema(description = "版本状态")
-    private Integer versionStatus;
+    private AgentMemoryVersionStatusProcess versionStatus;
 
     @Schema(description = "来源任务ID")
     private String sourceTaskId;

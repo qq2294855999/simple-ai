@@ -3,42 +3,19 @@ package com.simple.ai.service.agent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
 
 /**
  * 智能体会话上下文持有者。
- * <p>通过 Redis 存储 sessionId → 会话上下文（userId、agentId）映射，
- * 供 ToolCallback 在异步线程（boundedElastic）中获取会话上下文，
- * 避免 ThreadLocal 跨线程丢失。</p>
- * <p>存储格式：使用 ":::" 分隔 userId 和 agentId。
- * 键名：agent:session:context:{sessionId} → userId:::agentId</p>
+ * <p>通过 ThreadLocal 存储 sessionId → 会话上下文（userId、agentId）映射，
+ * 供 ToolCallback 在异步线程（boundedElastic）中获取会话上下文。</p>
+ * <p>不再使用 Redis，改用 AgentSessionContext ThreadLocal 直接传递，
+ * 配合 SessionAwareToolCallback 在工具执行线程上设置上下文。</p>
  *
  * @author qty
  */
 @Component
 public class AgentSessionContextHolder {
-
-    /**
-     * 会话上下文字段分隔符
-     */
-    private static final String CONTEXT_SEPARATOR = ":::";
-
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
-
-    /**
-     * Redis 中会话上下文 key 前缀。
-     */
-    private static final String SESSION_CONTEXT_KEY_PREFIX = "agent:session:context:";
-
-    /**
-     * 会话上下文缓存过期时间（分钟）。
-     */
-    private static final Duration SESSION_CONTEXT_TTL = Duration.ofMinutes(30);
 
     /**
      * 会话上下文内部类，包含工具回调所需的会话级参数。
@@ -64,6 +41,8 @@ public class AgentSessionContextHolder {
     /**
      * 存储会话上下文（完整上下文，包含 userId 和 agentId）。
      *
+     * <p>通过 AgentSessionContext ThreadLocal 存储，供同一线程的工具回调直接获取。</p>
+     *
      * @param sessionId 会话ID
      * @param userId    用户ID
      * @param agentId   智能体定义ID
@@ -73,37 +52,22 @@ public class AgentSessionContextHolder {
             return;
         }
 
-        // 使用分隔符拼接 userId 和 agentId，存储为单个 Redis 字符串值
-        String safeUserId = userId != null ? userId : "";
-        String safeAgentId = agentId != null ? agentId : "";
-        String value = safeUserId + CONTEXT_SEPARATOR + safeAgentId;
-        String redisKey = SESSION_CONTEXT_KEY_PREFIX + sessionId;
-        stringRedisTemplate.opsForValue().set(redisKey, value, SESSION_CONTEXT_TTL);
+        // 将完整会话上下文存入 ThreadLocal
+        AgentSessionContext.set(sessionId, userId, agentId);
     }
 
     /**
      * 获取完整会话上下文。
      *
-     * @param sessionId 会话ID
+     * @param sessionId 会话ID（已忽略，直接从 ThreadLocal 获取）
      * @return 会话上下文，未命中时返回 null
      */
     public SessionContext getContext(String sessionId) {
-        if (sessionId == null || sessionId.isBlank()) {
+        AgentSessionContext.SessionContext ctx = AgentSessionContext.get();
+        if (ctx == null) {
             return null;
         }
-        String redisKey = SESSION_CONTEXT_KEY_PREFIX + sessionId;
-        String value = stringRedisTemplate.opsForValue().get(redisKey);
-
-        // Redis 未命中时返回 null
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-
-        // 按分隔符解析 userId 和 agentId
-        String[] parts = value.split(CONTEXT_SEPARATOR, 2);
-        String userId = parts.length > 0 && !parts[0].isBlank() ? parts[0] : null;
-        String agentId = parts.length > 1 && !parts[1].isBlank() ? parts[1] : null;
-        return new SessionContext(userId, agentId);
+        return new SessionContext(ctx.getUserId(), ctx.getAgentId());
     }
 
     /**
@@ -124,7 +88,7 @@ public class AgentSessionContextHolder {
     /**
      * 获取会话上下文中的用户ID。
      *
-     * @param sessionId 会话ID
+     * @param sessionId 会话ID（已忽略，直接从 ThreadLocal 获取）
      * @return 用户ID
      * @deprecated 使用 {@link #getContext(String)} 替代
      */
@@ -137,13 +101,9 @@ public class AgentSessionContextHolder {
     /**
      * 清除会话上下文。
      *
-     * @param sessionId 会话ID
+     * @param sessionId 会话ID（已忽略，直接清除 ThreadLocal）
      */
     public void remove(String sessionId) {
-        if (sessionId == null) {
-            return;
-        }
-        String redisKey = SESSION_CONTEXT_KEY_PREFIX + sessionId;
-        stringRedisTemplate.delete(redisKey);
+        AgentSessionContext.clear();
     }
 }

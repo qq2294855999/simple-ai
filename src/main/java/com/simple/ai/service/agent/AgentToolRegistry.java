@@ -1,30 +1,29 @@
 package com.simple.ai.service.agent;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.simple.ai.common.dto.agent.ToolQueryByIdRequest;
 import com.simple.ai.common.dto.agentClient.CreateAgentClientRequest;
 import com.simple.ai.common.dto.agentDefinition.CreateAgentDefinitionRequest;
 import com.simple.ai.common.dto.agentExecutor.CreateAgentExecutorRequest;
-import com.simple.ai.common.dto.agentExecutor.InfoAgentExecutorResponse;
 import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
-import com.simple.ai.common.dto.atomicCommand.CreateAtomicCommandRequest;
+import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
+import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
-import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
 import com.simple.ai.common.service.agentClient.AgentClientService;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
-import com.simple.ai.common.service.atomicCommand.AtomicCommandService;
+import com.simple.ai.service.command.DefaultAtomicCommandExecutor;
 import com.simple.ai.view.agentChatSession.AgentChatSessionRepository;
-import com.simple.ai.view.agentExecutor.AgentExecutorRepository;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.core.utils.IdUtils;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
+
+import java.util.function.Consumer;
 
 /**
  * 智能体 AI 工具注册中心。
@@ -47,6 +46,12 @@ public class AgentToolRegistry {
      */
     @Autowired
     private AgentChatSessionRepository agentChatSessionRepository;
+
+    /**
+     * 原子命令执行器，通过 WebSocket 向执行器下发命令并等待结果
+     */
+    @Autowired
+    private DefaultAtomicCommandExecutor defaultAtomicCommandExecutor;
 
     // ──────────────────────────── CREATE 工具（8个）────────────────────────────
 
@@ -97,19 +102,19 @@ public class AgentToolRegistry {
     }
 
     /**
-     * 创建原子命令工具。
+     * 创建原子命令工具（已关闭，原子命令从执行器直接获取）。
      *
      * @param atomicCommandService 原子命令服务
      * @return 工具回调
      */
-    @Bean
-    public ToolCallback createAtomicCommand(AtomicCommandService atomicCommandService) {
-        return FunctionToolCallback.builder("createAtomicCommand", atomicCommandService::save)
-                                   .description("创建新的原子命令。参数：name（名称，必填）、command（命令，必填）、" + "role（作用，必填）、skillId（智能体技能主键ID，可选，注意：不是智能体ID，"
-                                                + "是 createSkill 返回的技能ID）、remark（备注，可选）")
-                                   .inputType(CreateAtomicCommandRequest.class)
-                                   .build();
-    }
+    // @Bean
+    // public ToolCallback createAtomicCommand(AtomicCommandService atomicCommandService) {
+    //     return FunctionToolCallback.builder("createAtomicCommand", atomicCommandService::save)
+    //                                .description("创建新的原子命令。参数：name（名称，必填）、command（命令，必填）、" + "role（作用，必填）、skillId（智能体技能主键ID，可选，注意：不是智能体ID，"
+    //                                             + "是 createSkill 返回的技能ID）、remark（备注，可选）")
+    //                                .inputType(CreateAtomicCommandRequest.class)
+    //                                .build();
+    // }
 
     /**
      * 创建执行器工具。
@@ -155,133 +160,222 @@ public class AgentToolRegistry {
 
     // ──────────────────────────── READ 工具（6个）────────────────────────────
 
-    /**
-     * 查询智能体规则工具。
-     *
-     * @param agentRuleService 智能体规则服务
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback queryRule(AgentRuleService agentRuleService) {
-        return FunctionToolCallback.builder("queryRule", (ToolQueryByIdRequest req) -> agentRuleService.findById(req.getId()))
-                                   .description("根据ID查询智能体规则的详细信息。参数：id（主键ID，必填）")
-                                   .inputType(ToolQueryByIdRequest.class)
-                                   .build();
-    }
+    //    /**
+    //     * 查询智能体规则工具。
+    //     *
+    //     * @param agentRuleService 智能体规则服务
+    //     * @return 工具回调
+    //     */
+    //    @Bean
+    //    public ToolCallback queryRule(AgentRuleService agentRuleService) {
+    //        return FunctionToolCallback.builder("queryRule", (ToolQueryByIdRequest req) -> agentRuleService.findById(req.getId()))
+    //                                   .description("根据ID查询智能体规则的详细信息。参数：id（主键ID，必填）")
+    //                                   .inputType(ToolQueryByIdRequest.class)
+    //                                   .build();
+    //    }
+
+    //    /**
+    //     * 查询智能体技能工具。
+    //     *
+    //     * @param agentSkillService 智能体技能服务
+    //     * @return 工具回调
+    //     */
+    //    @Bean
+    //    public ToolCallback querySkill(AgentSkillService agentSkillService) {
+    //        return FunctionToolCallback.builder("querySkill", (ToolQueryByIdRequest req) -> agentSkillService.findById(req.getId()))
+    //                                   .description("根据ID查询智能体技能的详细信息。参数：id（主键ID，必填）")
+    //                                   .inputType(ToolQueryByIdRequest.class)
+    //                                   .build();
+    //    }
+
+    //    /**
+    //     * 查询智能体定义工具。
+    //     * <p>支持按主键ID或智能体名称查询，优先按主键ID匹配，
+    //     * 主键查不到时再尝试按名称查找。</p>
+    //     *
+    //     * @param agentDefinitionService    智能体定义服务
+    //     * @param agentDefinitionRepository 智能体定义数据访问层
+    //     * @return 工具回调
+    //     */
+    //    @Bean
+    //    public ToolCallback queryAgentDefinition(AgentDefinitionService agentDefinitionService, com.simple.ai.view.agentDefinition.AgentDefinitionRepository agentDefinitionRepository) {
+    //        return FunctionToolCallback.builder("queryAgentDefinition", (ToolQueryByIdRequest req) -> {
+    //                                       // 先尝试按主键ID查询，失败时不抛异常，继续尝试按名称查询
+    //                                       try {
+    //                                           com.simple.ai.common.dto.agentDefinition.InfoAgentDefinitionResponse response = agentDefinitionService.findById(req.getId());
+    //                                           if (response != null) {
+    //                                               return response;
+    //                                           }
+    //                                       } catch (Exception ignored) {
+    //                                           // 主键查询失败时，继续尝试按名称查询
+    //                                       }
+    //
+    //                                       // 主键查不到或查询失败时，按 name 查询
+    //                                       com.simple.ai.common.entity.agentDefinition.AgentDefinition definition = agentDefinitionRepository.selectOne(
+    //                                                       new LambdaQueryWrapper<com.simple.ai.common.entity.agentDefinition.AgentDefinition>().eq(com.simple.ai.common.entity.agentDefinition.AgentDefinition::getName,
+    //                                                                                                                                                req.getId()));
+    //                                       AssertUtils.notEmpty(definition, "智能体[{}]不存在", req.getId());
+    //
+    //                                       // 通过真实ID再查一次，返回标准响应格式
+    //                                       return agentDefinitionService.findById(definition.getId());
+    //                                   }).description("根据ID或名称查询智能体定义的详细信息。参数：id（主键ID或智能体名称，必填）。" + "查询结果中的 id 字段就是 agentId，后续创建记忆/规则/技能时需要使用此ID。")
+    //                                   .inputType(ToolQueryByIdRequest.class)
+    //                                   .build();
+    //    }
+
+    //    /**
+    //     * 查询原子命令工具（已关闭，原子命令从执行器直接获取）。
+    //     *
+    //     * @param atomicCommandService 原子命令服务
+    //     * @return 工具回调
+    //     */
+    // @Bean
+    // public ToolCallback queryAtomicCommand(AtomicCommandService atomicCommandService) {
+    //     return FunctionToolCallback.builder("queryAtomicCommand", (ToolQueryByIdRequest req) -> atomicCommandService.findById(req.getId()))
+    //                                .description("根据ID查询原子命令的详细信息。参数：id（主键ID，必填）")
+    //                                .inputType(ToolQueryByIdRequest.class)
+    //                                .build();
+    // }
+
+    //    /**
+    //     * 查询执行器工具。
+    //     * <p>支持按主键ID或执行器编码（executorCode）查询，优先按主键ID匹配，
+    //     * 主键查不到时再尝试按执行器编码查找。</p>
+    //     *
+    //     * @param agentExecutorService    执行器服务
+    //     * @param agentExecutorRepository 执行器数据访问层
+    //     * @return 工具回调
+    //     */
+    //    @Bean
+    //    public ToolCallback queryExecutor(AgentExecutorService agentExecutorService, AgentExecutorRepository agentExecutorRepository) {
+    //        return FunctionToolCallback.builder("queryExecutor", (ToolQueryByIdRequest req) -> {
+    //            // 先尝试按主键ID查询
+    //            try {
+    //                InfoAgentExecutorResponse response = agentExecutorService.findById(req.getId());
+    //                if (response != null) {
+    //                    return response;
+    //                }
+    //            } catch (Exception ignored) {
+    //                // 主键查询失败时，继续尝试按执行器编码查询
+    //            }
+    //
+    //            // 主键查不到时，按 executor_code 查询
+    //            AgentExecutor executor = agentExecutorRepository.selectOne(
+    //                    new LambdaQueryWrapper<AgentExecutor>().eq(AgentExecutor::getExecutorCode, req.getId()));
+    //            if (executor == null) {
+    //            return buildToolErrorResponse(req.getId(), "执行器[" + req.getId() + "]不存在，请使用有效的执行器ID或编码查询");
+    //            }
+    //
+    //            // 通过真实ID再查一次，返回标准响应格式
+    //            return agentExecutorService.findById(executor.getId());
+    //        }).description("根据ID或执行器编码查询执行器的详细信息。参数：id（主键ID或执行器编码，必填）").inputType(ToolQueryByIdRequest.class).build();
+    //    }
+    //
+    //    /**
+    //     * 查询客户端实例工具。
+    //     *
+    //     * <p>增加 try-catch 容错，查询异常时返回友好错误信息而非中断对话。</p>
+    //     *
+    //     * @param agentClientService 客户端服务
+    //     * @return 工具回调
+    //     */
+    //    @Bean
+    //    public ToolCallback queryClient(AgentClientService agentClientService) {
+    //        return FunctionToolCallback.builder("queryClient", (ToolQueryByIdRequest req) -> {
+    //            // 查询客户端实例，异常时返回错误信息而非抛异常中断对话
+    //            try {
+    //                Object response = agentClientService.findById(req.getId());
+    //                if (response != null) {
+    //                    return response;
+    //                }
+    //            } catch (Exception ignored) {
+    //                // 查询异常时返回友好错误信息
+    //            }
+    //            return buildToolErrorResponse(req.getId(), "客户端[" + req.getId() + "]不存在，请使用有效的客户端ID查询");
+    //        }).description("根据主键ID查询客户端实例的详细信息。参数：id（主键ID，必填）").inputType(ToolQueryByIdRequest.class).build();
+    //    }
+
+    //    /**
+    //     * 构建工具错误响应。
+    //     *
+    //     * <p>当工具查询不到数据或查询异常时，返回友好的错误信息 Map，
+    //     * 避免 AI 因异常中断对话。</p>
+    //     *
+    //     * @param queryId  查询的ID
+    //     * @param message  错误信息
+    //     * @return 包含错误信息的 Map
+    //     */
+    //    private Map<String, Object> buildToolErrorResponse(String queryId, String message) {
+    //        Map<String, Object> errorResponse = new HashMap<>();
+    //        errorResponse.put("error", true);
+    //        errorResponse.put("queryId", queryId);
+    //        errorResponse.put("message", message);
+    //        return errorResponse;
+    //    }
+
+    // ──────────────────────────── EXECUTE 工具�?个）────────────────────────────
 
     /**
-     * 查询智能体技能工具。
+     * 执行原子命令工具。
+     * <p>AI 调用此工具直接通过 WebSocket 向执行器客户端下发原子命令并等待执行结果。
+     * clientId 通过当前会话上下文自动推导，无需 AI 手动传入。</p>
      *
-     * @param agentSkillService 智能体技能服务
      * @return 工具回调
      */
     @Bean
-    public ToolCallback querySkill(AgentSkillService agentSkillService) {
-        return FunctionToolCallback.builder("querySkill", (ToolQueryByIdRequest req) -> agentSkillService.findById(req.getId()))
-                                   .description("根据ID查询智能体技能的详细信息。参数：id（主键ID，必填）")
-                                   .inputType(ToolQueryByIdRequest.class)
-                                   .build();
-    }
+    public ToolCallback executeAtomicCommand() {
+        return FunctionToolCallback.builder("executeAtomicCommand", (AtomicCommandInvokeRequest req) -> {
+                                       // 通过进度 ThreadLocal 发布"正在使用[命令]"
+                                       publishToolProgress("正在使用" + (req.getCommandContent() != null ? req.getCommandContent() : "原子命令"));
 
-    /**
-     * 查询智能体定义工具。
-     * <p>支持按主键ID或智能体名称查询，优先按主键ID匹配，
-     * 主键查不到时再尝试按名称查找。</p>
-     *
-     * @param agentDefinitionService    智能体定义服务
-     * @param agentDefinitionRepository 智能体定义数据访问层
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback queryAgentDefinition(AgentDefinitionService agentDefinitionService, com.simple.ai.view.agentDefinition.AgentDefinitionRepository agentDefinitionRepository) {
-        return FunctionToolCallback.builder("queryAgentDefinition", (ToolQueryByIdRequest req) -> {
-                                       // 先尝试按主键ID查询，失败时不抛异常，继续尝试按名称查询
-                                       try {
-                                           com.simple.ai.common.dto.agentDefinition.InfoAgentDefinitionResponse response = agentDefinitionService.findById(req.getId());
-                                           if (response != null) {
-                                               return response;
+                                       // 从会话上下文获取 clientId 和必要参数
+                                       String sessionId = AgentSessionContext.getCurrentSessionId();
+                                       if (sessionId != null && !sessionId.isBlank()) {
+                                           AgentChatSession session = agentChatSessionRepository.selectById(sessionId);
+                                           if (session != null) {
+                                               if (session.getClientId() != null && (req.getClientId() == null || req.getClientId().isBlank())) {
+                                                   req.setClientId(session.getClientId());
+                                               }
                                            }
-                                       } catch (Exception ignored) {
-                                           // 主键查询失败时，继续尝试按名称查询
                                        }
 
-                                       // 主键查不到或查询失败时，按 name 查询
-                                       com.simple.ai.common.entity.agentDefinition.AgentDefinition definition = agentDefinitionRepository.selectOne(
-                                                       new LambdaQueryWrapper<com.simple.ai.common.entity.agentDefinition.AgentDefinition>().eq(com.simple.ai.common.entity.agentDefinition.AgentDefinition::getName,
-                                                                                                                                                req.getId()));
-                                       AssertUtils.notEmpty(definition, "智能体[{}]不存在", req.getId());
+                                       // 服务端补全必填字段：taskId（用于任务追踪）和 commandId（用于 WebSocket 等待器匹配）
+                                       if (req.getTaskId() == null || req.getTaskId().isBlank()) {
+                                           req.setTaskId(IdUtils.getSnowflakeNextIdStr());
+                                       }
+                                       if (req.getCommandId() == null || req.getCommandId().isBlank()) {
+                                           req.setCommandId(IdUtils.getSnowflakeNextIdStr());
+                                       }
 
-                                       // 通过真实ID再查一次，返回标准响应格式
-                                       return agentDefinitionService.findById(definition.getId());
-                                   }).description("根据ID或名称查询智能体定义的详细信息。参数：id（主键ID或智能体名称，必填）。" + "查询结果中的 id 字段就是 agentId，后续创建记忆/规则/技能时需要使用此ID。")
-                                   .inputType(ToolQueryByIdRequest.class)
+                                       // 调用 DefaultAtomicCommandExecutor 执行（WebSocket 下发 + 等待响应）
+                                       return defaultAtomicCommandExecutor.execute(req);
+                                   })
+                                   .description("向执行器客户端下发一条原子命令并等待执行结果。参数：commandContent（命令内容，必填）、" + "requestParams（请求参数 Map，可选）。"
+                                                + "命令内容应匹配已注册的原子命令名称或命令正文（如 system.capability、执行脚本内容等）。" + "返回执行结果包含 success 标志、结果数据或失败原因。")
+                                   .inputType(AtomicCommandInvokeRequest.class)
                                    .build();
     }
 
     /**
-     * 查询原子命令工具。
+     * 安全发布工具调用进度事件。
      *
-     * @param atomicCommandService 原子命令服务
-     * @return 工具回调
+     * @param message 进度消息
      */
-    @Bean
-    public ToolCallback queryAtomicCommand(AtomicCommandService atomicCommandService) {
-        return FunctionToolCallback.builder("queryAtomicCommand", (ToolQueryByIdRequest req) -> atomicCommandService.findById(req.getId()))
-                                   .description("根据ID查询原子命令的详细信息。参数：id（主键ID，必填）")
-                                   .inputType(ToolQueryByIdRequest.class)
-                                   .build();
-    }
-
-    /**
-     * 查询执行器工具。
-     * <p>支持按主键ID或执行器编码（executorCode）查询，优先按主键ID匹配，
-     * 主键查不到时再尝试按执行器编码查找。</p>
-     *
-     * @param agentExecutorService    执行器服务
-     * @param agentExecutorRepository 执行器数据访问层
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback queryExecutor(AgentExecutorService agentExecutorService, AgentExecutorRepository agentExecutorRepository) {
-        return FunctionToolCallback.builder("queryExecutor", (ToolQueryByIdRequest req) -> {
-            // 先尝试按主键ID查询，失败时不抛异常，继续尝试按执行器编码查询
-            try {
-                InfoAgentExecutorResponse response = agentExecutorService.findById(req.getId());
-                if (response != null) {
-                    return response;
-                }
-            } catch (Exception ignored) {
-                // 主键查询失败时，继续尝试按执行器编码查询
-            }
-
-            // 主键查不到或查询失败时，按 executor_code 查询
-            AgentExecutor executor = agentExecutorRepository.selectOne(new LambdaQueryWrapper<AgentExecutor>().eq(AgentExecutor::getExecutorCode, req.getId()));
-            AssertUtils.notEmpty(executor, "执行器[{}]不存在", req.getId());
-
-            // 通过真实ID再查一次，返回标准响应格式
-            return agentExecutorService.findById(executor.getId());
-        }).description("根据ID或执行器编码查询执行器的详细信息。参数：id（主键ID或执行器编码，必填）").inputType(ToolQueryByIdRequest.class).build();
-    }
-
-    /**
-     * 查询客户端实例工具。
-     *
-     * @param agentClientService 客户端服务
-     * @return 工具回调
-     */
-    @Bean
-    public ToolCallback queryClient(AgentClientService agentClientService) {
-        return FunctionToolCallback.builder("queryClient", (ToolQueryByIdRequest req) -> agentClientService.findById(req.getId()))
-                                   .description("根据主键ID查询客户端实例的详细信息。参数：id（主键ID，必填）")
-                                   .inputType(ToolQueryByIdRequest.class)
-                                   .build();
+    private void publishToolProgress(String message) {
+        Consumer<CommandDispatchProgressEvent> consumer = ProgressConsumerHolder.get();
+        if (consumer == null) {
+            return;
+        }
+        CommandDispatchProgressEvent event = new CommandDispatchProgressEvent();
+        event.setEventType("TOOL_CALLING");
+        event.setMessage(message);
+        consumer.accept(event);
     }
 
     /**
      * 从当前会话获取用户ID。
-     * <p>优先从 Redis 获取 userId，若 Redis 未命中则从数据库查询会话实体获取。
-     * SessionAwareToolCallback 已在 boundedElastic 执行线程上通过 ThreadLocal 设置了 sessionId，
-     * 因此本方法可以直接通过 AgentSessionContext 获取。</p>
+     * <p>优先从 ThreadLocal 获取 userId（AI 调用前由 SpringAiAgentAiClient 设置），
+     * 若未命中则从数据库查询会话实体获取。</p>
      *
      * @return 用户ID
      */
@@ -292,13 +386,13 @@ public class AgentToolRegistry {
             return null;
         }
 
-        // 优先从 Redis 获取 userId（AI 调用前存入）
-        String userId = agentSessionContextHolder.getUserId(sessionId);
+        // 优先从 ThreadLocal 获取 userId（AI 调用前由 SpringAiAgentAiClient 设置）
+        String userId = AgentSessionContext.getCurrentUserId();
         if (userId != null && !userId.isBlank()) {
             return userId;
         }
 
-        // Redis 未命中时，从数据库查询会话获取 userId（兜底方案）
+        // ThreadLocal 未命中时，从数据库查询会话获取 userId（兜底方案）
         AgentChatSession session = agentChatSessionRepository.selectById(sessionId);
         if (session == null) {
             return null;

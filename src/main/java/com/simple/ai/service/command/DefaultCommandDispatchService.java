@@ -31,6 +31,7 @@ import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
 import com.simple.ai.service.agent.AgentContextAssembler;
+import com.simple.ai.service.agent.ProgressConsumerHolder;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
@@ -193,6 +194,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
         try {
             // 组装智能体上下文
+            ProgressConsumerHolder.set(progressConsumer);
             publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
             AgentContext context = agentContextAssembler.assemble(request);
             publishContextTraceProgress(progressConsumer, request, task, context);

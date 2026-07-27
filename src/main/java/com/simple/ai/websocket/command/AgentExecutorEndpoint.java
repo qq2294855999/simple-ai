@@ -43,6 +43,9 @@ public class AgentExecutorEndpoint {
      */
     @WebSocketListening(type = "agent-executor")
     public void handle(WebSocketRequest<SepMessage<ExecutorCommandResultResponse>> request) {
+        // 打印接收到的原始 JSON 用于调试
+        log.info("=== 收到执行器响应 {}", request.getData());
+
 
         // 读取 SEP 外层消息，拒绝缺少协议类型的无效数据。
         SepMessage<ExecutorCommandResultResponse> message = request.getData();
@@ -57,6 +60,7 @@ public class AgentExecutorEndpoint {
 
         // 解析执行客户端回传的 COMMAND_RESULT 负载。
         ExecutorCommandResultResponse result = message.getPayload();
+
         if (result == null || result.getCommandId() == null) {
             return;
         }
