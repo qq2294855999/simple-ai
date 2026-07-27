@@ -1,7 +1,7 @@
-import axios, { type AxiosRequestConfig } from "axios";
-import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import type { R } from "../dto/common/R";
-import { ToastUtil } from "../utils/ToastUtil";
+import type {AxiosError, AxiosResponse, InternalAxiosRequestConfig} from "axios";
+import axios, {type AxiosRequestConfig} from "axios";
+import type {R} from "../dto/common/R";
+import {ToastUtil} from "../utils/ToastUtil";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
@@ -105,8 +105,9 @@ export function buildOauthLoginUrl(extraParams?: Record<string, string>): string
   }
 
   const query = params.toString();
-  // OAuth 前端为 HashRouter，需拼接 #/login 前缀使路由可匹配
-  return query ? `${baseUrl}#/login?${query}` : `${baseUrl}#/login`;
+    // 确保 baseUrl 以 / 结尾，再拼接 #/login 前缀，使 HashRouter 路由可匹配
+    const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+    return query ? `${normalizedBase}#/login?${query}` : `${normalizedBase}#/login`;
 }
 
 /**

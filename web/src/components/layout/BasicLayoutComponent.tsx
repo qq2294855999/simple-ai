@@ -1,7 +1,7 @@
 import {ApiOutlined, CloudServerOutlined, MessageOutlined, RobotOutlined, SendOutlined, SettingOutlined} from "@ant-design/icons";
 import {Layout, Menu} from "antd";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Outlet, useLocation, useNavigate, useSearchParams} from "react-router-dom";
+import {Outlet, useLocation, useNavigate} from "react-router-dom";
 import {buildOauthLoginUrl, clearAndRedirectToLogin, getOauthServerUrl, setIsLoggingOut} from "../../api/http";
 
 const { Header, Sider, Content } = Layout;
@@ -86,9 +86,34 @@ const CHILD_TO_PARENT: Record<string, string> = {
  * @author qty
  */
 export function BasicLayoutComponent() {
+    // 在受保护子路由挂载前同步保存 OAuth 回调参数，避免首轮请求缺少认证信息。
+    const callbackParams = new URLSearchParams(window.location.search);
+    const urlToken = callbackParams.get("access_token");
+    if (urlToken) {
+        window.localStorage.setItem(ACCESS_TOKEN_KEY, urlToken);
+
+        // 回调中存在刷新令牌时同步持久化，保持既有认证存储协议。
+        const urlRefresh = callbackParams.get("refresh_token");
+        if (urlRefresh) {
+            window.localStorage.setItem(REFRESH_TOKEN_KEY, urlRefresh);
+        }
+
+        // OAuth 回调中的用户展示信息写入既有固定键。
+        const urlNickname = callbackParams.get("nickname");
+        if (urlNickname) {
+            window.localStorage.setItem(NICKNAME_KEY, urlNickname);
+        }
+        const urlAvatar = callbackParams.get("avatar_url");
+        if (urlAvatar) {
+            window.localStorage.setItem(AVATAR_URL_KEY, urlAvatar);
+        }
+
+        // 清除敏感查询参数，同时保留当前页面路径与 Hash 路由片段。
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+    }
+
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
 
   // ====== 侧边栏状态 ======
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -127,22 +152,6 @@ export function BasicLayoutComponent() {
 
   // ====== OAuth 登录回调处理 ======
   useEffect(() => {
-    const urlToken = searchParams.get("access_token");
-    const urlRefresh = searchParams.get("refresh_token");
-    if (urlToken) {
-      window.localStorage.setItem(ACCESS_TOKEN_KEY, urlToken);
-      if (urlRefresh) {
-        window.localStorage.setItem(REFRESH_TOKEN_KEY, urlRefresh);
-      }
-      const urlNickname = searchParams.get("nickname");
-      if (urlNickname) window.localStorage.setItem(NICKNAME_KEY, urlNickname);
-      const urlAvatar = searchParams.get("avatar_url");
-      if (urlAvatar) window.localStorage.setItem(AVATAR_URL_KEY, urlAvatar);
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, "", cleanUrl);
-      return;
-    }
-
     // 检查 localStorage 中是否有有效的 access token
     const accessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!accessToken) {
