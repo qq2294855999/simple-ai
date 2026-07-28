@@ -89,13 +89,9 @@ public class ChatEventSender {
         if (eventConsumer == null) {
             return;
         }
-        try {
-            eventConsumer.accept(event);
-        } catch (RuntimeException e) {
 
-            // 客户端断开只终止事件投递，不影响主流程
-            log.warn("发送聊天 SSE 事件失败，type={}", event.getType(), e);
-        }
+        // 必须重新抛出异常，让调用方感知客户端断开并中断后台任务
+        eventConsumer.accept(event);
     }
 
     /**

@@ -19,6 +19,7 @@ import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
+import com.simple.ai.common.exception.ClientDisconnectedException;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.service.command.CommandDispatchService;
 import com.simple.ai.common.service.command.SubAgentDispatchService;
@@ -225,6 +226,10 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
             publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
             return buildSuccessResponse(task, responseContent);
+        } catch (ClientDisconnectedException e) {
+
+            // 客户端断开属于正常行为，不标记任务失败，直接向上传播中断执行
+            throw e;
         } catch (Exception e) {
             String failureReason = resolveFailureReason(e);
 
@@ -294,6 +299,10 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
             publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
             return buildSuccessResponse(task, responseContent);
+        } catch (ClientDisconnectedException e) {
+
+            // 客户端断开属于正常行为，不标记任务失败，直接向上传播中断执行
+            throw e;
         } catch (Exception e) {
             String failureReason = resolveFailureReason(e);
 
@@ -898,13 +907,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             return;
         }
         CommandDispatchProgressEvent event = buildProgressEvent(request, task, eventType, message, payload, completed, failureReason);
-        try {
-            progressConsumer.accept(event);
-        } catch (RuntimeException e) {
 
-            // 进度通道异常不改变业务任务状态，避免客户端断开导致任务被误标记失败
-            log.warn("智能体命令调度进度事件发送失败，任务ID：{}，事件类型：{}", task.getId(), eventType, e);
-        }
+        // 必须重新抛出异常，让调用方感知客户端断开并中断后台任务
+        progressConsumer.accept(event);
     }
 
     /**

@@ -317,6 +317,7 @@ class SpringAiAgentAiClient implements AgentAiClient {
             if (contentPiece != null && !contentPiece.isEmpty()) {
                 contentBuilder.append(contentPiece);
                 if (tokenConsumer != null) {
+                    // 必须让异常传播出去，以便中断后台任务
                     tokenConsumer.accept(contentPiece);
                 }
             }
@@ -326,6 +327,7 @@ class SpringAiAgentAiClient implements AgentAiClient {
             if (reasoningPiece != null && !reasoningPiece.isEmpty()) {
                 thinkingBuilder.append(reasoningPiece);
                 if (thinkingTokenConsumer != null) {
+                    // 必须让异常传播出去，以便中断后台任务
                     thinkingTokenConsumer.accept(reasoningPiece);
                 }
             }
@@ -336,6 +338,7 @@ class SpringAiAgentAiClient implements AgentAiClient {
         if (topReasoning != null && !topReasoning.isEmpty()) {
             thinkingBuilder.append(topReasoning);
             if (thinkingTokenConsumer != null) {
+                // 必须让异常传播出去，以便中断后台任务
                 thinkingTokenConsumer.accept(topReasoning);
             }
         }

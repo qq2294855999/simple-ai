@@ -14,6 +14,7 @@ import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentChatMessageFormatProcess;
 import com.simple.ai.common.enums.AgentChatMessageRoleProcess;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
+import com.simple.ai.common.exception.ClientDisconnectedException;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.ai.common.service.chatTurn.ChatTurnService;
 import com.simple.ai.common.service.command.CommandDispatchService;
@@ -222,7 +223,25 @@ class DefaultAgentChatService implements AgentChatService {
 
         // 会话级分布式锁：同一会话并发请求排队执行，避免消息序号错乱
         String lockKey = "chat:session:lock:" + request.getSessionId();
-        lockService.lock(lockKey, () -> sendStreamInternal(request, eventConsumer));
+        lockService.lock(lockKey, () -> sendStreamInternal(request, wrapEventConsumerWithDisconnectCheck(eventConsumer)));
+    }
+
+    /**
+     * 包装事件消费者，在 SSE 写入失败时抛出客户端断开异常以中断后台任务。
+     *
+     * @param eventConsumer 原始事件消费者
+     * @return 包装后的事件消费者
+     */
+    private Consumer<ChatSseEvent> wrapEventConsumerWithDisconnectCheck(Consumer<ChatSseEvent> eventConsumer) {
+        return event -> {
+            try {
+                eventConsumer.accept(event);
+            } catch (RuntimeException e) {
+                // 客户端断开时 SSE 写入会失败，抛出中断异常停止后台任务
+                log.debug("SSE 事件写入失败，判定客户端已断开: {}", e.getMessage());
+                throw new ClientDisconnectedException("客户端已断开连接", e);
+            }
+        };
     }
 
     /**
@@ -256,7 +275,17 @@ class DefaultAgentChatService implements AgentChatService {
         publishChatEvent(eventConsumer, session.getId(), "MESSAGE_ACCEPTED", "用户消息已保存", "", "", false, "");
 
         // 基于运行时上下文执行 AI 与智能体流程
-        CommandDispatchResponse response = dispatchAgentSafely(session, request, runtimeContext, compositeConsumer);
+        CommandDispatchResponse response;
+        try {
+            response = dispatchAgentSafely(session, request, runtimeContext, compositeConsumer);
+        } catch (ClientDisconnectedException e) {
+
+            // 客户端断开后仍需持久化已生成的 AI 回复，传入 null 事件消费者避免再次写入已关闭的 SSE 通道
+            CommandDispatchResponse disconnectResponse = buildDispatchFailureResponse(e);
+            String assistantMessageId = saveFinalMessage(session, disconnectResponse, null);
+            chatTurnService.completeTurn(turnId, assistantMessageId, "");
+            throw e;
+        }
 
         // 更新运行时上下文中的任务ID
         if (response != null && response.getTaskId() != null) {
@@ -679,6 +708,10 @@ class DefaultAgentChatService implements AgentChatService {
                                                         Consumer<CommandDispatchProgressEvent> eventConsumer) {
         try {
             return dispatchAgent(session, request, runtimeContext, eventConsumer);
+        } catch (ClientDisconnectedException e) {
+
+            // 客户端已断开连接，无需生成失败回复，直接向上抛出中断后台任务
+            throw e;
         } catch (RuntimeException e) {
 
             // 调度服务在创建任务前异常时仍生成失败回复，保证聊天消息链路完整
@@ -1024,12 +1057,9 @@ class DefaultAgentChatService implements AgentChatService {
         if (eventConsumer == null) {
             return;
         }
-        try {
-            eventConsumer.accept(event);
-        } catch (RuntimeException ignored) {
 
-            // 客户端断开只终止事件投递，最终消息仍须完成持久化
-        }
+        // 直接调用消费者，客户端断开时抛出 ClientDisconnectedException 正常向上传播
+        eventConsumer.accept(event);
     }
 
     /**

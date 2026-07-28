@@ -2,6 +2,7 @@ package com.simple.ai.controller.agentChat;
 
 import com.simple.ai.common.dto.agentChat.*;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
+import com.simple.ai.common.exception.ClientDisconnectedException;
 import com.simple.ai.common.properties.SimpleAiProperties;
 import com.simple.ai.common.service.agentChat.AgentChatService;
 import com.simple.ai.service.agentChat.ChatEventSender;
@@ -10,6 +11,7 @@ import com.simple.common.core.response.R;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.MediaType;
@@ -26,6 +28,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @author qty
  */
+@Slf4j
 @Tag(name = "智能体人机对话")
 @RequestMapping("sys/agent-chat")
 @RestController
@@ -116,6 +119,10 @@ public class AgentChatController {
         // SSE 超时必须以错误终态关闭，避免浏览器无限等待 loading
         emitter.onTimeout(() -> emitter.completeWithError(new TimeoutException("智能体聊天响应超时")));
 
+        // 客户端主动断开连接时中断后台任务
+        emitter.onCompletion(() -> log.debug("SSE 连接已关闭，客户端可能点击了停止"));
+        emitter.onError(ex -> log.warn("SSE 连接异常: {}", ex.getMessage()));
+
         try {
             // 建立通道后立即写出首帧，使浏览器、Vite 与反向代理立刻提交流式响应。
             sendEvent(emitter, ChatSseEvent.builder().type(ChatSseEvent.Types.PROGRESS).data("已建立实时对话通道").completed(false).build());
@@ -140,11 +147,36 @@ public class AgentChatController {
         try {
             agentChatService.sendStream(request, event -> sendEvent(emitter, event));
             emitter.complete();
-        } catch (Exception e) {
+        } catch (Throwable e) {
+
+            // 客户端断开连接属于正常行为，不需要标记为错误
+            if (isClientDisconnected(e)) {
+                log.debug("客户端已断开，终止聊天流式响应");
+                emitter.complete();
+                return;
+            }
 
             // 数据库或 AI 调用异常必须关闭 SSE，使客户端进入失败处理而非保持 loading
             emitter.completeWithError(e);
         }
+    }
+
+    /**
+     * 判断异常是否由客户端断开连接引起。
+     *
+     * @param e 异常
+     * @return 是否为客户端断开异常
+     */
+    private boolean isClientDisconnected(Throwable e) {
+        if (e instanceof ClientDisconnectedException) {
+            return true;
+        }
+        String message = e.getMessage();
+        if (message != null && (message.contains("Broken pipe") || message.contains("ClientAbortException") || message.contains("Connection reset"))) {
+            return true;
+        }
+        Throwable cause = e.getCause();
+        return cause != null && isClientDisconnected(cause);
     }
 
     /**
