@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -46,7 +45,7 @@ public class ExecutorTestController {
      */
     @PostMapping("capability/{clientId}")
     @Operation(summary = "向执行器发送 system.capability")
-    public R<Map<String, Object>> sendCapability(@PathVariable String clientId) {
+    public R<Object> sendCapability(@PathVariable String clientId) {
         return sendCommand(clientId, "system.capability", "{}");
     }
 
@@ -60,7 +59,7 @@ public class ExecutorTestController {
      */
     @PostMapping("send/{clientId}")
     @Operation(summary = "向执行器发送任意原子命令（fire-and-forget，日志打印收发 JSON）")
-    public R<Map<String, Object>> sendCommand(@PathVariable String clientId, @RequestParam(defaultValue = "system.capability") String commandCode,
+    public R<Object> sendCommand(@PathVariable String clientId, @RequestParam(defaultValue = "system.capability") String commandCode,
                                               @RequestParam(required = false, defaultValue = "{}") String argsJson) {
 
         if (clientId == null || clientId.isBlank()) {
@@ -80,9 +79,6 @@ public class ExecutorTestController {
             }
         }
 
-        // 检查在线状态
-        boolean online = WebSocketUtils.isOnline(EXECUTOR_CHANNEL_TYPE, clientId);
-
         // 构建 SEP 协议消息
         String commandId = IdUtils.getSnowflakeNextIdStr();
         String dispatchId = IdUtils.getSnowflakeNextIdStr();
@@ -100,15 +96,10 @@ public class ExecutorTestController {
         // 打印发送的原始 JSON
         log.info("=== 发送命令 [{}] -> clientId={} ===\n{}", commandCode, clientId, sentJson);
 
-        // 点对点发送
-        WebSocketUtils.sendMsg(EXECUTOR_CHANNEL_TYPE, clientId, sentJson);
-
-        // 构建响应
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("online", online);
-        result.put("commandCode", commandCode);
-        result.put("sentJson", sentJson);
-        result.put("note", online ? "命令已发送（fire-and-forget），发送和接收的原始 JSON 通过日志输出" : "客户端当前离线，命令未能投递");
+        // 传入 SepMessage 对象，框架内部序列化为 WebSocketRequest.data 的嵌套 JSON 对象
+        // 客户端 SepSyncEnvelope.Data 为 JsonElement 类型，期望嵌套对象而非字符串
+        Object result = WebSocketUtils.sendSyncMsg(EXECUTOR_CHANNEL_TYPE, clientId, message);
+        log.info("=== 收到回执 [{}] -> clientId={} ===\n{}", commandCode, clientId, JsonUtils.toJsonStr(result));
         return R.ok(result);
     }
 }
