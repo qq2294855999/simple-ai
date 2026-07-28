@@ -2,12 +2,14 @@ package com.simple.ai.service.agentChat;
 
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.agentChat.*;
-import com.simple.ai.common.dto.atomicCommand.FindOneAtomicCommandRequest;
+import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
+import com.simple.ai.common.dto.chatTurn.FindAllChatTurnRequest;
 import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
+import com.simple.ai.common.entity.chatTurn.ChatTurn;
 import com.simple.ai.common.entity.executionEvent.ExecutionEvent;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
@@ -57,7 +59,7 @@ import java.util.stream.Collectors;
 class DefaultAgentChatService implements AgentChatService {
 
     /**
-     * HTML 标签匹配表达式
+     * HTML 标签匹配正则式
      */
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("(?is)<[^>]*>");
 
@@ -110,9 +112,6 @@ class DefaultAgentChatService implements AgentChatService {
     private AgentContextAssembler agentContextAssembler;
 
     /**
-     * 智能体会话服务
-     */
-    /**
      * 事务模板
      */
     @Autowired
@@ -125,7 +124,7 @@ class DefaultAgentChatService implements AgentChatService {
     private ChatTurnService chatTurnService;
 
     /**
-     * 执行事件总线，将调度进度事件转换为 ExecutionEvent 并持久化
+     * 执行事件总线，将调度进度事件转化为 ExecutionEvent 并持久化
      */
     @Autowired
     private ExecutionEventBus executionEventBus;
@@ -160,10 +159,10 @@ class DefaultAgentChatService implements AgentChatService {
         AssertUtils.notEmpty(request.getModelId(), "模型主键不能为空");
         AssertUtils.notEmpty(request.getClientId(), "客户端主键不能为空");
 
-        // 校验会话绑定的智能体存在并已启用
+        // 校验会话绑定的智能体存在且已启用
         AgentDefinition agentDefinition = loadEnabledAgent(request.getAgentId());
 
-        // 校验执行客户端在线状态，避免后续 WebSocket 调用无谓等待超时
+        // 校验执行客户端在线状态，避免后续 WebSocket 调用无响应等待超时
         AssertUtils.isTrue(isClientOnline(request.getClientId()), "执行客户端[{}]不在线，请先启动客户端", request.getClientId());
 
         // 创建期装配快照：查询全部资产并序列化为 JSON
@@ -417,7 +416,7 @@ class DefaultAgentChatService implements AgentChatService {
     public void deleteSession(String sessionId) {
         AssertUtils.notEmpty(sessionId, "会话主键不能为空");
 
-        // 级联删除：收集消息中的任务ID，先删任务详情和任务，再删消息，最后删会话
+        // 级联删除：收集消息中的任务ID，先删执行事件和对话轮次，再删任务详情和任务，再删消息，最后删会话
         deleteSessionCascade(Collections.singletonList(sessionId));
     }
 
@@ -426,7 +425,7 @@ class DefaultAgentChatService implements AgentChatService {
     public void deleteSessions(List<String> sessionIds) {
         AssertUtils.notEmpty(sessionIds, "会话主键列表不能为空");
 
-        // 级联删除：收集消息中的任务ID，先删任务详情和任务，再删消息，最后删会话
+        // 级联删除：收集消息中的任务ID，先删执行事件和对话轮次，再删任务详情和任务，再删消息，最后删会话
         deleteSessionCascade(sessionIds);
     }
 
@@ -476,6 +475,8 @@ class DefaultAgentChatService implements AgentChatService {
 
     /**
      * 级联删除会话数据。
+     * <p>删除顺序：执行事件 -> 对话轮次 -> 任务详情 -> 任务 -> 消息 -> 会话，
+     * 确保不遗留孤儿数据。</p>
      *
      * @param sessionIds 会话主键列表
      */
@@ -488,6 +489,26 @@ class DefaultAgentChatService implements AgentChatService {
         for (AgentChatMessage message : allMessages) {
             if (message.getTaskId() != null && !message.getTaskId().isBlank()) {
                 taskIds.add(message.getTaskId());
+            }
+        }
+
+        // 删除执行事件（按任务ID批量清理，避免孤儿数据）
+        if (!taskIds.isEmpty()) {
+            List<ExecutionEvent> events = executionEventView.findAllByTaskIds(new ArrayList<>(taskIds));
+            List<String> eventIds = events.stream().map(ExecutionEvent::getId).collect(Collectors.toList());
+            if (!eventIds.isEmpty()) {
+                executionEventView.deleteByIds(eventIds);
+            }
+        }
+
+        // 删除对话轮次记录（按会话ID批量清理，避免孤儿数据）
+        for (String sessionId : sessionIds) {
+            FindAllChatTurnRequest turnRequest = new FindAllChatTurnRequest();
+            turnRequest.setSessionId(sessionId);
+            List<ChatTurn> turns = chatTurnView.findAll(turnRequest);
+            List<String> turnIds = turns.stream().map(ChatTurn::getId).collect(Collectors.toList());
+            if (!turnIds.isEmpty()) {
+                chatTurnView.deleteByIds(turnIds);
             }
         }
 
@@ -517,7 +538,7 @@ class DefaultAgentChatService implements AgentChatService {
     }
 
     /**
-     * 查询已启用智能体。
+     * 查询已启用的智能体。
      *
      * @param agentId 智能体主键
      * @return 智能体实体
@@ -601,8 +622,8 @@ class DefaultAgentChatService implements AgentChatService {
 
     /**
      * 将执行器能力命令 upsert 到本地 atomic_command 表。
-     * <p>按命令编码（command）匹配已有记录：存在则更新名称、作用、状态；
-     * 不存在则新增。使用批量操作避免逐条数据库交互。</p>
+     * <p>按命令编码（command）批量查询已有记录，内存中比对后拆分为更新列表和新增列表，
+     * 分别使用批量更新和批量插入操作，避免逐条数据库交互。</p>
      *
      * @param capabilities 执行器能力命令列表
      */
@@ -613,29 +634,56 @@ class DefaultAgentChatService implements AgentChatService {
 
         transactionTemplate.executeWithoutResult(status -> {
 
-            // 逐条 upsert：按命令编码匹配已有记录
-            for (CapabilityResultDto.CommandItem item : capabilities) {
-                FindOneAtomicCommandRequest queryReq = new FindOneAtomicCommandRequest().setCommand(item.getCode());
+            // 收集所有命令编码，一次性批量查询已有记录
+            List<String> commandCodes = capabilities.stream().map(CapabilityResultDto.CommandItem::getCode).filter(code -> code != null && !code.isBlank()).collect(Collectors.toList());
+            if (commandCodes.isEmpty()) {
+                return;
+            }
 
-                AtomicCommand existing = atomicCommandView.findOne(queryReq, new FindOneAtomicCommandRequest());
+            // 批量查询已有命令记录，按编码建立索引
+            FindAllAtomicCommandRequest batchQueryReq = new FindAllAtomicCommandRequest();
+            batchQueryReq.setCommands(commandCodes);
+            batchQueryReq.setStatus(Status.ON);
+            List<AtomicCommand> existingCommands = atomicCommandView.findAll(batchQueryReq);
+            Map<String, AtomicCommand> existingMap = existingCommands.stream().collect(Collectors.toMap(AtomicCommand::getCommand, cmd -> cmd, (a, b) -> a));
+
+            // 内存中比对，拆分为需更新列表和需新增列表
+            List<AtomicCommand> toUpdate = new ArrayList<>();
+            List<AtomicCommand> toInsert = new ArrayList<>();
+            for (CapabilityResultDto.CommandItem item : capabilities) {
+                String code = item.getCode();
+                if (code == null || code.isBlank()) {
+                    continue;
+                }
+                AtomicCommand existing = existingMap.get(code);
                 if (existing != null) {
 
-                    // 更新已有命令的名称、作用、状态
+                    // 更新已有命令的名称、角色、状态
                     existing.setName(item.getName());
                     existing.setRole(item.getDescription());
                     existing.setStatus(Status.ON);
-                    atomicCommandView.updateById(existing);
+                    toUpdate.add(existing);
                 } else {
 
-                    // 新增命令记录
+                    // 构建新增命令记录
                     AtomicCommand newCommand = new AtomicCommand();
                     newCommand.setName(item.getName());
-                    newCommand.setCommand(item.getCode());
+                    newCommand.setCommand(code);
                     newCommand.setRole(item.getDescription());
                     newCommand.setStatus(Status.ON);
-                    newCommand.setRemark("从执行器 system.capability 同步");
-                    atomicCommandView.save(newCommand);
+                    newCommand.setRemark("由执行端 system.capability 同步");
+                    toInsert.add(newCommand);
                 }
+            }
+
+            // 批量更新已有记录
+            if (!toUpdate.isEmpty()) {
+                atomicCommandView.updateById(toUpdate);
+            }
+
+            // 批量新增记录
+            if (!toInsert.isEmpty()) {
+                atomicCommandView.saves(toInsert);
             }
         });
     }
@@ -751,7 +799,7 @@ class DefaultAgentChatService implements AgentChatService {
      * 构建调度异常响应。
      *
      * @param exception 调度异常
-     * @return 失败调度响应
+     * @return 失败的调度响应
      */
     private CommandDispatchResponse buildDispatchFailureResponse(RuntimeException exception) {
         CommandDispatchResponse response = new CommandDispatchResponse();
@@ -878,7 +926,7 @@ class DefaultAgentChatService implements AgentChatService {
             return "未获取到有效回复。";
         }
 
-        // HTML 标记出现时整体转义，避免剥离标签后保留脚本正文等不可信内容
+        // HTML 标记出现时整体转义，避免剥离标签后保留脚本片段等不可信内容
         if (HTML_TAG_PATTERN.matcher(content).find()) {
             return escapeHtmlMarkup(content);
         }

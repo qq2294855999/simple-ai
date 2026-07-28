@@ -10,7 +10,7 @@ import java.util.List;
 
 @Data
 @Accessors(chain = true)
-@Schema(title = "原子命令(atomic_command)列表请求参数")
+@Schema(title = "原子命令(atomic_command)列表查询参数")
 public class FindAllAtomicCommandRequest {
 
     @Schema(description = "主键")
@@ -22,14 +22,17 @@ public class FindAllAtomicCommandRequest {
     @Schema(description = "命令")
     private String command;
 
-    @Schema(description = "作用")
+    @Schema(description = "命令编码列表，用于批量IN查询")
+    private List<String> commands;
+
+    @Schema(description = "角色")
     private String role;
 
     @Schema(description = "智能体技能ID")
     private String skillId;
 
     /**
-     * 智能体技能ID列表（批量查询用）
+     * 智能体技能ID列表，用于批量查询。
      */
     @Schema(description = "智能体技能ID列表")
     private List<String> skillIds;
@@ -50,4 +53,3 @@ public class FindAllAtomicCommandRequest {
     private String remark;
 
 }
-

@@ -237,8 +237,8 @@ SEP v1.2 是智能体系统与远程执行器之间的标准通信协议。基�
 
 ## system.capability 能力清单
 
-握手后执行器返回的能力清单。每条命令包含 code、name、description、parameters（含 name、label、type、required）、riskLevel、isIdempotent。AI 应根据 `type` 字段判断参数是
-string（字符串）、string[]（JSON 字符串数组）、int（整数）、bool（布尔值）还是 object（JSON 对象）。
+握手后执行器返回的能力清单。每条命令包含 code、name、description、parameters（含 name、label、type、required）、example（请求示例 JSON，可直接嵌入 COMMAND_BATCH.commands
+数组）、riskLevel、isIdempotent。AI 应根据 `type` 字段判断参数是 string（字符串）、string[]（JSON 字符串数组）、int（整数）、bool（布尔值）还是 object（JSON 对象）。
 
 ### COMMAND_RESULT 返回示例（能力清单）
 
@@ -272,6 +272,7 @@ string（字符串）、string[]（JSON 字符串数组）、int（整数）、b
 							"required": false
 						}
 					],
+					"example": "{ \"args\": { \"titleKeyword\": \"微信\" } }",
 					"riskLevel": "LOW",
 					"isIdempotent": true
 				}
@@ -1046,7 +1047,6 @@ string（字符串）、string[]（JSON 字符串数组）、int（整数）、b
 ```
 
 `source` 取值：
-
 - `running_process`：从正在运行的进程中获取
 - `file_system`：从文件系统搜索获取
 - `not_found`：未找到

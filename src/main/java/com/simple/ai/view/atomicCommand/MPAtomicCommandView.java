@@ -61,6 +61,7 @@ class MPAtomicCommandView implements AtomicCommandView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), AtomicCommand::getId, findAllRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getName()), AtomicCommand::getName, findAllRequest.getName())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getCommand()), AtomicCommand::getCommand, findAllRequest.getCommand())
+                    .in(CollectionUtil.isNotEmpty(findAllRequest.getCommands()), AtomicCommand::getCommand, findAllRequest.getCommands())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getRole()), AtomicCommand::getRole, findAllRequest.getRole())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getSkillId()), AtomicCommand::getSkillId, findAllRequest.getSkillId())
                     .in(CollectionUtil.isNotEmpty(findAllRequest.getSkillIds()), AtomicCommand::getSkillId, findAllRequest.getSkillIds())
