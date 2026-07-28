@@ -108,7 +108,7 @@ public class ExecutorTestController {
         result.put("online", online);
         result.put("commandCode", commandCode);
         result.put("sentJson", sentJson);
-        result.put("note", online ? "命令已发送，执行器回复通过 AgentExecutorEndpoint 接收，日志中可查看完整 JSON" : "客户端当前离线，命令未能投递");
+        result.put("note", online ? "命令已发送（fire-and-forget），发送和接收的原始 JSON 通过日志输出" : "客户端当前离线，命令未能投递");
         return R.ok(result);
     }
 }

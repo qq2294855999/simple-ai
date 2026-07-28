@@ -2,6 +2,7 @@ package com.simple.ai.common.service.agent;
 
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
+import com.simple.ai.service.agentChat.AgentChatRuntimeContext;
 
 import java.util.function.Consumer;
 
@@ -52,4 +53,16 @@ public interface AgentAiClient {
         return response;
     }
 
+    /**
+     * 发送智能体 AI 流式调用请求（显式传递运行时上下文）。
+     *
+     * @param request               AI 调用请求
+     * @param runtimeContext        聊天运行时上下文
+     * @param tokenConsumer         content token 消费者（正常回复文本）
+     * @param thinkingTokenConsumer reasoning/thinking token 消费者（思考过程文本），不需要可传 null
+     * @return AI 调用响应
+     */
+    default AgentAiResponse chatStream(AgentAiRequest request, AgentChatRuntimeContext runtimeContext, Consumer<String> tokenConsumer, Consumer<String> thinkingTokenConsumer) {
+        return chatStream(request, tokenConsumer, thinkingTokenConsumer);
+    }
 }

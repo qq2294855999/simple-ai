@@ -9,6 +9,7 @@ import com.simple.ai.common.properties.SimpleAiProperties;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
 import com.simple.ai.common.view.agentChatRawLog.AgentChatRawLogView;
+import com.simple.ai.service.agentChat.AgentChatRuntimeContext;
 import com.simple.ai.service.aiModel.AiModelChatClientFactory;
 import com.simple.ai.service.aiModel.AiModelRoutingService;
 import com.simple.common.core.utils.AssertUtils;
@@ -51,9 +52,6 @@ class SpringAiAgentAiClient implements AgentAiClient {
 
     @Autowired
     private List<ToolCallback> toolCallbacks;
-
-    @Autowired
-    private AgentSessionContextHolder agentSessionContextHolder;
 
     /**
      * 聊天消息视图，用于加载会话历史消息
@@ -111,6 +109,23 @@ class SpringAiAgentAiClient implements AgentAiClient {
 
         // 调用 Spring AI 流式接口，按 token 分类推送（content / reasoning）
         String[] aggregated = callSpringAiChatResponseStream(chatClient, request, tokenConsumer, thinkingTokenConsumer);
+
+        // 构建成功响应对象
+        return buildSuccessResponse(aggregated[0], aggregated[1], config);
+    }
+
+    @Override
+    public AgentAiResponse chatStream(AgentAiRequest request, AgentChatRuntimeContext runtimeContext, Consumer<String> tokenConsumer, Consumer<String> thinkingTokenConsumer) {
+
+        // 校验 AI 调用请求中的必填业务内容
+        assertAiRequest(request);
+
+        // 按运行时路由解析模型并创建本次调用客户端
+        AiModelRuntimeConfig config = resolveRuntimeConfig(request);
+        ChatClient chatClient = aiModelChatClientFactory.create(config);
+
+        // 调用 Spring AI 流式接口，使用运行时上下文替代 ThreadLocal
+        String[] aggregated = callSpringAiChatResponseStreamWithContext(chatClient, request, runtimeContext, tokenConsumer, thinkingTokenConsumer);
 
         // 构建成功响应对象
         return buildSuccessResponse(aggregated[0], aggregated[1], config);
@@ -186,51 +201,92 @@ class SpringAiAgentAiClient implements AgentAiClient {
         // 保存原始请求日志（流式请求结构与非流式一致）
         saveRequestRawLog(request, systemPrompt, historyMessages);
 
-        // 将完整会话上下文存入 Redis，供 ToolCallback 在异步线程中获取
+        // 构建工具上下文，传递 sessionId 供工具回调获取用户上下文
+        // 过滤 null 和空字符串值，避免 Spring AI 抛出 "toolContext values cannot contain null elements"
+        Map<String, Object> toolContext = new java.util.HashMap<>();
         if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
-            agentSessionContextHolder.putContext(request.getSessionId(), request.getUserId(), request.getAgentId());
+            putIfNotBlank(toolContext, "sessionId", request.getSessionId());
+            putIfNotBlank(toolContext, "userId", request.getUserId());
+            putIfNotBlank(toolContext, "agentId", request.getAgentId());
         }
 
-        // 用 SessionAwareToolCallback 包装所有工具回调，
-        // 在 boundedElastic 执行线程上设置 AgentSessionContext ThreadLocal，
-        // 使 ToolCallback 能通过 resolveUserIdFromSession() 获取会话上下文
-        String sessionId = request.getSessionId() != null && !request.getSessionId().isBlank() ? request.getSessionId() : null;
-        List<ToolCallback> wrappedCallbacks = new ArrayList<>();
-        for (ToolCallback tc : toolCallbacks) {
-            wrappedCallbacks.add(new SessionAwareToolCallback(tc, sessionId));
-        }
+        // 构建 Spring AI 流式请求，使用角色分离：system 提示词 + 对话历史 + 当前用户命令
+        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt().system(systemPrompt);
+        ChatClient.ChatClientRequestSpec historySpec = requestSpec.messages(historyMessages);
 
-        try {
-            // 构建 Spring AI 流式请求，使用角色分离：system 提示词 + 对话历史 + 当前用户命令
-            ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt().system(systemPrompt);
-            ChatClient.ChatClientRequestSpec historySpec = requestSpec.messages(historyMessages);
+        // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
+        ChatClient.ChatClientRequestSpec userSpec = historySpec.user(request.getCommandContent());
+        ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks).toolContext(toolContext);
+        ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
+        Flux<ChatResponse> chatResponseFlux = streamSpec.chatResponse();
 
-            // 构建工具上下文，传递 sessionId 供工具回调获取用户上下文
-            Map<String, Object> toolContext = new java.util.HashMap<>();
-            if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
-                toolContext.put("sessionId", request.getSessionId());
+        // 消费每一片 ChatResponse，分别提取 content token / reasoning token
+        chatResponseFlux.doOnNext(chatResponse -> acceptStreamChatResponse(tokenConsumer, thinkingTokenConsumer, contentBuilder, thinkingBuilder, chatResponse)).blockLast();
+
+        String[] result = new String[] { contentBuilder.toString(), thinkingBuilder.toString() };
+
+        // 保存原始响应日志（流式聚合后的完整内容）
+        saveResponseRawLog(request, result[0], result[1]);
+        return result;
+    }
+
+    /**
+     * 调用 Spring AI 获取流式 ChatResponse Flux（显式传递运行时上下文）。
+     * <p>使用运行时上下文替代 ThreadLocal，工具回调直接从上下文获取 userId/clientId。</p>
+     *
+     * @param chatClient            动态聊天客户端
+     * @param request               AI 调用请求
+     * @param runtimeContext        聊天运行时上下文
+     * @param tokenConsumer         content token 消费者
+     * @param thinkingTokenConsumer reasoning token 消费者（可为 null）
+     * @return [完整content, 完整thinking] 聚合字符串
+     */
+    private String[] callSpringAiChatResponseStreamWithContext(ChatClient chatClient, AgentAiRequest request, AgentChatRuntimeContext runtimeContext, Consumer<String> tokenConsumer,
+                                                               Consumer<String> thinkingTokenConsumer) {
+        String systemPrompt = request.getPromptContent();
+        List<Message> historyMessages = loadHistoryMessages(request.getSessionId());
+        StringBuilder contentBuilder = new StringBuilder();
+        StringBuilder thinkingBuilder = new StringBuilder();
+
+        // 保存原始请求日志（流式请求结构与非流式一致）
+        saveRequestRawLog(request, systemPrompt, historyMessages);
+
+        // 构建工具上下文，传递运行时上下文供工具回调获取用户上下文
+        // 过滤 null 和空字符串值，避免 Spring AI 抛出 "toolContext values cannot contain null elements"
+        Map<String, Object> toolContext = new java.util.HashMap<>();
+        if (runtimeContext != null) {
+            putIfNotBlank(toolContext, "sessionId", runtimeContext.getSessionId());
+            putIfNotBlank(toolContext, "userId", runtimeContext.getUserId());
+            putIfNotBlank(toolContext, "clientId", runtimeContext.getClientId());
+            putIfNotBlank(toolContext, "agentId", runtimeContext.getAgentId());
+            putIfNotBlank(toolContext, "turnId", runtimeContext.getTurnId());
+            putIfNotBlank(toolContext, "taskId", runtimeContext.getTaskId());
+
+            // 传递事件发送器，供工具回调发送流式进度事件
+            if (runtimeContext.getEventSender() != null) {
+                toolContext.put("eventSender", runtimeContext.getEventSender());
             }
-
-            // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
-            ChatClient.ChatClientRequestSpec userSpec = historySpec.user(request.getCommandContent());
-            ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(wrappedCallbacks).toolContext(toolContext);
-            ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
-            Flux<ChatResponse> chatResponseFlux = streamSpec.chatResponse();
-
-            // 消费每一片 ChatResponse，分别提取 content token / reasoning token
-            chatResponseFlux.doOnNext(chatResponse -> acceptStreamChatResponse(tokenConsumer, thinkingTokenConsumer, contentBuilder, thinkingBuilder, chatResponse)).blockLast();
-
-            String[] result = new String[] { contentBuilder.toString(), thinkingBuilder.toString() };
-
-            // 保存原始响应日志（流式聚合后的完整内容）
-            saveResponseRawLog(request, result[0], result[1]);
-            return result;
-        } finally {
-            // 清理 Redis 中的会话上下文，防止数据残留
-            if (request.getSessionId() != null) {
-                agentSessionContextHolder.remove(request.getSessionId());
-            }
         }
+
+        // 直接使用原始工具回调，不再使用 SessionAwareToolCallback 包装
+        // 工具回调通过 ToolContext 获取运行时上下文
+        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt().system(systemPrompt);
+        ChatClient.ChatClientRequestSpec historySpec = requestSpec.messages(historyMessages);
+
+        // 注册工具回调，让 AI 在流式对话中自主调用工具完成数据操作
+        ChatClient.ChatClientRequestSpec userSpec = historySpec.user(request.getCommandContent());
+        ChatClient.ChatClientRequestSpec toolSpec = userSpec.toolCallbacks(toolCallbacks).toolContext(toolContext);
+        ChatClient.StreamResponseSpec streamSpec = toolSpec.stream();
+        Flux<ChatResponse> chatResponseFlux = streamSpec.chatResponse();
+
+        // 消费每一片 ChatResponse，分别提取 content token / reasoning token
+        chatResponseFlux.doOnNext(chatResponse -> acceptStreamChatResponse(tokenConsumer, thinkingTokenConsumer, contentBuilder, thinkingBuilder, chatResponse)).blockLast();
+
+        String[] result = new String[] { contentBuilder.toString(), thinkingBuilder.toString() };
+
+        // 保存原始响应日志（流式聚合后的完整内容）
+        saveResponseRawLog(request, result[0], result[1]);
+        return result;
     }
 
     /**
@@ -690,5 +746,20 @@ class SpringAiAgentAiClient implements AgentAiClient {
         response.setModelId(config.getModelId());
         response.setModelCode(config.getModelCode());
         return response;
+    }
+
+    /**
+     * 向工具上下文中放入非空且非空字符串的值。
+     * <p>HashMap 本身允许 null value，但 Spring AI ToolContext 会校验拒绝 null 元素，
+     * 因此需要在放入前过滤。</p>
+     *
+     * @param map   目标 Map
+     * @param key   键
+     * @param value 值（可能为 null 或空字符串）
+     */
+    private void putIfNotBlank(Map<String, Object> map, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            map.put(key, value);
+        }
     }
 }

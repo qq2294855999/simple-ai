@@ -1,4 +1,4 @@
-﻿package com.simple.ai.service.memory;
+package com.simple.ai.service.memory;
 
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;

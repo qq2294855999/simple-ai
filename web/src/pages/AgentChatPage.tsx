@@ -398,26 +398,27 @@ export function AgentChatPage() {
   }, []);
 
   const handleProgress = useCallback((event: AgentChatProgressEventDto) => {
-      // 思考 token 直接写入 THINKING 气泡 thinkingContent（如果没有该气泡，先跳过等待 MESSAGE_ACCEPTED 占位推送）
-      if (event.eventType === "AI_THINKING_TOKEN") {
+      // 兼容新版后端 ChatSseEvent（type）与旧版内部事件（eventType）
+      const evtType = event.type || event.eventType;
+
+      // THINKING 事件：写入 THINKING 气泡 thinkingContent
+      if (evtType === "THINKING") {
           setAiThinking(true);
-          setMessages(previousMessages => appendThinkingToken(previousMessages, event.payload || "", event.taskId));
+          setMessages(previousMessages => appendThinkingToken(previousMessages, event.data || "", event.taskId));
           return;
       }
 
-      // AI 输出 token：写入回复气泡 content，同时 aiThinking 标记关闭（说明模型已进入最终答复阶段）
-    if (event.eventType === "AI_TOKEN") {
-      setAiThinking(false);
-      setMessages(previousMessages => appendAssistantToken(previousMessages, event));
-      return;
-    }
+      // REPLY 事件：写入回复气泡 content
+      if (evtType === "REPLY") {
+          setAiThinking(false);
+          setMessages(previousMessages => appendAssistantToken(previousMessages, event));
+          return;
+      }
 
-      // 消息被接受时：确保三路占位气泡已存在（进度 → 思考 → 回复）
-      if (event.eventType === "MESSAGE_ACCEPTED") {
-          setAiThinking(true);
+      // PROGRESS 事件：确保三路占位气泡已存在，并将进度推入 PROGRESS 气泡
+      if (evtType === "PROGRESS") {
           setMessages(previousMessages => {
               // 先查找是否有 taskId 为空的占位气泡（由 handleSend 预创建），将其 taskId 更新为真实值
-              // 避免重复创建气泡导致旧气泡（空 taskId）永远无法被 finalize 而一直转圈
               const hasEmptyTaskIdBubble = previousMessages.some(
                   m => !m.taskId && (m.bubbleType === "PROGRESS" || m.bubbleType === "THINKING"
                       || (m.bubbleType === "NORMAL" && m.role === "ASSISTANT" && m.content === ""))
@@ -450,44 +451,57 @@ export function AgentChatPage() {
               if (!hasThinking) inserts.push(createThinkingBubble(event.taskId, event.sessionId));
               if (!hasReply) inserts.push(createReplyBubble(event.taskId, event.sessionId));
 
-              return inserts.length > 0 ? [...updated, ...inserts] : updated;
+              updated = inserts.length > 0 ? [...updated, ...inserts] : updated;
+
+              // 将进度事件推入 PROGRESS 气泡的 executionEvents
+              return appendProgressEvent(updated, event);
           });
           return;
       }
 
-      // 进度事件（非消息流事件）：推入 PROGRESS 气泡
-      if (event.eventType !== "MESSAGE_COMPLETED" && event.eventType !== "CHAT_FAILED"
-          && event.eventType !== "TASK_COMPLETED" && event.eventType !== "TASK_FAILED") {
-          setMessages(previousMessages => appendProgressEvent(previousMessages, event));
+      // FINAL 事件：分别 finalize 三个气泡
+      if (evtType === "FINAL") {
+          setAiThinking(false);
+          setMessages(previousMessages => {
+              let updated = previousMessages;
+
+              // 先完成进度气泡（状态折叠）
+              updated = finalizeProgressBubble(updated, event.taskId, "OK");
+              // 完成思考气泡（无内容则整条移除）
+              updated = finalizeThinkingBubble(updated, event.taskId);
+              // 完成回复气泡（替换最终消息内容）
+              updated = replaceFinalMessage(updated, event);
+
+              return updated;
+          });
           return;
       }
 
-      // 消息完成或任务完成/失败时：分别 finalize 三个气泡，不再把进度合并到回复气泡内部
-      if (event.eventType === "MESSAGE_COMPLETED" || event.eventType === "CHAT_FAILED"
-          || event.eventType === "TASK_COMPLETED" || event.eventType === "TASK_FAILED") {
-      setAiThinking(false);
-        setMessages(previousMessages => {
-            let updated = previousMessages;
-            const progressStatus = (event.eventType === "MESSAGE_COMPLETED" || event.eventType === "TASK_COMPLETED") ? "OK" : "FAILED";
+      // ERROR 事件：标记失败并写入错误原因
+      if (evtType === "ERROR") {
+          setAiThinking(false);
+          setMessages(previousMessages => {
+              let updated = previousMessages;
 
-            // 先完成进度气泡（状态折叠）
-            updated = finalizeProgressBubble(updated, event.taskId, progressStatus);
-            // 完成思考气泡（无内容则整条移除）
-            updated = finalizeThinkingBubble(updated, event.taskId);
-            // 完成回复气泡（替换最终消息内容）
-            updated = replaceFinalMessage(updated, event);
+              // 先完成进度气泡（失败状态）
+              updated = finalizeProgressBubble(updated, event.taskId, "FAILED");
+              // 完成思考气泡（无内容则整条移除）
+              updated = finalizeThinkingBubble(updated, event.taskId);
+              // 完成回复气泡（替换为错误内容）
+              updated = replaceFinalMessage(updated, event);
 
-            // 事件失败时，确保回复气泡写入失败原因（CHAT_FAILED/TASK_FAILED）
-            if ((event.eventType === "CHAT_FAILED" || event.eventType === "TASK_FAILED") && updated.length > 0) {
-                const last = updated[updated.length - 1];
-                if (!last.content && event.failureReason) {
-                    updated[updated.length - 1] = {...last, role: "SYSTEM_ERROR", content: event.failureReason, contentFormat: "PLAIN_TEXT"};
-                }
-            }
+              // 确保回复气泡写入失败原因
+              if (updated.length > 0) {
+                  const last = updated[updated.length - 1];
+                  if (!last.content && event.errorReason) {
+                      updated[updated.length - 1] = {...last, role: "SYSTEM_ERROR", content: event.errorReason, contentFormat: "PLAIN_TEXT"};
+                  }
+              }
 
-            return updated;
-        });
-    }
+              return updated;
+          });
+          return;
+      }
   }, []);
 
   const { onClick: handleSend, loading: sending } = usePreventDoubleClickHook(async () => {
@@ -919,6 +933,7 @@ function renderExecutionEvents(events: AgentChatExecutionEventDto[]) {
 
     // 收集原子命令事件（仅展示有意义的步骤）
     const commandEvents = sortedEvents.filter(event =>
+        event.eventType === "PROGRESS" ||
         event.eventType === "ATOMIC_COMMAND_START" ||
         event.eventType === "ATOMIC_COMMAND_COMPLETE" ||
         event.eventType === "AI_STARTED" ||
@@ -1005,13 +1020,18 @@ function buildChatFailureEvent(message: string): AgentChatProgressEventDto {
   return {
     taskId: "",
     sessionId: "",
-    eventType: "CHAT_FAILED",
+      eventType: "ERROR",
     stepId: "",
     stepName: "",
     execStatus: "FAILED",
     message: "聊天请求失败",
     payload: "",
+      data: "",
     completed: true,
-    failureReason: message
+      failureReason: message,
+      errorReason: message,
+      messageId: "",
+      turnId: "",
+      thinkingSummary: ""
   };
 }

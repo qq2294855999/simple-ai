@@ -1,21 +1,22 @@
 package com.simple.ai.controller.agentChat;
 
 import com.simple.ai.common.dto.agentChat.*;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.properties.SimpleAiProperties;
 import com.simple.ai.common.service.agentChat.AgentChatService;
+import com.simple.ai.service.agentChat.ChatEventSender;
 import com.simple.common.auth.client.common.annotation.HasAuthority;
 import com.simple.common.core.response.R;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -99,16 +100,26 @@ public class AgentChatController {
      * @param request 发送消息请求
      * @return SSE 事件输出器
      */
-    @PostMapping("send-stream")
+    @PostMapping(value = "send-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "流式发送智能体聊天消息")
     @HasAuthority("sys:agent-chat:send-stream")
-    public SseEmitter sendStream(@RequestBody @Validated SendAgentChatMessageRequest request) {
+    public SseEmitter sendStream(@RequestBody @Validated SendAgentChatMessageRequest request, HttpServletResponse response) {
+
+        // 明确声明 SSE 响应并禁止代理转换或聚合响应内容，确保每个事件帧立即到达浏览器。
+        response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Connection", "keep-alive");
         SseEmitter emitter = new SseEmitter(simpleAiProperties.getChat().getStreamTimeoutMillis());
 
         // SSE 超时必须以错误终态关闭，避免浏览器无限等待 loading
         emitter.onTimeout(() -> emitter.completeWithError(new TimeoutException("智能体聊天响应超时")));
 
         try {
+            // 建立通道后立即写出首帧，使浏览器、Vite 与反向代理立刻提交流式响应。
+            sendEvent(emitter, ChatSseEvent.builder().type(ChatSseEvent.Types.PROGRESS).data("已建立实时对话通道").completed(false).build());
+
             // 在异步线程执行模型调用，保持请求线程可立即返回 SSE 通道
             taskExecutor.execute(() -> runChatStream(request, emitter));
         } catch (RuntimeException e) {
@@ -208,15 +219,12 @@ public class AgentChatController {
 
     /**
      * 写出单条 SSE 事件。
+     * <p>统一使用 ChatEventSender 将稳定事件写入 SSE 通道，不再直接暴露内部事件。</p>
      *
      * @param emitter SSE 输出器
-     * @param event 调度事件
+     * @param event   聊天 SSE 事件
      */
-    private void sendEvent(SseEmitter emitter, CommandDispatchProgressEvent event) {
-        try {
-            emitter.send(SseEmitter.event().name(event.getEventType()).data(event));
-        } catch (IOException e) {
-            throw new IllegalStateException("发送智能体聊天事件失败", e);
-        }
+    private void sendEvent(SseEmitter emitter, ChatSseEvent event) {
+        ChatEventSender.writeToEmitter(emitter, event);
     }
 }

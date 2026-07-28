@@ -1,7 +1,6 @@
 package com.simple.ai.common.service.agentChat;
 
 import com.simple.ai.common.dto.agentChat.*;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 
 import java.util.List;
@@ -54,9 +53,9 @@ public interface AgentChatService {
      * 流式发送聊天消息。
      *
      * @param request 发送消息请求
-     * @param eventConsumer 进度事件消费者
+     * @param eventConsumer SSE 事件消费者
      */
-    void sendStream(SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer);
+    void sendStream(SendAgentChatMessageRequest request, Consumer<ChatSseEvent> eventConsumer);
 
     /**
      * 删除单个会话及其关联的消息和任务轨迹。

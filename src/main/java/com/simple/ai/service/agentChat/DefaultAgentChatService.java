@@ -1,12 +1,13 @@
 package com.simple.ai.service.agentChat;
 
+import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.agentChat.*;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
-import com.simple.ai.common.dto.command.CommandDispatchRequest;
-import com.simple.ai.common.dto.command.CommandDispatchResponse;
+import com.simple.ai.common.dto.atomicCommand.FindOneAtomicCommandRequest;
+import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
+import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.executionEvent.ExecutionEvent;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
@@ -20,13 +21,16 @@ import com.simple.ai.common.service.executionEvent.ExecutionEventBus;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
 import com.simple.ai.common.view.agentChatSession.AgentChatSessionView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
+import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.chatTurn.ChatTurnView;
 import com.simple.ai.common.view.executionEvent.ExecutionEventView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
+import com.simple.ai.service.agent.AgentContextAssembler;
 import com.simple.common.auth.client.util.LoginUserUtils;
 import com.simple.common.core.common.service.lock.LockService;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
 import com.simple.common.websocket.utils.WebSocketUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -92,6 +97,18 @@ class DefaultAgentChatService implements AgentChatService {
     private CommandDispatchService commandDispatchService;
 
     /**
+     * 原子命令视图，用于 upsert 执行器返回的命令能力
+     */
+    @Autowired
+    private AtomicCommandView atomicCommandView;
+
+    /**
+     * 智能体上下文组装器
+     */
+    @Autowired
+    private AgentContextAssembler agentContextAssembler;
+
+    /**
      * 智能体会话服务
      */
     /**
@@ -145,8 +162,23 @@ class DefaultAgentChatService implements AgentChatService {
         // 校验会话绑定的智能体存在并已启用
         AgentDefinition agentDefinition = loadEnabledAgent(request.getAgentId());
 
-        // 创建持久化会话，保存完整上下文配置
-        AgentChatSession session = createSessionEntity(agentDefinition, request.getModelId(), request.getClientId());
+        // 校验执行客户端在线状态，避免后续 WebSocket 调用无谓等待超时
+        AssertUtils.isTrue(isClientOnline(request.getClientId()), "执行客户端[{}]不在线，请先启动客户端", request.getClientId());
+
+        // 创建期装配快照：查询全部资产并序列化为 JSON
+        String snapshotJson = agentContextAssembler.assembleForSnapshot(request.getAgentId(), request.getClientId());
+
+        // 通过 WebSocket 同步查询执行器能力，获取支持的原子命令列表
+        List<CapabilityResultDto.CommandItem> capabilities = fetchCapabilities(request.getClientId());
+
+        // 将执行器能力命令 upsert 到本地 atomic_command 表
+        upsertCapabilityCommands(capabilities);
+
+        // 将能力命令列表合并到快照中
+        snapshotJson = agentContextAssembler.enrichSnapshotWithCapabilities(snapshotJson, capabilities);
+
+        // 创建持久化会话，保存完整上下文配置（含快照）
+        AgentChatSession session = createSessionEntity(agentDefinition, request.getModelId(), request.getClientId(), snapshotJson);
         transactionTemplate.executeWithoutResult(status -> agentChatSessionView.save(session));
         return buildSessionResponse(session, agentDefinition);
     }
@@ -181,7 +213,7 @@ class DefaultAgentChatService implements AgentChatService {
     }
 
     @Override
-    public void sendStream(SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    public void sendStream(SendAgentChatMessageRequest request, Consumer<ChatSseEvent> eventConsumer) {
         AssertUtils.notEmpty(request.getSessionId(), "会话主键不能为空");
         AssertUtils.notEmpty(request.getContent(), "用户消息不能为空");
 
@@ -197,9 +229,9 @@ class DefaultAgentChatService implements AgentChatService {
      * 流式发送聊天消息的内部实现，在分布式锁保护下执行。
      *
      * @param request       发送消息请求
-     * @param eventConsumer 进度事件消费者
+     * @param eventConsumer SSE 事件消费者
      */
-    private void sendStreamInternal(SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private void sendStreamInternal(SendAgentChatMessageRequest request, Consumer<ChatSseEvent> eventConsumer) {
 
         // 在短事务内锁定会话并持久化用户消息，避免模型执行期间占用数据库锁
         AgentChatSession session = saveUserMessage(request);
@@ -207,14 +239,30 @@ class DefaultAgentChatService implements AgentChatService {
         // 创建本轮对话轮次记录
         String turnId = startChatTurn(session, request);
 
+        // 创建事件发送器，用于统一 SSE 事件输出
+        ChatEventSender eventSender = new ChatEventSender(eventConsumer);
+
+        // 装配智能体上下文（定义、规则、技能、记忆、客户端、执行器、协议）
+        AgentContext agentContext = assembleAgentContext(session);
+
+        // 创建运行时上下文，持有本轮聊天所需的全部运行时事实
+        AgentChatRuntimeContext runtimeContext = new AgentChatRuntimeContext(session.getId(), turnId, session.getUserId(), session.getAgentId(), session.getModelId(), session.getClientId(),
+                                                                             "", agentContext, eventSender);
+
         // 构建组合消费者：将调度事件同时写入执行轨迹并透传给SSE通道
         Consumer<CommandDispatchProgressEvent> compositeConsumer = buildCompositeConsumer(turnId, eventConsumer);
 
         // 通知客户端用户消息已被服务端接收
         publishChatEvent(eventConsumer, session.getId(), "MESSAGE_ACCEPTED", "用户消息已保存", "", "", false, "");
 
-        // 基于原有命令调度核心执行 AI 与智能体流程
-        CommandDispatchResponse response = dispatchAgentSafely(session, request, compositeConsumer);
+        // 基于运行时上下文执行 AI 与智能体流程
+        CommandDispatchResponse response = dispatchAgentSafely(session, request, runtimeContext, compositeConsumer);
+
+        // 更新运行时上下文中的任务ID
+        if (response != null && response.getTaskId() != null) {
+            runtimeContext = new AgentChatRuntimeContext(session.getId(), turnId, session.getUserId(), session.getAgentId(), session.getModelId(), session.getClientId(),
+                                                         response.getTaskId(), agentContext, eventSender);
+        }
 
         // 在独立短事务内持久化最终消息，保证流式收尾与数据库审计闭环
         String assistantMessageId = saveFinalMessage(session, response, eventConsumer);
@@ -223,6 +271,31 @@ class DefaultAgentChatService implements AgentChatService {
         chatTurnService.completeTurn(turnId, assistantMessageId, "");
 
         // 记忆蒸馏不再自动触发，改为由用户或指定体明确要求蒸馏正确线路后再执行
+    }
+
+    /**
+     * 装配智能体上下文。
+     * <p>优先从会话 reserve 快照恢复，避免聊天期重复查询资产表；
+     * 快照为空时降级为直接查询 DB 装配（存量会话兼容）。</p>
+     *
+     * @param session 会话实体
+     * @return 智能体上下文
+     */
+    private AgentContext assembleAgentContext(AgentChatSession session) {
+        String reserveJson = session.getReserve();
+
+        // 优先从快照恢复上下文
+        if (reserveJson != null && !reserveJson.isBlank()) {
+            return agentContextAssembler.restoreFromSnapshot(reserveJson, session.getUserId(), session.getId());
+        }
+
+        // 降级：存量会话无快照时直接查询 DB 装配
+        CommandDispatchRequest dispatchRequest = new CommandDispatchRequest();
+        dispatchRequest.setAgentId(session.getAgentId());
+        dispatchRequest.setUserId(session.getUserId());
+        dispatchRequest.setSessionId(session.getId());
+        dispatchRequest.setClientId(session.getClientId());
+        return agentContextAssembler.assemble(dispatchRequest);
     }
 
     /**
@@ -278,19 +351,24 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 构建组合事件消费者，在透传事件的同时记录执行轨迹。
      * <p>MESSAGE_* 等聊天层事件由 ExecutionEventBus 内部白名单过滤，不会误录入执行轨迹。</p>
+     * <p>内部事件统一映射为 PROGRESS 后输出 SSE。</p>
      *
      * @param turnId        对话轮次主键
      * @param eventConsumer 原始事件消费者（SSE 通道）
      * @return 组合消费者
      */
-    private Consumer<CommandDispatchProgressEvent> buildCompositeConsumer(String turnId, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private Consumer<CommandDispatchProgressEvent> buildCompositeConsumer(String turnId, Consumer<ChatSseEvent> eventConsumer) {
 
         // 轮次为空时不记录执行轨迹
         if (turnId == null || turnId.isBlank()) {
-            return eventConsumer;
+            return event -> {
+                if (eventConsumer != null) {
+                    eventConsumer.accept(mapToSseEvent(event));
+                }
+            };
         }
 
-        // 组合消费：先记录到执行事件表，再透传给原始消费者
+        // 组合消费：先记录到执行事件表，再映射为稳定事件透传给原始消费者
         return event -> {
             try {
                 executionEventBus.recordEvent(turnId, "", event);
@@ -300,7 +378,7 @@ class DefaultAgentChatService implements AgentChatService {
                 log.warn("执行事件记录失败，turnId={}, eventType={}", turnId, event.getEventType(), e);
             }
             if (eventConsumer != null) {
-                eventConsumer.accept(event);
+                eventConsumer.accept(mapToSseEvent(event));
             }
         };
     }
@@ -423,20 +501,132 @@ class DefaultAgentChatService implements AgentChatService {
     }
 
     /**
+     * 通过 WebSocket 同步查询执行器能力，获取支持的原子命令列表。
+     * <p>调用 system.capability 系统命令，通过框架级 sendSyncMsg 阻塞等待执行器返回 COMMAND_RESULT，
+     * 解析其中的 data 数组（裸命令列表）并返回。超时或返回失败时抛出异常，
+     * 阻断会话创建。</p>
+     *
+     * @param clientId 客户端ID
+     * @return 执行器支持的原子命令元信息列表
+     */
+    private List<CapabilityResultDto.CommandItem> fetchCapabilities(String clientId) {
+        // 构建 system.capability 批量命令请求
+        String commandId = UUID.randomUUID().toString();
+        ExecutorCommandItem item = new ExecutorCommandItem().setCommandId(commandId)
+                                                            .setSequenceNo(1)
+                                                            .setAtomicCommandCode("system.capability")
+                                                            .setTimeoutMs((int) TimeUnit.SECONDS.toMillis(60));
+
+        ExecutorCommandBatchRequest batchRequest = new ExecutorCommandBatchRequest().setDispatchId(UUID.randomUUID().toString())
+                                                                                    .setTaskId("session-create-" + UUID.randomUUID().toString())
+                                                                                    .setClientId(clientId)
+                                                                                    .setStopOnFailure(Boolean.TRUE)
+                                                                                    .setCommands(Collections.singletonList(item));
+
+        // 使用 SEP 外层消息封装，通过框架级 sendSyncMsg 阻塞等待回执
+        SepMessage<ExecutorCommandBatchRequest> message = new SepMessage<>();
+        message.setMessageType("COMMAND_BATCH");
+        message.setPayload(batchRequest);
+
+        // 调用框架级同步发送，阻塞等待执行器返回
+        Object result = WebSocketUtils.sendSyncMsg("agent-executor", clientId, message);
+
+        // 从返回值提取 ExecutorCommandResultResponse
+        ExecutorCommandResultResponse executorResult = extractExecutorResult(result);
+        AssertUtils.isTrue(executorResult.getSuccess() != null && executorResult.getSuccess(), "执行器能力查询失败: %s",
+                           executorResult.getError() != null ? executorResult.getError().getDetail() : "未知错误");
+
+        // 解析 COMMAND_RESULT.data 中的命令列表（执行器返回裸数组，非 {commands: [...]} 结构）
+        Object data = executorResult.getData();
+        AssertUtils.notEmpty(data, "执行器能力查询返回数据为空");
+
+        // 将原始数据序列化为 JSON 字符串后直接解析为命令列表
+        String dataJson = JsonUtils.toJsonStr(data);
+        List<CapabilityResultDto.CommandItem> capabilities = JsonUtils.toList(dataJson, CapabilityResultDto.CommandItem.class);
+        AssertUtils.notEmpty(capabilities, "执行器能力查询结果解析失败");
+
+        return capabilities;
+    }
+
+    /**
+     * 从 sendSyncMsg 返回值中提取 ExecutorCommandResultResponse
+     * <p>sendSyncMsg 返回的是回执中 data 字段的值，即 SepMessage JSON 对象。
+     * 需要将其反序列化为 SepMessage 后提取 payload 再转为 ExecutorCommandResultResponse。</p>
+     *
+     * @param result sendSyncMsg 返回值（JSONObject/Map）
+     * @return 执行器命令结果响应
+     */
+    private ExecutorCommandResultResponse extractExecutorResult(Object result) {
+        AssertUtils.notEmpty(result, "执行器返回数据为空");
+        try {
+            String resultJson = JsonUtils.toJsonStr(result);
+            SepMessage<?> replyMessage = JsonUtils.toJsonObj(resultJson, SepMessage.class);
+            Object payload = replyMessage.getPayload();
+            AssertUtils.notEmpty(payload, "执行器返回 payload 为空");
+            String payloadJson = JsonUtils.toJsonStr(payload);
+            return JsonUtils.toJsonObj(payloadJson, ExecutorCommandResultResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("解析执行器返回数据失败", e);
+        }
+    }
+
+    /**
+     * 将执行器能力命令 upsert 到本地 atomic_command 表。
+     * <p>按命令编码（command）匹配已有记录：存在则更新名称、作用、状态；
+     * 不存在则新增。使用批量操作避免逐条数据库交互。</p>
+     *
+     * @param capabilities 执行器能力命令列表
+     */
+    private void upsertCapabilityCommands(List<CapabilityResultDto.CommandItem> capabilities) {
+        if (capabilities == null || capabilities.isEmpty()) {
+            return;
+        }
+
+        transactionTemplate.executeWithoutResult(status -> {
+
+            // 逐条 upsert：按命令编码匹配已有记录
+            for (CapabilityResultDto.CommandItem item : capabilities) {
+                FindOneAtomicCommandRequest queryReq = new FindOneAtomicCommandRequest().setCommand(item.getCode());
+
+                AtomicCommand existing = atomicCommandView.findOne(queryReq, new FindOneAtomicCommandRequest());
+                if (existing != null) {
+
+                    // 更新已有命令的名称、作用、状态
+                    existing.setName(item.getName());
+                    existing.setRole(item.getDescription());
+                    existing.setStatus(Status.ON);
+                    atomicCommandView.updateById(existing);
+                } else {
+
+                    // 新增命令记录
+                    AtomicCommand newCommand = new AtomicCommand();
+                    newCommand.setName(item.getName());
+                    newCommand.setCommand(item.getCode());
+                    newCommand.setRole(item.getDescription());
+                    newCommand.setStatus(Status.ON);
+                    newCommand.setRemark("从执行器 system.capability 同步");
+                    atomicCommandView.save(newCommand);
+                }
+            }
+        });
+    }
+
+    /**
      * 创建会话实体。
      *
      * @param agentDefinition 智能体实体
      * @param modelId         模型主键
      * @param clientId        客户端主键
+     * @param snapshotJson    上下文快照 JSON
      * @return 会话实体
      */
-    private AgentChatSession createSessionEntity(AgentDefinition agentDefinition, String modelId, String clientId) {
+    private AgentChatSession createSessionEntity(AgentDefinition agentDefinition, String modelId, String clientId, String snapshotJson) {
         AgentChatSession session = new AgentChatSession();
         session.setAgentId(agentDefinition.getId());
         session.setSessionName("新对话");
         session.setLastMessageAt(new Date());
         session.setStatus(Status.ON);
-        session.setReserve("");
+        session.setReserve(snapshotJson != null ? snapshotJson : "");
         session.setRemark("智能体人机对话会话");
 
         // 从登录上下文获取当前用户ID并设置会话归属
@@ -479,14 +669,16 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 安全调用既有命令调度服务。
      *
-     * @param session       会话实体
-     * @param request       发送消息请求
-     * @param eventConsumer 事件消费者
+     * @param session        会话实体
+     * @param request        发送消息请求
+     * @param runtimeContext 聊天运行时上下文
+     * @param eventConsumer  SSE 事件消费者
      * @return 调度响应
      */
-    private CommandDispatchResponse dispatchAgentSafely(AgentChatSession session, SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private CommandDispatchResponse dispatchAgentSafely(AgentChatSession session, SendAgentChatMessageRequest request, AgentChatRuntimeContext runtimeContext,
+                                                        Consumer<CommandDispatchProgressEvent> eventConsumer) {
         try {
-            return dispatchAgent(session, request, eventConsumer);
+            return dispatchAgent(session, request, runtimeContext, eventConsumer);
         } catch (RuntimeException e) {
 
             // 调度服务在创建任务前异常时仍生成失败回复，保证聊天消息链路完整
@@ -497,14 +689,16 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 调用既有命令调度服务。
      *
-     * <p>从会话实体获取 userId、modelId、clientId，避免依赖 ThreadLocal 导致异步线程丢失上下文。</p>
+     * <p>显式传递运行时上下文，避免依赖 ThreadLocal 导致异步线程丢失上下文。</p>
      *
-     * @param session       会话实体
-     * @param request       发送消息请求
-     * @param eventConsumer 事件消费者
+     * @param session        会话实体
+     * @param request        发送消息请求
+     * @param runtimeContext 聊天运行时上下文
+     * @param eventConsumer  调度事件消费者（内部使用）
      * @return 调度响应
      */
-    private CommandDispatchResponse dispatchAgent(AgentChatSession session, SendAgentChatMessageRequest request, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private CommandDispatchResponse dispatchAgent(AgentChatSession session, SendAgentChatMessageRequest request, AgentChatRuntimeContext runtimeContext,
+                                                  Consumer<CommandDispatchProgressEvent> eventConsumer) {
         CommandDispatchRequest dispatchRequest = new CommandDispatchRequest();
         dispatchRequest.setAgentId(session.getAgentId());
         dispatchRequest.setCommandName("人机对话");
@@ -517,7 +711,7 @@ class DefaultAgentChatService implements AgentChatService {
 
         // 从会话实体获取用户ID，避免 ThreadLocal 在异步线程中丢失
         dispatchRequest.setUserId(session.getUserId());
-        return commandDispatchService.dispatchStream(dispatchRequest, eventConsumer);
+        return commandDispatchService.dispatchStream(dispatchRequest, runtimeContext, eventConsumer);
     }
 
     /**
@@ -551,9 +745,9 @@ class DefaultAgentChatService implements AgentChatService {
      *
      * @param session       会话实体
      * @param response      调度响应
-     * @param eventConsumer 事件消费者
+     * @param eventConsumer SSE 事件消费者
      */
-    private String saveFinalMessage(AgentChatSession session, CommandDispatchResponse response, Consumer<CommandDispatchProgressEvent> eventConsumer) {
+    private String saveFinalMessage(AgentChatSession session, CommandDispatchResponse response, Consumer<ChatSseEvent> eventConsumer) {
         return transactionTemplate.execute(status -> {
 
             // 重新锁定会话并分配最终消息序号
@@ -718,22 +912,33 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 发布最终消息事件。
      *
-     * @param eventConsumer 事件消费者
+     * @param eventConsumer SSE 事件消费者
      * @param sessionId     会话主键
      * @param message       最终消息
      * @param response      调度响应
      */
-    private void publishFinalEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId, AgentChatMessage message, CommandDispatchResponse response) {
+    private void publishFinalEvent(Consumer<ChatSseEvent> eventConsumer, String sessionId, AgentChatMessage message, CommandDispatchResponse response) {
         boolean success = AgentExecutionStatusProcess.SUCCESS.equals(response.getExecStatus());
-        String eventType = success ? "MESSAGE_COMPLETED" : "CHAT_FAILED";
-        String eventMessage = success ? "AI 最终回复已保存" : "AI 对话执行失败";
-        publishChatEvent(eventConsumer, sessionId, eventType, eventMessage, message.getTaskId(), message.getContent(), true, response.getFailureReason());
+
+        // 成功时发送 FINAL 事件，失败时发送 ERROR 事件
+        if (success) {
+            sendSseEvent(eventConsumer, ChatSseEvent.builder()
+                                                    .type(ChatSseEvent.Types.FINAL)
+                                                    .messageId(message.getId())
+                                                    .data(message.getContent())
+                                                    .thinkingSummary(message.getThinkingContent())
+                                                    .completed(true)
+                                                    .build());
+        } else {
+            sendSseEvent(eventConsumer, ChatSseEvent.builder().type(ChatSseEvent.Types.ERROR).errorReason(response.getFailureReason()).completed(true).build());
+        }
     }
 
     /**
      * 发布聊天事件。
+     * <p>内部事件统一映射为 PROGRESS 后输出 SSE。</p>
      *
-     * @param eventConsumer 事件消费者
+     * @param eventConsumer SSE 事件消费者
      * @param sessionId     会话主键
      * @param eventType     事件类型
      * @param message       事件说明
@@ -742,24 +947,83 @@ class DefaultAgentChatService implements AgentChatService {
      * @param completed     是否完成
      * @param failureReason 失败原因
      */
-    private void publishChatEvent(Consumer<CommandDispatchProgressEvent> eventConsumer, String sessionId, String eventType, String message, String taskId, String payload, boolean completed,
+    private void publishChatEvent(Consumer<ChatSseEvent> eventConsumer, String sessionId, String eventType, String message, String taskId, String payload, boolean completed,
                                   String failureReason) {
 
         // 客户端未订阅时无需构建事件
         if (eventConsumer == null) {
             return;
         }
-        CommandDispatchProgressEvent event = new CommandDispatchProgressEvent();
-        event.setSessionId(sessionId);
-        event.setTaskId(taskId);
-        event.setEventType(eventType);
-        event.setStepId("");
-        event.setStepName("");
-        event.setExecStatus(null);
-        event.setMessage(message);
-        event.setPayload(payload);
-        event.setCompleted(completed);
-        event.setFailureReason(failureReason);
+
+        // 内部事件统一映射为稳定 SSE 事件
+        ChatSseEvent sseEvent = mapInternalEventToSseEvent(eventType, message, taskId, payload, completed, failureReason);
+        sendSseEvent(eventConsumer, sseEvent);
+    }
+
+    /**
+     * 将内部事件映射为稳定 SSE 事件。
+     *
+     * @param eventType     内部事件类型
+     * @param message       事件说明
+     * @param taskId        任务主键
+     * @param payload       事件载荷
+     * @param completed     是否完成
+     * @param failureReason 失败原因
+     * @return 稳定 SSE 事件
+     */
+    private ChatSseEvent mapInternalEventToSseEvent(String eventType, String message, String taskId, String payload, boolean completed, String failureReason) {
+
+        // MESSAGE_ACCEPTED 映射为 PROGRESS
+        if ("MESSAGE_ACCEPTED".equals(eventType)) {
+            return ChatSseEvent.builder().type(ChatSseEvent.Types.PROGRESS).taskId(taskId).data(message).completed(false).build();
+        }
+
+        // AI_TOKEN 映射为 REPLY（AI 流式回复内容）
+        if ("AI_TOKEN".equals(eventType)) {
+            return ChatSseEvent.builder().type(ChatSseEvent.Types.REPLY).taskId(taskId).data(payload).completed(false).build();
+        }
+
+        // AI_THINKING_TOKEN 映射为 THINKING（AI 流式思考内容）
+        if ("AI_THINKING_TOKEN".equals(eventType)) {
+            return ChatSseEvent.builder().type(ChatSseEvent.Types.THINKING).taskId(taskId).data(payload).completed(false).build();
+        }
+
+        // MESSAGE_COMPLETED 映射为 FINAL（由 publishFinalEvent 处理，此处兜底）
+        if ("MESSAGE_COMPLETED".equals(eventType)) {
+            return ChatSseEvent.builder().type(ChatSseEvent.Types.FINAL).taskId(taskId).data(payload).completed(true).build();
+        }
+
+        // CHAT_FAILED 映射为 ERROR
+        if ("CHAT_FAILED".equals(eventType)) {
+            return ChatSseEvent.builder().type(ChatSseEvent.Types.ERROR).taskId(taskId).errorReason(failureReason != null ? failureReason : message).completed(true).build();
+        }
+
+        // 其他内部事件（CONTEXT_LOADING、AI_STARTED、TOOL_CALLING 等）均映射为 PROGRESS
+        return ChatSseEvent.builder().type(ChatSseEvent.Types.PROGRESS).taskId(taskId).data(message).completed(completed).build();
+    }
+
+    /**
+     * 将 CommandDispatchProgressEvent 映射为 ChatSseEvent。
+     * <p>用于 buildCompositeConsumer 中透传事件时的类型转换。</p>
+     *
+     * @param event 调度进度事件
+     * @return 稳定 SSE 事件
+     */
+    private ChatSseEvent mapToSseEvent(CommandDispatchProgressEvent event) {
+        return mapInternalEventToSseEvent(event.getEventType(), event.getMessage(), event.getTaskId(), event.getPayload(), Boolean.TRUE.equals(event.getCompleted()),
+                                          event.getFailureReason());
+    }
+
+    /**
+     * 发送 SSE 事件到浏览器。
+     *
+     * @param eventConsumer SSE 事件消费者
+     * @param event         聊天 SSE 事件
+     */
+    private void sendSseEvent(Consumer<ChatSseEvent> eventConsumer, ChatSseEvent event) {
+        if (eventConsumer == null) {
+            return;
+        }
         try {
             eventConsumer.accept(event);
         } catch (RuntimeException ignored) {

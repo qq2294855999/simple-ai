@@ -63,14 +63,31 @@ export interface SendAgentChatMessageRequestDto {
 export interface AgentChatProgressEventDto {
   taskId: string;
   sessionId: string;
+    /** 稳定 SSE 事件类型：PROGRESS/THINKING/REPLY/FINAL/ERROR（新版后端 ChatSseEvent 使用 type 字段） */
+    type?: string;
+    /** @deprecated 旧版字段，新版使用 type，此处保留兼容 */
   eventType: string;
   stepId: string;
   stepName: string;
   execStatus: string;
+    /** 事件消息（PROGRESS 类型使用） */
   message: string;
+    /** 事件载荷（REPLY 类型的 AI 回复内容） */
   payload: string;
+    /** SSE 数据字段（THINKING 类型的思考内容） */
+    data: string;
+    /** 是否完成 */
   completed: boolean;
+    /** 失败原因（ERROR 类型使用） */
   failureReason: string;
+    /** 错误原因（ERROR 类型使用，与 failureReason 同义） */
+    errorReason: string;
+    /** 消息主键（FINAL 类型使用） */
+    messageId: string;
+    /** 轮次主键（FINAL 类型使用） */
+    turnId: string;
+    /** 思考摘要（FINAL 类型使用） */
+    thinkingSummary: string;
 }
 
 /** 会话历史执行轨迹（任务详情快照）。 */

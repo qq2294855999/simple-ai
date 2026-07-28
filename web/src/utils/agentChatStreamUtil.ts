@@ -2,23 +2,14 @@ import type {AgentChatExecutionEventDto, AgentChatMessageDto, AgentChatProgressE
 
 /**
  * 人机会话流式工具集合。
- * 负责 SSE 帧解析、三种气泡（进度/思考/回复）占位生成、流式 token 追加、最终化状态落定，
- * 以及历史兼容：旧数据没有 bubbleType / thinkingContent 时的归一化与合成气泡。
+ * 负责 SSE 帧解析、三种气泡（进度/思考/回复）占位生成、流式 token 追加、最终化状态落定。
+ * 只解析五类稳定事件：PROGRESS、THINKING、REPLY、FINAL、ERROR。
  *
  * @author qty
  */
 
-const messageEventTypes = new Set(["MESSAGE_ACCEPTED", "AI_TOKEN", "MESSAGE_COMPLETED", "CHAT_FAILED"]);
-
-/** 进度事件类型白名单：进入 PROGRESS 气泡的 executionEvents。AI_THINKING_TOKEN 不进入执行轨迹。 */
-const progressTrackedEventTypes = new Set([
-    "TASK_CREATED", "CONTEXT_ASSEMBLING", "CONTEXT_ASSEMBLED",
-    "MEMORY_MATCHING", "MEMORY_MATCHED", "MEMORY_MISSED", "MEMORY_EXECUTING",
-    "AI_STARTED", "AI_COMPLETED",
-    "ATOMIC_COMMAND_START", "ATOMIC_COMMAND_COMPLETE", "ATOMIC_COMMAND_FAILED",
-    "SUB_AGENT_STARTED", "SUB_AGENT_COMPLETED", "SUB_AGENT_FAILED",
-    "TASK_COMPLETED", "TASK_FAILED"
-]);
+/** 五类稳定 SSE 事件类型 */
+const STABLE_EVENT_TYPES = new Set(["PROGRESS", "THINKING", "REPLY", "FINAL", "ERROR"]);
 
 /** 执行协议 JSON 特征关键字，用于识别机器对机器的协议数据。 */
 const protocolKeywords = ["\"event\"", "\"action\"", "\"schedule\"", "\"call_win_rpa\""];
@@ -54,16 +45,6 @@ export function consumeAgentChatSseEvents(buffer: string, onProgress: (event: Ag
         }
     }
     return remainingBuffer;
-}
-
-/**
- * 判断事件是否属于聊天消息流。
- *
- * @param eventType 事件类型
- * @returns 是否为消息事件
- */
-export function isAgentChatMessageEvent(eventType: string): boolean {
-    return messageEventTypes.has(eventType);
 }
 
 /**
@@ -184,7 +165,7 @@ export function appendAssistantToken(messages: AgentChatMessageDto[], event: Age
         const updated = [...messages];
         updated[found.index] = {
             ...found.message,
-            content: (found.message.content || "") + (event.payload || "")
+            content: (found.message.content || "") + (event.payload || event.data || "")
         };
         return updated;
     }
@@ -192,27 +173,22 @@ export function appendAssistantToken(messages: AgentChatMessageDto[], event: Age
     // 兼容旧路径：最后一条可能是临时 assistant
     const lastMessage = messages[messages.length - 1];
     if (lastMessage?.id === "streaming-assistant") {
-        return [...messages.slice(0, -1), {...lastMessage, content: lastMessage.content + (event.payload || "")}];
+        return [...messages.slice(0, -1), {...lastMessage, content: lastMessage.content + (event.payload || event.data || "")}];
     }
     return [...messages, eventToStreamingMessage(event)];
 }
 
 /**
  * 将进度事件追加到 PROGRESS 气泡的 executionEvents 列表。
- * AI_THINKING_TOKEN 事件不会进入此路径（在消费层过滤）。
+ * <p>仅处理 PROGRESS 类型的 SSE 事件，其他类型（THINKING/REPLY/FINAL/ERROR）由各自路径处理。</p>
  *
  * @param messages 当前消息
  * @param event 进度事件
  * @returns 更新后的消息
  */
 export function appendProgressEvent(messages: AgentChatMessageDto[], event: AgentChatProgressEventDto): AgentChatMessageDto[] {
-    // AI_THINKING_TOKEN 由 appendThinkingToken 处理，不进入进度事件
-    if (event.eventType === "AI_THINKING_TOKEN") {
-        return messages;
-    }
-
-    // 非白名单事件（MESSAGE_ACCEPTED / CHAT_FAILED / MESSAGE_COMPLETED 等）不推入 execution 数组
-    if (!progressTrackedEventTypes.has(event.eventType)) {
+    // 仅处理 PROGRESS 类型事件（兼容新版 ChatSseEvent.type 和旧版 eventType）
+    if ((event as any).type !== "PROGRESS" && event.eventType !== "PROGRESS") {
         return messages;
     }
 
@@ -221,13 +197,17 @@ export function appendProgressEvent(messages: AgentChatMessageDto[], event: Agen
         return messages;
     }
 
+    // 稳定 SSE 事件仅提供 type 与 data；旧事件才提供 eventType、stepName、message。
+    // 在事件进入 UI 状态前统一归一化，避免展示层读取空的旧字段。
+    const stableType = event.type || event.eventType || "PROGRESS";
+    const progressDescription = event.stepName || event.message || event.data || stableType;
     const executionEvent: AgentChatExecutionEventDto = {
         id: `${event.taskId || "task"}-${found.message.executionEvents.length + 1}`,
-        eventType: event.eventType,
-        stepName: event.stepName || event.message || event.eventType,
+        eventType: stableType,
+        stepName: progressDescription,
         commandName: "",
-        responseContent: event.payload || "",
-        failureReason: event.failureReason || "",
+        responseContent: event.payload || event.data || "",
+        failureReason: event.failureReason || event.errorReason || "",
         sequenceNo: found.message.executionEvents.length + 1,
         startedAt: "",
         finishedAt: "",
@@ -342,20 +322,20 @@ export function finalizeThinkingBubble(messages: AgentChatMessageDto[], taskId: 
  * @returns 更新后的消息
  */
 export function replaceFinalMessage(messages: AgentChatMessageDto[], event: AgentChatProgressEventDto): AgentChatMessageDto[] {
-    const isFailed = event.eventType === "CHAT_FAILED";
+    const isFailed = (event as any).type === "ERROR" || event.eventType === "ERROR";
     const message: AgentChatMessageDto = {
         id: `final-${event.taskId}`,
         taskId: event.taskId,
-        turnId: "",
+        turnId: event.turnId || "",
         role: isFailed ? "SYSTEM_ERROR" : "ASSISTANT",
-        content: event.payload || event.failureReason || "",
+        content: event.payload || event.data || event.errorReason || event.failureReason || "",
         contentFormat: isFailed ? "PLAIN_TEXT" : "RESTRICTED_MARKDOWN",
         sequenceNo: Date.now(),
         createTime: "",
         providerName: "",
         modelCode: "",
         executionEvents: [],
-        thinkingContent: "",
+        thinkingContent: event.thinkingSummary || "",
         thinkingContentFormat: "PLAIN_TEXT",
         bubbleType: "NORMAL"
     };
@@ -444,7 +424,7 @@ export function stripProtocolJson(content: string): string {
 
 /**
  * 将进度事件列表转换为执行事件列表（保留用于简版历史回放 + 回复气泡锚点）。
- * AI_THINKING_TOKEN 被过滤，不进入 execution 数组。
+ * 仅处理 PROGRESS 类型事件，其他类型（THINKING/REPLY/FINAL/ERROR）由各自路径处理。
  *
  * @param progressEvents 进度事件列表
  * @param taskId 任务ID
@@ -455,14 +435,14 @@ export function progressEventsToExecutionEvents(
     taskId: string
 ): AgentChatExecutionEventDto[] {
     return progressEvents
-        .filter(event => event.eventType !== "AI_THINKING_TOKEN")
+        .filter(event => event.eventType === "PROGRESS")
         .map((event, idx) => ({
             id: `${taskId}-${idx}`,
             eventType: event.eventType,
             stepName: event.stepName || event.message || event.eventType,
             commandName: "",
-            responseContent: event.payload || "",
-            failureReason: event.failureReason || "",
+            responseContent: event.payload || event.data || "",
+            failureReason: event.failureReason || event.errorReason || "",
             sequenceNo: idx + 1,
             startedAt: "",
             finishedAt: "",

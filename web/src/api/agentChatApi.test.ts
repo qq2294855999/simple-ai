@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { AgentChatApi } from "./agentChatApi";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {AgentChatApi} from "./agentChatApi";
 
 const localFetch = vi.fn();
 
@@ -17,7 +17,7 @@ describe("AgentChatApi.sendStream", () => {
 
   it("应在存在业务令牌时使用与 REST 相同的 Bearer Authorization 头并消费 SSE 事件", async () => {
     window.localStorage.setItem("accessToken", "local-access-token");
-    localFetch.mockResolvedValue(buildSseResponse("data: {\"eventType\":\"MESSAGE_ACCEPTED\",\"taskId\":\"\",\"sessionId\":\"session-local\",\"payload\":\"\",\"completed\":false}\n\n"));
+      localFetch.mockResolvedValue(buildSseResponse("data: {\"eventType\":\"PROGRESS\",\"taskId\":\"task-local\",\"sessionId\":\"session-local\",\"stepName\":\"上下文装配\",\"payload\":\"\",\"completed\":false}\n\n"));
     vi.stubGlobal("fetch", localFetch);
     const events: string[] = [];
 
@@ -37,7 +37,7 @@ describe("AgentChatApi.sendStream", () => {
         })
       })
     );
-    expect(events).toEqual(["MESSAGE_ACCEPTED"]);
+      expect(events).toEqual(["PROGRESS"]);
   });
 
   it("应在未启用登录令牌时不伪造 Authorization 头", async () => {

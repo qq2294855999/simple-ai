@@ -6,24 +6,23 @@ import com.simple.ai.common.dto.agentExecutor.CreateAgentExecutorRequest;
 import com.simple.ai.common.dto.agentRule.CreateAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.CreateAgentSkillRequest;
 import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
-import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
 import com.simple.ai.common.service.agentClient.AgentClientService;
 import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
+import com.simple.ai.service.agentChat.ChatEventSender;
 import com.simple.ai.service.command.DefaultAtomicCommandExecutor;
-import com.simple.ai.view.agentChatSession.AgentChatSessionRepository;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.IdUtils;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
-import java.util.function.Consumer;
+import java.util.Map;
 
 /**
  * 智能体 AI 工具注册中心。
@@ -34,18 +33,6 @@ import java.util.function.Consumer;
  */
 @Component
 public class AgentToolRegistry {
-
-    /**
-     * 智能体会话上下文持有者，用于获取会话上下文中的用户ID
-     */
-    @Autowired
-    private AgentSessionContextHolder agentSessionContextHolder;
-
-    /**
-     * 智能体聊天会话数据访问层，用于从会话获取用户上下文
-     */
-    @Autowired
-    private AgentChatSessionRepository agentChatSessionRepository;
 
     /**
      * 原子命令执行器，通过 WebSocket 向执行器下发命令并等待结果
@@ -138,16 +125,19 @@ public class AgentToolRegistry {
 
     /**
      * 创建客户端实例工具。
-     * <p>客户端创建需要用户归属，通过 sessionId 从会话获取 userId，避免 ThreadLocal 在异步线程中丢失。</p>
+     * <p>客户端创建需要用户归属，通过 ToolContext 中的运行时上下文获取 userId。</p>
      *
      * @param agentClientService 客户端服务
      * @return 工具回调
      */
     @Bean
     public ToolCallback createClient(AgentClientService agentClientService) {
-        return FunctionToolCallback.builder("createClient", (CreateAgentClientRequest req) -> {
-                                       // 通过 sessionId 从会话获取 userId，SessionAwareToolCallback 已在执行线程上设置了 ThreadLocal
-                                       String userId = resolveUserIdFromSession();
+        return FunctionToolCallback.builder("createClient", (CreateAgentClientRequest req, ToolContext toolContext) -> {
+                                       // 从 ToolContext 获取运行时上下文中的 userId
+                                       String userId = null;
+                                       if (toolContext != null && toolContext.getContext() != null) {
+                                           userId = (String) toolContext.getContext().get("userId");
+                                       }
                                        AssertUtils.notEmpty(userId, "当前登录用户身份为空");
                                        return agentClientService.save(req, userId);
                                    })
@@ -318,24 +308,40 @@ public class AgentToolRegistry {
     /**
      * 执行原子命令工具。
      * <p>AI 调用此工具直接通过 WebSocket 向执行器客户端下发原子命令并等待执行结果。
-     * clientId 通过当前会话上下文自动推导，无需 AI 手动传入。</p>
+     * clientId 通过 ToolContext 中的运行时上下文获取，不再回查会话表。</p>
      *
      * @return 工具回调
      */
     @Bean
     public ToolCallback executeAtomicCommand() {
-        return FunctionToolCallback.builder("executeAtomicCommand", (AtomicCommandInvokeRequest req) -> {
-                                       // 通过进度 ThreadLocal 发布"正在使用[命令]"
-                                       publishToolProgress("正在使用" + (req.getCommandContent() != null ? req.getCommandContent() : "原子命令"));
+        return FunctionToolCallback.builder("executeAtomicCommand", (AtomicCommandInvokeRequest req, ToolContext toolContext) -> {
+                                       // 从 ToolContext 获取运行时上下文
+                                       Map<String, Object> context = toolContext != null ? toolContext.getContext() : null;
 
-                                       // 从会话上下文获取 clientId 和必要参数
-                                       String sessionId = AgentSessionContext.getCurrentSessionId();
-                                       if (sessionId != null && !sessionId.isBlank()) {
-                                           AgentChatSession session = agentChatSessionRepository.selectById(sessionId);
-                                           if (session != null) {
-                                               if (session.getClientId() != null && (req.getClientId() == null || req.getClientId().isBlank())) {
-                                                   req.setClientId(session.getClientId());
-                                               }
+                                       // 从 ToolContext 获取事件发送器，用于推送原子命令调用进度
+                                       ChatEventSender eventSender = null;
+                                       if (context != null) {
+                                           eventSender = (ChatEventSender) context.get("eventSender");
+                                       }
+
+                                       // 构建中文进度消息：优先使用命令作用描述，其次用命令内容
+                                       String progressMsg;
+                                       if (req.getAtomicCommandRole() != null && !req.getAtomicCommandRole().isBlank()) {
+                                           progressMsg = "正在执行：" + req.getAtomicCommandRole();
+                                       } else {
+                                           progressMsg = "正在执行原子命令：" + (req.getCommandContent() != null ? req.getCommandContent() : "");
+                                       }
+
+                                       // 发送原子命令调用进度事件到前端
+                                       if (eventSender != null) {
+                                           eventSender.sendProgress(progressMsg);
+                                       }
+
+                                       // 使用运行时上下文中的 clientId 补全请求参数
+                                       if (context != null) {
+                                           String clientId = (String) context.get("clientId");
+                                           if (clientId != null && !clientId.isBlank() && (req.getClientId() == null || req.getClientId().isBlank())) {
+                                               req.setClientId(clientId);
                                            }
                                        }
 
@@ -354,49 +360,5 @@ public class AgentToolRegistry {
                                                 + "命令内容应匹配已注册的原子命令名称或命令正文（如 system.capability、执行脚本内容等）。" + "返回执行结果包含 success 标志、结果数据或失败原因。")
                                    .inputType(AtomicCommandInvokeRequest.class)
                                    .build();
-    }
-
-    /**
-     * 安全发布工具调用进度事件。
-     *
-     * @param message 进度消息
-     */
-    private void publishToolProgress(String message) {
-        Consumer<CommandDispatchProgressEvent> consumer = ProgressConsumerHolder.get();
-        if (consumer == null) {
-            return;
-        }
-        CommandDispatchProgressEvent event = new CommandDispatchProgressEvent();
-        event.setEventType("TOOL_CALLING");
-        event.setMessage(message);
-        consumer.accept(event);
-    }
-
-    /**
-     * 从当前会话获取用户ID。
-     * <p>优先从 ThreadLocal 获取 userId（AI 调用前由 SpringAiAgentAiClient 设置），
-     * 若未命中则从数据库查询会话实体获取。</p>
-     *
-     * @return 用户ID
-     */
-    private String resolveUserIdFromSession() {
-        // 通过 AgentSessionContext 获取 sessionId（由 SessionAwareToolCallback 在执行线程上设置）
-        String sessionId = AgentSessionContext.getCurrentSessionId();
-        if (sessionId == null || sessionId.isBlank()) {
-            return null;
-        }
-
-        // 优先从 ThreadLocal 获取 userId（AI 调用前由 SpringAiAgentAiClient 设置）
-        String userId = AgentSessionContext.getCurrentUserId();
-        if (userId != null && !userId.isBlank()) {
-            return userId;
-        }
-
-        // ThreadLocal 未命中时，从数据库查询会话获取 userId（兜底方案）
-        AgentChatSession session = agentChatSessionRepository.selectById(sessionId);
-        if (session == null) {
-            return null;
-        }
-        return session.getUserId();
     }
 }

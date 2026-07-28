@@ -31,7 +31,7 @@ import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
 import com.simple.ai.service.agent.AgentContextAssembler;
-import com.simple.ai.service.agent.ProgressConsumerHolder;
+import com.simple.ai.service.agentChat.AgentChatRuntimeContext;
 import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
@@ -157,11 +157,87 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
     @Override
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public CommandDispatchResponse dispatchStream(CommandDispatchRequest request, AgentChatRuntimeContext runtimeContext, Consumer<CommandDispatchProgressEvent> progressConsumer) {
+        return dispatchInternalWithContext(request, runtimeContext, progressConsumer, "", 0);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommandDispatchResponse dispatchInternal(CommandDispatchRequest request, Consumer<CommandDispatchProgressEvent> progressConsumer,
                                                     String parentTaskId, int recursionDepth) {
 
         // 通过内部执行器入口承接子智能体递归上下文
         return executeDispatchInternal(request, progressConsumer, parentTaskId, recursionDepth);
+    }
+
+    /**
+     * 执行智能体命令内部调度（显式传递运行时上下文）。
+     *
+     * @param request          命令调度请求
+     * @param runtimeContext   聊天运行时上下文
+     * @param progressConsumer 进度事件消费者
+     * @param parentTaskId     父任务ID
+     * @param recursionDepth   当前递归深度
+     * @return 命令调度响应
+     */
+    private CommandDispatchResponse dispatchInternalWithContext(CommandDispatchRequest request, AgentChatRuntimeContext runtimeContext,
+                                                                Consumer<CommandDispatchProgressEvent> progressConsumer, String parentTaskId, int recursionDepth) {
+
+        // 参数校验：智能体ID不能为空
+        AssertUtils.notEmpty(request.getAgentId(), "智能体ID不能为空");
+
+        // 参数校验：命令名称不能为空
+        AssertUtils.notEmpty(request.getCommandName(), "命令名称不能为空");
+
+        // 参数校验：命令内容不能为空
+        AssertUtils.notEmpty(request.getCommandContent(), "命令内容不能为空");
+
+        // 校验子智能体递归深度，防止配置环路导致无限调度
+        AssertUtils.isTrue(recursionDepth <= MAX_SUB_AGENT_DEPTH, "子智能体递归调度超过安全深度");
+
+        // 创建任务主记录并标记执行中
+        Task task = createRunningTask(request, parentTaskId);
+        publishProgress(progressConsumer, request, task, "TASK_CREATED", "任务已创建", "", Boolean.FALSE, "");
+
+        try {
+            // 使用运行时上下文中的 AgentContext，避免重复查询数据库
+            publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
+            AgentContext context = runtimeContext.getAgentContext();
+            publishContextTraceProgress(progressConsumer, request, task, context);
+
+            // AI意图识别匹配已发布记忆，同时提取参数值
+            publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
+            MemoryMatchResult matchResult = memoryMatcher.match(request.getCommandContent(), context);
+            publishMemoryMatchProgress(progressConsumer, request, task, matchResult.isMatched() ? matchResult.getMemoryId() : null);
+
+            // 命中记忆时将AI提取的参数合并到请求中，供MemoryExecutor替换占位符
+            if (matchResult.isMatched() && matchResult.getExtractedParams() != null && !matchResult.getExtractedParams().isEmpty()) {
+                mergeExtractedParams(request, matchResult.getExtractedParams());
+            }
+
+            // 执行智能体命令流程
+            String responseContent = executeCommand(task, request, context, matchResult, progressConsumer, recursionDepth, runtimeContext);
+
+            // 记忆直执行路径已自行管理任务状态，仅AI探索路径需要外层标记
+            if (!matchResult.isMatched()) {
+                markTaskSuccess(task, responseContent);
+            }
+
+            publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
+            return buildSuccessResponse(task, responseContent);
+        } catch (Exception e) {
+            String failureReason = resolveFailureReason(e);
+
+            // 保存失败任务详情，确保失败链路可追踪且不重复落库
+            saveFailedTaskDetailIfAbsent(task, request, failureReason);
+
+            // 标记任务执行失败（记忆直执行路径已在内层标记过，此处为幂等操作）
+            if (!AgentExecutionStatusProcess.FAILED.equals(task.getExecStatus())) {
+                markTaskFailed(task, failureReason);
+            }
+            publishProgress(progressConsumer, request, task, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, failureReason);
+            return buildFailedResponse(task, failureReason);
+        }
     }
 
     /**
@@ -194,7 +270,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
         try {
             // 组装智能体上下文
-            ProgressConsumerHolder.set(progressConsumer);
             publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
             AgentContext context = agentContextAssembler.assemble(request);
             publishContextTraceProgress(progressConsumer, request, task, context);
@@ -209,8 +284,8 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
                 mergeExtractedParams(request, matchResult.getExtractedParams());
             }
 
-            // 执行智能体命令流程
-            String responseContent = executeCommand(task, request, context, matchResult, progressConsumer, recursionDepth);
+            // 执行智能体命令流程（旧路径，无运行时上下文）
+            String responseContent = executeCommand(task, request, context, matchResult, progressConsumer, recursionDepth, null);
 
             // 记忆直执行路径已自行管理任务状态，仅AI探索路径需要外层标记
             if (!matchResult.isMatched()) {
@@ -272,10 +347,11 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param matchResult 记忆匹配结果
      * @param progressConsumer 进度事件消费者
      * @param recursionDepth 当前递归深度
+     * @param runtimeContext 聊天运行时上下文
      * @return 响应内容
      */
-    private String executeCommand(Task task, CommandDispatchRequest request, AgentContext context, MemoryMatchResult matchResult,
-                                  Consumer<CommandDispatchProgressEvent> progressConsumer, int recursionDepth) {
+    private String executeCommand(Task task, CommandDispatchRequest request, AgentContext context, MemoryMatchResult matchResult, Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                  int recursionDepth, AgentChatRuntimeContext runtimeContext) {
 
         // 命中记忆时由 MemoryExecutor 直接按记忆步骤创建任务并下发客户端
         if (matchResult.isMatched()) {
@@ -299,7 +375,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         }
 
         // 未命中记忆时调用 AI 生成探索响应
-        return executeAiExploration(task, request, context, progressConsumer);
+        return executeAiExploration(task, request, context, progressConsumer, runtimeContext);
     }
 
     /**
@@ -347,44 +423,38 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * @param request 命令调度请求
      * @param context 智能体上下文
      * @param progressConsumer 进度事件消费者
+     * @param runtimeContext 聊天运行时上下文
      * @return 响应内容
      */
-    private String executeAiExploration(Task task, CommandDispatchRequest request, AgentContext context,
-                                        Consumer<CommandDispatchProgressEvent> progressConsumer) {
+    private String executeAiExploration(Task task, CommandDispatchRequest request, AgentContext context, Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                        AgentChatRuntimeContext runtimeContext) {
         publishProgress(progressConsumer, request, task, "AI_STARTED", "AI 开始生成探索方案", request.getCommandContent(), Boolean.FALSE, "");
 
-        // 设置会话上下文，供 ToolCallback 在异步线程中获取 sessionId
-        com.simple.ai.service.agent.AgentSessionContext.setCurrentSessionId(request.getSessionId());
-        try {
-            AgentAiRequest aiRequest = buildAiRequest(request, context);
-            AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, token -> publishAiTokenProgress(progressConsumer, request, task, token),
-                                                                  thinkingChunk -> publishAiThinkingProgress(progressConsumer, request, task, thinkingChunk));
+        AgentAiRequest aiRequest = buildAiRequest(request, context);
+        AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, runtimeContext, token -> publishAiTokenProgress(progressConsumer, request, task, token),
+                                                              thinkingChunk -> publishAiThinkingProgress(progressConsumer, request, task, thinkingChunk));
 
-            // 将 AI 思考推理完整文本暂存到 task.reserve（内存+DB 双传递，
-            // 后续 buildSuccessResponse 读出写入 CommandDispatchResponse，再落库到 agent_chat_message.thinking_content）
-            if (aiResponse.getThinkingContent() != null && !aiResponse.getThinkingContent().isBlank()) {
-                String safeThinking = aiResponse.getThinkingContent();
-                String existingReserve = task.getReserve();
-                if (existingReserve == null || existingReserve.isBlank()) {
-                    task.setReserve(safeThinking);
-                } else {
-                    // 保留已有 reserve 内容，末尾拼接 thinkingContent，防止与其它扩展字段写入冲突
-                    task.setReserve(existingReserve + "\n===THINKING===\n" + safeThinking);
-                }
-                taskView.updateById(task);
+        // 将 AI 思考推理完整文本暂存到 task.reserve（内存+DB 双传递，
+        // 后续 buildSuccessResponse 读出写入 CommandDispatchResponse，再落库到 agent_chat_message.thinking_content）
+        if (aiResponse.getThinkingContent() != null && !aiResponse.getThinkingContent().isBlank()) {
+            String safeThinking = aiResponse.getThinkingContent();
+            String existingReserve = task.getReserve();
+            if (existingReserve == null || existingReserve.isBlank()) {
+                task.setReserve(safeThinking);
+            } else {
+                // 保留已有 reserve 内容，末尾拼接 thinkingContent，防止与其它扩展字段写入冲突
+                task.setReserve(existingReserve + "\n===THINKING===\n" + safeThinking);
             }
-
-            // 持久化当前 AI 调用的不可变供应商和模型快照
-            persistRuntimeSnapshot(task, aiResponse);
-            saveAiTaskDetail(task, request, aiRequest, aiResponse);
-            AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
-            publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
-
-            return aiResponse.getResponseContent();
-        } finally {
-            // 清理 ThreadLocal，防止内存泄漏
-            com.simple.ai.service.agent.AgentSessionContext.clear();
+            taskView.updateById(task);
         }
+
+        // 持久化当前 AI 调用的不可变供应商和模型快照
+        persistRuntimeSnapshot(task, aiResponse);
+        saveAiTaskDetail(task, request, aiRequest, aiResponse);
+        AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
+        publishProgress(progressConsumer, request, task, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
+
+        return aiResponse.getResponseContent();
     }
 
     /**

@@ -9,7 +9,8 @@
                reserve,
                remark,
                model_id  as modelId,
-               client_id as clientId
+               client_id as clientId,
+               user_id   as userId
         from agent_chat_session
         where id = #{id}
         for update
@@ -23,7 +24,8 @@
                reserve,
         remark,
         model_id as modelId,
-        client_id as clientId
+        client_id as clientId,
+        user_id as userId
         from agent_chat_session
         where agent_id = #{agentId}
 

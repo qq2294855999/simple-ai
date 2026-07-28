@@ -1,18 +1,30 @@
 import {describe, expect, it} from "vitest";
 import type {AgentChatProgressEventDto} from "../dto/agentChat/AgentChatDto";
-import {appendAssistantToken, consumeAgentChatSseEvents, isAgentChatMessageEvent, replaceFinalMessage, stripProtocolJson} from "./agentChatStreamUtil";
+import {
+    appendAssistantToken,
+    appendProgressEvent,
+    consumeAgentChatSseEvents,
+    createProgressBubble,
+    replaceFinalMessage,
+    stripProtocolJson
+} from "./agentChatStreamUtil";
 
-const tokenEvent: AgentChatProgressEventDto = {
+const replyEvent: AgentChatProgressEventDto = {
   taskId: "task-local",
   sessionId: "session-local",
-  eventType: "AI_TOKEN",
+    eventType: "REPLY",
   stepId: "",
   stepName: "",
   execStatus: "RUNNING",
-  message: "AI 内容片段",
+    message: "AI 回复内容",
   payload: "第一段",
+    data: "",
   completed: false,
-  failureReason: ""
+    failureReason: "",
+    errorReason: "",
+    messageId: "",
+    turnId: "",
+    thinkingSummary: ""
 };
 
 /**
@@ -23,48 +35,54 @@ const tokenEvent: AgentChatProgressEventDto = {
 describe("agentChatStreamUtil", () => {
   it("应解析多行 data 帧并保留未完成帧", () => {
     const events: AgentChatProgressEventDto[] = [];
-    const frame = "event: AI_TOKEN\r\n"
+      const frame = "event: REPLY\r\n"
       + "data: {\"taskId\":\"task-local\",\r\n"
-      + "data: \"sessionId\":\"session-local\",\"eventType\":\"AI_TOKEN\",\"stepId\":\"\",\"stepName\":\"\",\"execStatus\":\"RUNNING\",\"message\":\"AI 内容片段\",\"payload\":\"第一段\",\"completed\":false,\"failureReason\":\"\"}\r\n\r\npartial";
+          + "data: \"sessionId\":\"session-local\",\"eventType\":\"REPLY\",\"stepId\":\"\",\"stepName\":\"\",\"execStatus\":\"RUNNING\",\"message\":\"AI 回复内容\",\"payload\":\"第一段\",\"data\":\"\",\"completed\":false,\"failureReason\":\"\",\"errorReason\":\"\",\"messageId\":\"\",\"turnId\":\"\",\"thinkingSummary\":\"\"}\r\n\r\npartial";
 
     const remaining = consumeAgentChatSseEvents(frame, event => events.push(event));
 
-    expect(events).toEqual([tokenEvent]);
+      expect(events).toEqual([replyEvent]);
     expect(remaining).toBe("partial");
   });
 
   it("应隔离异常 JSON 且继续解析后续有效事件", () => {
     const events: AgentChatProgressEventDto[] = [];
-    const valid = JSON.stringify({ ...tokenEvent, eventType: "TASK_CREATED" });
+      const valid = JSON.stringify({...replyEvent, eventType: "PROGRESS"});
     const frame = `data: {invalid}\n\ndata: ${valid}\n\n`;
 
     consumeAgentChatSseEvents(frame, event => events.push(event));
 
     expect(events).toHaveLength(1);
-    expect(events[0].eventType).toBe("TASK_CREATED");
+      expect(events[0].eventType).toBe("PROGRESS");
   });
 
-  it("应将 AI_TOKEN 与最终消息留在消息流，将调度事件分流到时间线", () => {
-    const messages = appendAssistantToken([], tokenEvent);
-    const appended = appendAssistantToken(messages, { ...tokenEvent, payload: "第二段" });
-    const finalMessages = replaceFinalMessage(appended, { ...tokenEvent, eventType: "MESSAGE_COMPLETED", payload: "最终回复", completed: true });
+    it("应将 REPLY 事件追加到回复气泡，FINAL 事件完成消息", () => {
+        const messages = appendAssistantToken([], replyEvent);
+        const appended = appendAssistantToken(messages, {...replyEvent, payload: "第二段"});
+        const finalMessages = replaceFinalMessage(appended, {...replyEvent, eventType: "FINAL", payload: "最终回复", completed: true});
 
-    expect(isAgentChatMessageEvent("AI_TOKEN")).toBe(true);
-    expect(isAgentChatMessageEvent("MESSAGE_COMPLETED")).toBe(true);
-    expect(isAgentChatMessageEvent("TASK_CREATED")).toBe(false);
     expect(appended[0].content).toBe("第一段第二段");
     expect(finalMessages).toHaveLength(1);
     expect(finalMessages[0].role).toBe("ASSISTANT");
     expect(finalMessages[0].content).toBe("最终回复");
   });
 
-  it("应将 CHAT_FAILED 转换为纯文本系统消息", () => {
-    const messages = replaceFinalMessage([], { ...tokenEvent, eventType: "CHAT_FAILED", payload: "", failureReason: "本地失败", completed: true });
+    it("应将稳定 PROGRESS 事件的 data 映射为可展示步骤文案", () => {
+        const progressBubble = createProgressBubble("task-local", "session-local");
+        const messages = appendProgressEvent([progressBubble], {
+            ...replyEvent,
+            type: "PROGRESS",
+            eventType: "",
+            message: "",
+            stepName: "",
+            data: "正在执行：打开微信"
+        });
 
-    expect(messages[0].role).toBe("SYSTEM_ERROR");
-    expect(messages[0].contentFormat).toBe("PLAIN_TEXT");
-    expect(messages[0].content).toBe("本地失败");
+        expect(messages[0].executionEvents).toHaveLength(1);
+        expect(messages[0].executionEvents[0].eventType).toBe("PROGRESS");
+        expect(messages[0].executionEvents[0].stepName).toBe("正在执行：打开微信");
   });
+
 });
 
 /**

@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.time.Instant;
-import java.util.Map;
 
 /**
  * 执行器命令执行结果响应。
@@ -36,8 +35,8 @@ public class ExecutorCommandResultResponse {
     @Schema(description = "执行说明")
     private String message;
 
-    @Schema(description = "返回数据")
-    private Map<String, Object> data;
+    @Schema(description = "返回数据，可能是对象或数组")
+    private Object data;
 
     @Schema(description = "错误信息")
     private ExecutorCommandError error;

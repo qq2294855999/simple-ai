@@ -2,11 +2,12 @@ package com.simple.ai.service.agent;
 
 import com.simple.ai.common.constant.AgentIronRuleConstant;
 import com.simple.ai.common.dto.agent.AgentContext;
+import com.simple.ai.common.dto.agent.AgentContextSnapshot;
 import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
 import com.simple.ai.common.dto.agentRule.FindAllAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.FindAllAgentSkillRequest;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
-import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
+import com.simple.ai.common.dto.command.CapabilityResultDto;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.subAgentRelation.FindAllSubAgentRelationRequest;
 import com.simple.ai.common.entity.agentClient.AgentClient;
@@ -29,12 +30,12 @@ import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.protocol.ProtocolView;
 import com.simple.ai.common.view.subAgentRelation.SubAgentRelationView;
 import com.simple.common.core.utils.AssertUtils;
+import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * 智能体上下文组装器。
@@ -50,6 +51,16 @@ import java.util.function.Consumer;
  */
 @Component
 public class AgentContextAssembler {
+
+    /**
+     * 当前快照版本号，用于版本兼容与刷新规则判定。
+     * <p>版本规则：</p>
+     * <ul>
+     *   <li>"1.0"：初始版本，含 agent 资产 + 客户端 + 执行器 + 协议 + 本地原子命令</li>
+     *   <li>"1.0"：次版本未变，当前只通过次版本号标识数据刷新</li>
+     * </ul>
+     */
+    public static final String SNAPSHOT_VERSION = "1.0";
 
     /**
      * 智能体定义视图
@@ -302,21 +313,12 @@ public class AgentContextAssembler {
     }
 
     /**
-     * 安全发布进度事件，consumer 为 null 时静默跳过。
+     * 安全发布进度事件，已废弃（运行时上下文已显式传递）。
      *
      * @param message 进度消息
      */
     private void publishProgressSafe(String message) {
-        Consumer<CommandDispatchProgressEvent> consumer = ProgressConsumerHolder.get();
-        if (consumer == null) {
-            return;
-        }
-
-        // 构建简单的进度事件，只填充消息字段
-        CommandDispatchProgressEvent event = new CommandDispatchProgressEvent();
-        event.setEventType("CONTEXT_LOADING");
-        event.setMessage(message);
-        consumer.accept(event);
+        // 已废弃：进度事件现在通过运行时上下文显式传递
     }
 
     /**
@@ -563,5 +565,125 @@ public class AgentContextAssembler {
             builder.append("  </memory>\n");
         }
         builder.append("</memories>\n\n");
+    }
+
+    /**
+     * 创建期装配快照：查询全部资产并序列化为 JSON 字符串。
+     * <p>用于会话创建时将完整的智能体上下文持久化到 reserve 字段，
+     * 避免聊天期重复查询资产表。</p>
+     *
+     * @param agentId  智能体ID
+     * @param clientId 客户端ID
+     * @return JSON 格式的快照字符串
+     */
+    public String assembleForSnapshot(String agentId, String clientId) {
+        AssertUtils.notEmpty(agentId, "智能体ID不能为空");
+
+        // 加载 agent 维度数据（定义、规则、技能、子智能体、记忆、原子命令）
+        AgentContext context = doAssemble(agentId);
+
+        // 解析会话级信息（客户端、执行器、协议）
+        resolveSessionContext(context, clientId);
+
+        // 构建快照 DTO
+        AgentContextSnapshot snapshot = new AgentContextSnapshot();
+        snapshot.setAgentDefinition(context.getAgentDefinition());
+        snapshot.setSystemIronRule(context.getSystemIronRule());
+        snapshot.setRules(context.getRules());
+        snapshot.setSkills(context.getSkills());
+        snapshot.setSubAgentRelations(context.getSubAgentRelations());
+        snapshot.setMemories(context.getMemories());
+        snapshot.setClient(context.getClient());
+        snapshot.setExecutor(context.getExecutor());
+        snapshot.setProtocol(context.getProtocol());
+        snapshot.setAtomicCommands(context.getAtomicCommands());
+        snapshot.setCreatedAt(System.currentTimeMillis());
+
+        // 序列化为 JSON
+        return JsonUtils.toJsonStr(snapshot);
+    }
+
+    /**
+     * 聊天期从快照恢复上下文。
+     * <p>从 reserve 字段反序列化快照，补充 userId/sessionId 和提示词后返回，
+     * 不再查询任何资产表。</p>
+     *
+     * @param reserveJson reserve 字段的 JSON 字符串
+     * @param userId      当前用户ID
+     * @param sessionId   当前会话ID
+     * @return 恢复后的智能体上下文
+     */
+    public AgentContext restoreFromSnapshot(String reserveJson, String userId, String sessionId) {
+        AssertUtils.notEmpty(reserveJson, "会话快照不能为空");
+
+        // 反序列化快照
+        AgentContextSnapshot snapshot = JsonUtils.toJsonObj(reserveJson, AgentContextSnapshot.class);
+        AssertUtils.notEmpty(snapshot, "会话快照解析失败");
+
+        // 构建 AgentContext
+        AgentContext context = new AgentContext();
+        context.setAgentDefinition(snapshot.getAgentDefinition());
+        context.setSystemIronRule(snapshot.getSystemIronRule());
+        context.setRules(snapshot.getRules());
+        context.setSkills(snapshot.getSkills());
+        context.setSubAgentRelations(snapshot.getSubAgentRelations());
+        context.setMemories(snapshot.getMemories());
+        context.setClient(snapshot.getClient());
+        context.setExecutor(snapshot.getExecutor());
+        context.setProtocol(snapshot.getProtocol());
+        context.setAtomicCommands(snapshot.getAtomicCommands());
+
+        // 覆盖会话级信息
+        context.setUserId(userId);
+        context.setSessionId(sessionId != null ? sessionId : "");
+
+        // 重建提示词
+        context.setPromptContent(buildPromptContent(context));
+        return context;
+    }
+
+    /**
+     * 将执行器能力命令列表写入已有快照 JSON。
+     * <p>在创建会话时，先调用 {@link #assembleForSnapshot} 获取基础快照，
+     * 再调用 system.capability 获取执行器实时能力，最后通过本方法将能力列表
+     * 合并到快照中，刷新版本号后返回。</p>
+     *
+     * @param snapshotJson 基础快照 JSON
+     * @param capabilities 执行器能力命令列表
+     * @return 合并后的快照 JSON
+     */
+    public String enrichSnapshotWithCapabilities(String snapshotJson, List<CapabilityResultDto.CommandItem> capabilities) {
+        AssertUtils.notEmpty(snapshotJson, "快照 JSON 不能为空");
+
+        AgentContextSnapshot snapshot = JsonUtils.toJsonObj(snapshotJson, AgentContextSnapshot.class);
+        AssertUtils.notEmpty(snapshot, "快照 JSON 解析失败");
+
+        // 写入执行器能力命令列表
+        snapshot.setCommandCapabilities(capabilities);
+
+        // 更新快照版本号（次版本递增，表示数据内容刷新）
+        snapshot.setVersion(SNAPSHOT_VERSION);
+        snapshot.setCreatedAt(System.currentTimeMillis());
+
+        return JsonUtils.toJsonStr(snapshot);
+    }
+
+    /**
+     * 刷新快照：重新查询全部资产并序列化。
+     * <p>用于存量会话显式"刷新上下文"场景，重新从数据库读取最新资产配置，
+     * 生成新快照。调用方需自行处理 system.capability 等实时能力注入。</p>
+     * <p>刷新规则：</p>
+     * <ul>
+     *   <li>新会话自动使用最新配置（创建时调用 assembleForSnapshot）</li>
+     *   <li>存量会话仅通过显式"刷新上下文"更新快照</li>
+     *   <li>刷新后快照版本号更新为当前最新版本</li>
+     * </ul>
+     *
+     * @param agentId  智能体ID
+     * @param clientId 客户端ID
+     * @return JSON 格式的刷新后快照字符串
+     */
+    public String refreshSnapshot(String agentId, String clientId) {
+        return assembleForSnapshot(agentId, clientId);
     }
 }
