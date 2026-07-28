@@ -1,5 +1,6 @@
 package com.simple.ai.websocket.command;
 
+import com.simple.ai.common.constant.WebSocketConstant;
 import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.enums.AgentClientStatusProcess;
 import com.simple.ai.common.view.agentClient.AgentClientView;
@@ -45,7 +46,7 @@ public class ClientCheckWebSocketManager extends DefaultCheckWebSocketManager {
     public boolean checkToken(String token, String type, String cliKey) {
 
         // 仅处理 agent-executor 类型的连接，其他类型委托父类默认放行
-        if (!"agent-executor".equals(type)) {
+        if (!WebSocketConstant.AGENT_EXECUTOR_TYPE.equals(type)) {
             return super.checkToken(token, type, cliKey);
         }
 

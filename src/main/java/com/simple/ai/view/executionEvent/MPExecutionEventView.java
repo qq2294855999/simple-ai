@@ -243,6 +243,28 @@ class MPExecutionEventView implements ExecutionEventView {
     }
 
     @Override
+    public void updateTaskIdByTurnId(String turnId, String taskId) {
+        if (turnId == null || turnId.isBlank() || taskId == null || taskId.isBlank()) {
+            return;
+        }
+
+        // 查当前轮次下 taskId 为空的执行事件
+        LambdaQueryWrapper<ExecutionEvent> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ExecutionEvent::getTurnId, turnId).and(w -> w.isNull(ExecutionEvent::getTaskId).or().eq(ExecutionEvent::getTaskId, ""));
+
+        List<ExecutionEvent> events = repository.selectList(queryWrapper);
+        if (CollectionUtil.isEmpty(events)) {
+            return;
+        }
+
+        // 逐条回填 taskId
+        for (ExecutionEvent event : events) {
+            event.setTaskId(taskId);
+        }
+        repository.updateById(events);
+    }
+
+    @Override
     public void delete(DeleteExecutionEventRequest request) {
         repository.deleteById(request.getId());
     }

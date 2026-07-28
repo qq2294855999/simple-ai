@@ -109,6 +109,16 @@ public interface ExecutionEventView {
     List<ExecutionEvent> findAllByTaskIds(List<String> taskIds);
 
     /**
+     * 按轮次主键回填任务主键。
+     * <p>调度完成后将当前轮次所有执行事件的 taskId 从空串更新为真实任务主键，
+     * 确保历史回显时能通过消息的 taskId 查询到执行事件。</p>
+     *
+     * @param turnId 轮次主键
+     * @param taskId 任务主键
+     */
+    void updateTaskIdByTurnId(String turnId, String taskId);
+
+    /**
      * 获取单条数据
      *
      * @param findOneRequest 查询条件

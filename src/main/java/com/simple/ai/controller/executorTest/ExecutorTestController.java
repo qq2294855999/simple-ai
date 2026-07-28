@@ -1,6 +1,7 @@
 package com.simple.ai.controller.executorTest;
 
 import cn.hutool.json.JSONUtil;
+import com.simple.ai.common.constant.WebSocketConstant;
 import com.simple.ai.common.dto.command.ExecutorCommandBatchRequest;
 import com.simple.ai.common.dto.command.ExecutorCommandItem;
 import com.simple.ai.common.dto.command.SepMessage;
@@ -31,11 +32,6 @@ import java.util.UUID;
 public class ExecutorTestController {
 
     private static final Logger log = LoggerFactory.getLogger(ExecutorTestController.class);
-
-    /**
-     * 执行器 WebSocket 通道类型
-     */
-    private static final String EXECUTOR_CHANNEL_TYPE = "agent-executor";
 
     /**
      * 向指定客户端发送 system.capability 命令。
@@ -98,7 +94,7 @@ public class ExecutorTestController {
 
         // 传入 SepMessage 对象，框架内部序列化为 WebSocketRequest.data 的嵌套 JSON 对象
         // 客户端 SepSyncEnvelope.Data 为 JsonElement 类型，期望嵌套对象而非字符串
-        Object result = WebSocketUtils.sendSyncMsg(EXECUTOR_CHANNEL_TYPE, clientId, message);
+        Object result = WebSocketUtils.sendSyncMsg(WebSocketConstant.AGENT_EXECUTOR_TYPE, clientId, message);
         log.info("=== 收到回执 [{}] -> clientId={} ===\n{}", commandCode, clientId, JsonUtils.toJsonStr(result));
         return R.ok(result);
     }

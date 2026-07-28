@@ -56,6 +56,7 @@ springdoc:
 
 simple:
   websocket:
+    max-web-socket-frame-size: 1048576  # WebSocket 最大帧大小 1MB
     command:
       type: ${SIMPLE_WEBSOCKET_COMMAND_TYPE:agent-command}
       cli-key: ${SIMPLE_WEBSOCKET_COMMAND_CLI_KEY:default}

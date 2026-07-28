@@ -572,38 +572,40 @@ class SpringAiAgentAiClient implements AgentAiClient {
             return new ArrayList<>();
         }
 
-        // 从最新消息向前取最近 N 轮，转换为 Spring AI Message
-        List<Message> historyMessages = new ArrayList<>();
-        int turnCount = 0;
-
-        // 标记是否已跳过当前轮次的 USER 消息（即最近一条 user 消息，它会在 .user() 中单独发送）
+        // 第一步：从后向前找到最近 N 轮的 USER 消息索引（跳过当前轮次的 USER）
+        List<Integer> userIndices = new ArrayList<>();
         boolean skippedCurrentUser = false;
+        int maxTurns = simpleAiProperties.getChat().getMaxHistoryTurns();
 
-        // 从最新到最旧遍历消息，按轮数限制裁剪
         for (int i = allMessages.size() - 1; i >= 0; i--) {
             AgentChatMessage msg = allMessages.get(i);
-
-            // 只取 USER 和 ASSISTANT 角色的消息，SYSTEM_ERROR 不参与上下文
-            if (!"USER".equals(msg.getRole()) && !"ASSISTANT".equals(msg.getRole())) {
+            if (!"USER".equals(msg.getRole())) {
                 continue;
             }
-
-            // 跳过最近一条 USER 消息（即当前消息，已通过 .user() 单独发送），避免重复
-            if ("USER".equals(msg.getRole()) && !skippedCurrentUser) {
+            // 跳过最近一条 USER 消息（当前消息，已通过 .user() 单独发送）
+            if (!skippedCurrentUser) {
                 skippedCurrentUser = true;
                 continue;
             }
-
-            // 每遇到一条 USER 消息计数为一轮
-            if ("USER".equals(msg.getRole())) {
-                turnCount++;
-                if (turnCount > simpleAiProperties.getChat().getMaxHistoryTurns()) {
-                    break;
-                }
+            userIndices.add(i);
+            if (userIndices.size() >= maxTurns) {
+                break;
             }
+        }
 
-            // 插入到列表头部以保持时间顺序
-            historyMessages.add(0, toSpringAiMessage(msg));
+        // 无历史轮次时返回空列表
+        if (userIndices.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 第二步：从最早的 USER 消息索引开始，收集到最新消息，确保轮次完整
+        int startIndex = userIndices.get(userIndices.size() - 1);
+        List<Message> historyMessages = new ArrayList<>();
+        for (int i = startIndex; i < allMessages.size(); i++) {
+            AgentChatMessage msg = allMessages.get(i);
+            if ("USER".equals(msg.getRole()) || "ASSISTANT".equals(msg.getRole())) {
+                historyMessages.add(toSpringAiMessage(msg));
+            }
         }
 
         return historyMessages;

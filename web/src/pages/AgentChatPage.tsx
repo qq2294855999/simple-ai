@@ -615,9 +615,9 @@ export function AgentChatPage() {
                         {isStreaming ? (
                             <Spin indicator={<LoadingOutlined style={{fontSize: 12, color: "#72a6ff"}} spin/>}/>
                         ) : (
-                            <Tag color={statusTag} style={{margin: 0, padding: "0 6px", fontSize: 11}}>
+                            <Typography.Text type="secondary" style={{fontSize: 12}}>
                                 {statusTag === "success" ? "已完成" : statusTag === "error" ? "失败" : "处理中"}
-                            </Tag>
+                            </Typography.Text>
                         )}
                     </Space>
                 </div>
@@ -928,31 +928,14 @@ function renderExecutionEvents(events: AgentChatExecutionEventDto[]) {
         return <Typography.Text type="secondary">无执行事件</Typography.Text>;
     }
 
-    // 按序号排序展示原子命令调用链
+    // 按序号排序展示执行步骤
     const sortedEvents = [...events].sort((a, b) => (a.sequenceNo || 0) - (b.sequenceNo || 0));
-
-    // 收集原子命令事件（仅展示有意义的步骤）
-    const commandEvents = sortedEvents.filter(event =>
-        event.eventType === "PROGRESS" ||
-        event.eventType === "ATOMIC_COMMAND_START" ||
-        event.eventType === "ATOMIC_COMMAND_COMPLETE" ||
-        event.eventType === "AI_STARTED" ||
-        event.eventType === "AI_COMPLETED" ||
-        event.eventType === "CONTEXT_ASSEMBLED" ||
-        event.eventType === "MEMORY_MATCHED" ||
-        event.eventType === "MEMORY_MISSED"
-    );
-
-    if (commandEvents.length === 0) {
-        return <Typography.Text type="secondary">暂无步骤详情</Typography.Text>;
-    }
 
     return (
         <div style={{paddingLeft: 4}}>
-            {commandEvents.map(event => {
-                // 失败事件用红色标记
+            {sortedEvents.map(event => {
+                // 失败事件用红色文字标记
                 const isFailed = event.eventType.includes("FAILED") || event.failureReason;
-                const color = isFailed ? "red" : event.eventType.includes("AI") ? "purple" : "blue";
 
                 return (
                     <div
@@ -964,9 +947,12 @@ function renderExecutionEvents(events: AgentChatExecutionEventDto[]) {
                             fontSize: 12
                         }}
                     >
-                        <Tag color={color} style={{fontSize: 11, marginRight: 8, minWidth: 120, textAlign: "center"}}>
+                        <Typography.Text
+                            type={isFailed ? "danger" : "secondary"}
+                            style={{fontSize: 12, marginRight: 8, minWidth: 120}}
+                        >
                             {event.stepName || event.commandName || event.eventType}
-                        </Tag>
+                        </Typography.Text>
                         {event.responseContent && (
                             <Tooltip title={event.responseContent}>
                                 <Typography.Text

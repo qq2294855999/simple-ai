@@ -1,5 +1,6 @@
 package com.simple.ai.service.agentChat;
 
+import com.simple.ai.common.constant.WebSocketConstant;
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.agentChat.*;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
@@ -309,6 +310,12 @@ class DefaultAgentChatService implements AgentChatService {
                                                          response.getTaskId(), agentContext, eventSender);
         }
 
+        // 调度完成后回填执行事件的 taskId
+        // 调度期间 recordEvent 时 taskId 尚未生成，此处将当前轮次所有执行事件的 taskId 从空串更新为真实任务主键
+        if (response != null && response.getTaskId() != null && !response.getTaskId().isBlank()) {
+            transactionTemplate.executeWithoutResult(status -> executionEventView.updateTaskIdByTurnId(turnId, response.getTaskId()));
+        }
+
         // 在独立短事务内持久化最终消息，保证流式收尾与数据库审计闭环
         String assistantMessageId = saveFinalMessage(session, response, eventConsumer);
 
@@ -395,7 +402,7 @@ class DefaultAgentChatService implements AgentChatService {
 
     /**
      * 构建组合事件消费者，在透传事件的同时记录执行轨迹。
-     * <p>MESSAGE_* 等聊天层事件由 ExecutionEventBus 内部白名单过滤，不会误录入执行轨迹。</p>
+     * <p>AI_TOKEN 和 AI_THINKING_TOKEN 是流式 token 片段，不记录为执行事件，仅透传给 SSE。</p>
      * <p>内部事件统一映射为 PROGRESS 后输出 SSE。</p>
      *
      * @param turnId        对话轮次主键
@@ -413,19 +420,36 @@ class DefaultAgentChatService implements AgentChatService {
             };
         }
 
-        // 组合消费：先记录到执行事件表，再映射为稳定事件透传给原始消费者
+        // 组合消费：执行事件落库（流式 token 片段除外），再映射为稳定事件透传给 SSE
         return event -> {
-            try {
-                executionEventBus.recordEvent(turnId, "", event);
-            } catch (RuntimeException e) {
+            if (!isStreamToken(event)) {
+                try {
+                    executionEventBus.recordEvent(turnId, "", event);
+                } catch (RuntimeException e) {
 
-                // 执行轨迹落库异常不影响主流程
-                log.warn("执行事件记录失败，turnId={}, eventType={}", turnId, event.getEventType(), e);
+                    // 执行轨迹落库异常不影响主流程
+                    log.warn("执行事件记录失败，turnId={}, eventType={}", turnId, event.getEventType(), e);
+                }
             }
             if (eventConsumer != null) {
                 eventConsumer.accept(mapToSseEvent(event));
             }
         };
+    }
+
+    /**
+     * 判断事件是否为流式 token 片段，此类事件不记录为执行事件。
+     *
+     * @param event 调度进度事件
+     * @return 是否为流式 token
+     */
+    private boolean isStreamToken(CommandDispatchProgressEvent event) {
+        if (event == null || event.getEventType() == null) {
+            return false;
+        }
+
+        // AI_TOKEN 和 AI_THINKING_TOKEN 是逐个字符/单词的流式片段，仅 SSE 消费
+        return "AI_TOKEN".equals(event.getEventType()) || "AI_THINKING_TOKEN".equals(event.getEventType());
     }
 
     @Override
@@ -596,7 +620,7 @@ class DefaultAgentChatService implements AgentChatService {
         message.setPayload(batchRequest);
 
         // 调用框架级同步发送，阻塞等待执行器返回
-        Object result = WebSocketUtils.sendSyncMsg("agent-executor", clientId, message);
+        Object result = WebSocketUtils.sendSyncMsg(WebSocketConstant.AGENT_EXECUTOR_TYPE, clientId, message);
 
         // 从返回值提取 ExecutorCommandResultResponse
         ExecutorCommandResultResponse executorResult = extractExecutorResult(result);
@@ -1277,6 +1301,6 @@ class DefaultAgentChatService implements AgentChatService {
     public Boolean isClientOnline(String clientId) {
 
         // 通过 WebSocket ChannelMap 判断客户端是否保持活跃连接
-        return WebSocketUtils.isOnline("agent-executor", clientId);
+        return WebSocketUtils.isOnline(WebSocketConstant.AGENT_EXECUTOR_TYPE, clientId);
     }
 }

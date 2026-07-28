@@ -13,9 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,42 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Service
 class DefaultExecutionEventBus implements ExecutionEventBus {
-
-    /**
-     * 进入 ExecutionEvent 的事件类型白名单。
-     * <p>AI_TOKEN 和 MESSAGE_* 等聊天层事件不入执行轨迹。</p>
-     */
-    private static final Set<String> TRACKED_EVENT_TYPES = new HashSet<>();
-
-    static {
-        // 上下文装配阶段
-        TRACKED_EVENT_TYPES.add("CONTEXT_ASSEMBLING");
-        TRACKED_EVENT_TYPES.add("CONTEXT_ASSEMBLED");
-        TRACKED_EVENT_TYPES.add("RULE_LOADED");
-        TRACKED_EVENT_TYPES.add("SKILL_LOADED");
-        TRACKED_EVENT_TYPES.add("SUB_AGENT_LOADED");
-
-        // 记忆匹配阶段
-        TRACKED_EVENT_TYPES.add("MEMORY_MATCHING");
-        TRACKED_EVENT_TYPES.add("MEMORY_MATCHED");
-        TRACKED_EVENT_TYPES.add("MEMORY_MISSED");
-
-        // 原子命令执行阶段
-        TRACKED_EVENT_TYPES.add("STEP_STARTED");
-        TRACKED_EVENT_TYPES.add("STEP_COMPLETED");
-
-        // AI 调用阶段
-        TRACKED_EVENT_TYPES.add("AI_STARTED");
-        TRACKED_EVENT_TYPES.add("AI_COMPLETED");
-
-        // 子智能体阶段
-        TRACKED_EVENT_TYPES.add("SUB_AGENT_STARTED");
-        TRACKED_EVENT_TYPES.add("SUB_AGENT_COMPLETED");
-
-        // 任务完成/失败阶段
-        TRACKED_EVENT_TYPES.add("TASK_COMPLETED");
-        TRACKED_EVENT_TYPES.add("TASK_FAILED");
-    }
 
     /**
      * 执行事件视图
@@ -82,34 +44,12 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
     public void recordEvent(String turnId, String taskId, CommandDispatchProgressEvent event) {
         AssertUtils.notEmpty(turnId, "轮次主键不能为空");
 
-        // 非轨迹事件不入 ExecutionEvent，仅聊天层消费
-        if (!isTrackedEvent(event)) {
-            return;
-        }
-
         // 构建事件实体并持久化
         ExecutionEvent executionEvent = buildExecutionEvent(turnId, taskId, event);
         executionEventView.save(executionEvent);
 
         // 调试日志记录事件落库
         log.debug("执行事件已记录：turnId={}, eventType={}, sequenceNo={}", turnId, event.getEventType(), executionEvent.getSequenceNo());
-    }
-
-    /**
-     * 判断当前事件是否应进入执行轨迹。
-     *
-     * @param event 调度进度事件
-     * @return 是否进入轨迹
-     */
-    private boolean isTrackedEvent(CommandDispatchProgressEvent event) {
-
-        // 事件或事件类型为空时不记录
-        if (event == null || event.getEventType() == null || event.getEventType().isBlank()) {
-            return false;
-        }
-
-        // 仅白名单内的事件类型进入执行轨迹
-        return TRACKED_EVENT_TYPES.contains(event.getEventType());
     }
 
     /**

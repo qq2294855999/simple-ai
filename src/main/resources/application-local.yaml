@@ -58,6 +58,8 @@ springdoc:
 
 # 项目配置
 simple:
+  websocket:
+    max-web-socket-frame-size: 1048576  # WebSocket 最大帧大小 1MB，防止大消息（如能力查询结果）超出默认限制
   event:
     type: mq # 事件实现方式
     concurrency: 1 # 事件消费并发数

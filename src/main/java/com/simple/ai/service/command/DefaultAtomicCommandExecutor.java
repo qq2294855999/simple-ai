@@ -1,5 +1,6 @@
 package com.simple.ai.service.command;
 
+import com.simple.ai.common.constant.WebSocketConstant;
 import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.service.command.AtomicCommandExecutor;
 import com.simple.common.core.utils.AssertUtils;
@@ -28,11 +29,6 @@ import java.util.concurrent.TimeUnit;
 public class DefaultAtomicCommandExecutor implements AtomicCommandExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultAtomicCommandExecutor.class);
-
-    /**
-     * 执行客户端 WebSocket 通道类型
-     */
-    private static final String EXECUTOR_CHANNEL_TYPE = "agent-executor";
 
     /**
      * SEP 批量命令消息类型
@@ -79,7 +75,7 @@ public class DefaultAtomicCommandExecutor implements AtomicCommandExecutor {
         // 打印 WebSocket 发送消息（debug 级别）
         log.debug("WebSocket 下发原子命令 [clientId={}, commandId={}]: {}", clientId, commandId, JsonUtils.toJsonStr(message));
 
-        Object result = WebSocketUtils.sendSyncMsg(EXECUTOR_CHANNEL_TYPE, clientId, message, RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        Object result = WebSocketUtils.sendSyncMsg(WebSocketConstant.AGENT_EXECUTOR_TYPE, clientId, message, RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         // 打印 WebSocket 接收消息（debug 级别）
         log.debug("WebSocket 收到原子命令回执 [clientId={}, commandId={}]: {}", clientId, commandId, result != null ? JsonUtils.toJsonStr(result) : "null");
@@ -127,7 +123,7 @@ public class DefaultAtomicCommandExecutor implements AtomicCommandExecutor {
         // 打印 WebSocket 发送系统命令消息（debug 级别）
         log.debug("WebSocket 下发系统命令 [clientId={}, commandId={}]: {}", clientId, commandId, JsonUtils.toJsonStr(message));
 
-        Object result = WebSocketUtils.sendSyncMsg(EXECUTOR_CHANNEL_TYPE, clientId, message, RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        Object result = WebSocketUtils.sendSyncMsg(WebSocketConstant.AGENT_EXECUTOR_TYPE, clientId, message, RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         // 打印 WebSocket 接收系统命令回执（debug 级别）
         log.debug("WebSocket 收到系统命令回执 [clientId={}, commandId={}]: {}", clientId, commandId, result != null ? JsonUtils.toJsonStr(result) : "null");

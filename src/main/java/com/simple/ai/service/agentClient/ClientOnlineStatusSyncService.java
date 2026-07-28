@@ -1,6 +1,7 @@
 package com.simple.ai.service.agentClient;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.simple.ai.common.constant.WebSocketConstant;
 import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.enums.AgentClientStatusProcess;
 import com.simple.ai.common.view.agentClient.AgentClientView;
@@ -26,11 +27,6 @@ import java.util.List;
 @Slf4j
 @Component
 public class ClientOnlineStatusSyncService {
-
-    /**
-     * WebSocket 客户端类型标识
-     */
-    private static final String AGENT_EXECUTOR_TYPE = "agent-executor";
 
     @Autowired
     private AgentClientView agentClientView;
@@ -83,7 +79,7 @@ public class ClientOnlineStatusSyncService {
             String clientId = client.getId();
 
             // 通过 WebSocket ChannelMap 判断是否真正在线
-            boolean actuallyOnline = WebSocketUtils.isOnline(AGENT_EXECUTOR_TYPE, clientId);
+            boolean actuallyOnline = WebSocketUtils.isOnline(WebSocketConstant.AGENT_EXECUTOR_TYPE, clientId);
 
             // 数据库记录与 ChannelMap 不一致时需同步
             boolean dbOnline = Boolean.TRUE.equals(client.getIsOnline());

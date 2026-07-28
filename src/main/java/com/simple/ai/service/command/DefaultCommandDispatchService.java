@@ -485,7 +485,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
 
     /**
      * 发布 AI 推理思考过程 token 进度事件（reasoning content）。
-     * <p>AI_THINKING_TOKEN 不进入 ExecutionEvent 白名单，仅聊天层 THINKING 气泡消费。</p>
+     * <p>AI_THINKING_TOKEN 是流式 token 片段，不记录为执行事件，仅聊天层 THINKING 气泡消费。</p>
      *
      * @param progressConsumer 进度事件消费者
      * @param request          命令调度请求
