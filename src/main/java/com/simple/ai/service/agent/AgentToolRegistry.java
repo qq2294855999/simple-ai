@@ -337,10 +337,10 @@ public class AgentToolRegistry {
                                            eventSender.sendProgress(progressMsg);
                                        }
 
-                                       // 使用运行时上下文中的 clientId 补全请求参数
+                                       // 使用运行时上下文中的 clientId 强制覆盖（服务端受控字段，禁止AI指定）
                                        if (context != null) {
                                            String clientId = (String) context.get("clientId");
-                                           if (clientId != null && !clientId.isBlank() && (req.getClientId() == null || req.getClientId().isBlank())) {
+                                           if (clientId != null && !clientId.isBlank()) {
                                                req.setClientId(clientId);
                                            }
                                        }

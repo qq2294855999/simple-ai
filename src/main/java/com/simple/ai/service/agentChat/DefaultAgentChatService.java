@@ -7,6 +7,7 @@ import com.simple.ai.common.dto.chatTurn.FindAllChatTurnRequest;
 import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
+import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.chatTurn.ChatTurn;
@@ -23,6 +24,7 @@ import com.simple.ai.common.service.command.CommandDispatchService;
 import com.simple.ai.common.service.executionEvent.ExecutionEventBus;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
 import com.simple.ai.common.view.agentChatSession.AgentChatSessionView;
+import com.simple.ai.common.view.agentClient.AgentClientView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.chatTurn.ChatTurnView;
@@ -106,6 +108,12 @@ class DefaultAgentChatService implements AgentChatService {
     private AtomicCommandView atomicCommandView;
 
     /**
+     * 客户端实例视图，用于查询客户端绑定的执行器ID
+     */
+    @Autowired
+    private AgentClientView agentClientView;
+
+    /**
      * 智能体上下文组装器
      */
     @Autowired
@@ -165,14 +173,23 @@ class DefaultAgentChatService implements AgentChatService {
         // 校验执行客户端在线状态，避免后续 WebSocket 调用无响应等待超时
         AssertUtils.isTrue(isClientOnline(request.getClientId()), "执行客户端[{}]不在线，请先启动客户端", request.getClientId());
 
+        // 查询客户端实例，获取其绑定的执行器ID用于关联原子命令
+        AgentClient agentClient = agentClientView.findById(request.getClientId());
+        AssertUtils.notEmpty(agentClient, "客户端[{}]不存在", request.getClientId());
+        AssertUtils.notEmpty(agentClient.getExecutorId(), "客户端[{}]未绑定执行器", request.getClientId());
+
+        // 获取当前登录用户ID，用于原子命令私域隔离
+        String currentUserId = LoginUserUtils.getUserTemporary().getUserId();
+        AssertUtils.notEmpty(currentUserId, "当前登录用户身份为空");
+
         // 创建期装配快照：查询全部资产并序列化为 JSON
         String snapshotJson = agentContextAssembler.assembleForSnapshot(request.getAgentId(), request.getClientId());
 
         // 通过 WebSocket 同步查询执行器能力，获取支持的原子命令列表
         List<CapabilityResultDto.CommandItem> capabilities = fetchCapabilities(request.getClientId());
 
-        // 将执行器能力命令 upsert 到本地 atomic_command 表
-        upsertCapabilityCommands(capabilities);
+        // 将执行器能力命令 upsert 到本地 atomic_command 表，关联执行器ID和用户ID
+        upsertCapabilityCommands(capabilities, agentClient.getExecutorId(), currentUserId);
 
         // 将能力命令列表合并到快照中
         snapshotJson = agentContextAssembler.enrichSnapshotWithCapabilities(snapshotJson, capabilities);
@@ -623,11 +640,14 @@ class DefaultAgentChatService implements AgentChatService {
     /**
      * 将执行器能力命令 upsert 到本地 atomic_command 表。
      * <p>按命令编码（command）批量查询已有记录，内存中比对后拆分为更新列表和新增列表，
-     * 分别使用批量更新和批量插入操作，避免逐条数据库交互。</p>
+     * 分别使用批量更新和批量插入操作，避免逐条数据库交互。
+     * 同时为每条命令关联执行器ID和用户ID，确保命令与执行器绑定且私域隔离。</p>
      *
      * @param capabilities 执行器能力命令列表
+     * @param executorId   执行器主键，关联 agent_executor.id
+     * @param userId       用户归属ID，确保每个用户的原子命令私域隔离
      */
-    private void upsertCapabilityCommands(List<CapabilityResultDto.CommandItem> capabilities) {
+    private void upsertCapabilityCommands(List<CapabilityResultDto.CommandItem> capabilities, String executorId, String userId) {
         if (capabilities == null || capabilities.isEmpty()) {
             return;
         }
@@ -658,20 +678,24 @@ class DefaultAgentChatService implements AgentChatService {
                 AtomicCommand existing = existingMap.get(code);
                 if (existing != null) {
 
-                    // 更新已有命令的名称、角色、状态
+                    // 更新已有命令的名称、角色、状态、执行器ID和用户ID
                     existing.setName(item.getName());
                     existing.setRole(item.getDescription());
                     existing.setStatus(Status.ON);
+                    existing.setExecutorId(executorId);
+                    existing.setUserId(userId);
                     toUpdate.add(existing);
                 } else {
 
-                    // 构建新增命令记录
+                    // 构建新增命令记录，关联执行器ID和用户ID
                     AtomicCommand newCommand = new AtomicCommand();
                     newCommand.setName(item.getName());
                     newCommand.setCommand(code);
                     newCommand.setRole(item.getDescription());
                     newCommand.setStatus(Status.ON);
                     newCommand.setRemark("由执行端 system.capability 同步");
+                    newCommand.setExecutorId(executorId);
+                    newCommand.setUserId(userId);
                     toInsert.add(newCommand);
                 }
             }

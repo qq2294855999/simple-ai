@@ -91,5 +91,17 @@ public class AtomicCommand {
     @TableField(value = "remark")
     private String remark;
 
+    /**
+     * 用户归属ID，确保每个用户的原子命令私域隔离
+     */
+    @TableField(value = "user_id")
+    private String userId;
+
+    /**
+     * 执行器类型外键，关联 agent_executor.id
+     */
+    @TableField(value = "executor_id")
+    private String executorId;
+
 }
 
