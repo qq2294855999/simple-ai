@@ -36,48 +36,53 @@ public class ChatEventSender {
     /**
      * 发送进度事件。
      *
+     * @param taskId  任务主键，用于前端按任务分组匹配气泡
      * @param message 面向用户的当前动作描述
      */
-    public void sendProgress(String message) {
-        send(ChatSseEvent.builder().type(ChatSseEvent.Types.PROGRESS).data(message).completed(false).build());
+    public void sendProgress(String taskId, String message) {
+        send(ChatSseEvent.builder().type(ChatSseEvent.Types.PROGRESS).taskId(taskId).data(message).completed(false).build());
     }
 
     /**
      * 发送思考增量事件。
      *
-     * @param chunk reasoning 增量 token
+     * @param taskId 任务主键，用于前端按任务分组匹配气泡
+     * @param chunk  reasoning 增量 token
      */
-    public void sendThinking(String chunk) {
-        send(ChatSseEvent.builder().type(ChatSseEvent.Types.THINKING).data(chunk).completed(false).build());
+    public void sendThinking(String taskId, String chunk) {
+        send(ChatSseEvent.builder().type(ChatSseEvent.Types.THINKING).taskId(taskId).data(chunk).completed(false).build());
     }
 
     /**
      * 发送回复增量事件。
      *
-     * @param chunk content 增量 token
+     * @param taskId 任务主键，用于前端按任务分组匹配气泡
+     * @param chunk  content 增量 token
      */
-    public void sendReply(String chunk) {
-        send(ChatSseEvent.builder().type(ChatSseEvent.Types.REPLY).data(chunk).completed(false).build());
+    public void sendReply(String taskId, String chunk) {
+        send(ChatSseEvent.builder().type(ChatSseEvent.Types.REPLY).taskId(taskId).data(chunk).completed(false).build());
     }
 
     /**
      * 发送最终事件。
      *
+     * @param taskId          任务主键，用于前端按任务分组匹配气泡
      * @param messageId       消息主键
      * @param turnId          轮次主键
      * @param thinkingSummary 思考内容摘要
      */
-    public void sendFinal(String messageId, String turnId, String thinkingSummary) {
-        send(ChatSseEvent.builder().type(ChatSseEvent.Types.FINAL).messageId(messageId).turnId(turnId).thinkingSummary(thinkingSummary).completed(true).build());
+    public void sendFinal(String taskId, String messageId, String turnId, String thinkingSummary) {
+        send(ChatSseEvent.builder().type(ChatSseEvent.Types.FINAL).taskId(taskId).messageId(messageId).turnId(turnId).thinkingSummary(thinkingSummary).completed(true).build());
     }
 
     /**
      * 发送错误事件。
      *
+     * @param taskId      任务主键，用于前端按任务分组匹配气泡
      * @param errorReason 可展示的失败原因
      */
-    public void sendError(String errorReason) {
-        send(ChatSseEvent.builder().type(ChatSseEvent.Types.ERROR).errorReason(errorReason).completed(true).build());
+    public void sendError(String taskId, String errorReason) {
+        send(ChatSseEvent.builder().type(ChatSseEvent.Types.ERROR).taskId(taskId).errorReason(errorReason).completed(true).build());
     }
 
     /**

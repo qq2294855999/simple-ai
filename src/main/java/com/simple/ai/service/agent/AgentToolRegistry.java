@@ -332,9 +332,10 @@ public class AgentToolRegistry {
                                            progressMsg = "正在执行原子命令：" + (req.getCommandContent() != null ? req.getCommandContent() : "");
                                        }
 
-                                       // 发送原子命令调用进度事件到前端
+                                       // 发送原子命令调用进度事件到前端，携带 taskId 供前端按任务匹配气泡
                                        if (eventSender != null) {
-                                           eventSender.sendProgress(progressMsg);
+                                           String progressTaskId = req.getTaskId() != null ? req.getTaskId() : "";
+                                           eventSender.sendProgress(progressTaskId, progressMsg);
                                        }
 
                                        // 使用运行时上下文中的 clientId 强制覆盖（服务端受控字段，禁止AI指定）

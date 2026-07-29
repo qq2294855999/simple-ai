@@ -1049,17 +1049,17 @@ class DefaultAgentChatService implements AgentChatService {
     private void publishFinalEvent(Consumer<ChatSseEvent> eventConsumer, String sessionId, AgentChatMessage message, CommandDispatchResponse response) {
         boolean success = AgentExecutionStatusProcess.SUCCESS.equals(response.getExecStatus());
 
-        // 成功时发送 FINAL 事件，失败时发送 ERROR 事件
+        // 成功时发送 FINAL 事件，携带 taskId 供前端按任务匹配气泡
         if (success) {
             sendSseEvent(eventConsumer, ChatSseEvent.builder()
                                                     .type(ChatSseEvent.Types.FINAL)
                                                     .messageId(message.getId())
                                                     .data(message.getContent())
-                                                    .thinkingSummary(message.getThinkingContent())
+                                                    .thinkingSummary(message.getThinkingContent()).taskId(message.getTaskId())
                                                     .completed(true)
                                                     .build());
         } else {
-            sendSseEvent(eventConsumer, ChatSseEvent.builder().type(ChatSseEvent.Types.ERROR).errorReason(response.getFailureReason()).completed(true).build());
+            sendSseEvent(eventConsumer, ChatSseEvent.builder().type(ChatSseEvent.Types.ERROR).errorReason(response.getFailureReason()).taskId(message.getTaskId()).completed(true).build());
         }
     }
 

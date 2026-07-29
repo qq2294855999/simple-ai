@@ -598,13 +598,16 @@ class SpringAiAgentAiClient implements AgentAiClient {
             return new ArrayList<>();
         }
 
-        // 第二步：从最早的 USER 消息索引开始，收集到最新消息，确保轮次完整
+        // 第二步：从最早的 USER 消息索引开始，收集到最新消息（不含当前轮次用户消息），确保轮次完整
+        // userIndices 从后向前构建，第一个元素是最近的 USER 消息，最后一个元素才是最早的 USER 消息
         int startIndex = userIndices.get(userIndices.size() - 1);
         List<Message> historyMessages = new ArrayList<>();
-        for (int i = startIndex; i < allMessages.size(); i++) {
+        int endIndex = allMessages.size() - 1;
+        for (int i = startIndex; i < endIndex; i++) {
             AgentChatMessage msg = allMessages.get(i);
-            if ("USER".equals(msg.getRole()) || "ASSISTANT".equals(msg.getRole())) {
-                historyMessages.add(toSpringAiMessage(msg));
+            Message springMsg = toSpringAiMessage(msg);
+            if (springMsg != null) {
+                historyMessages.add(springMsg);
             }
         }
 
@@ -613,15 +616,25 @@ class SpringAiAgentAiClient implements AgentAiClient {
 
     /**
      * 将 AgentChatMessage 实体转换为 Spring AI Message 对象。
+     * <p>SYSTEM_ERROR 消息转换为 AssistantMessage，让 AI 知晓上一轮执行失败的原因。</p>
      *
      * @param msg 聊天消息实体
-     * @return Spring AI Message 对象
+     * @return Spring AI Message 对象，不支持的角色返回 null
      */
     private Message toSpringAiMessage(AgentChatMessage msg) {
         if ("ASSISTANT".equals(msg.getRole())) {
             return new AssistantMessage(msg.getContent());
         }
-        return new UserMessage(msg.getContent());
+
+        // SYSTEM_ERROR 消息也作为 AssistantMessage 注入历史，让 AI 感知上一轮失败原因
+        if ("SYSTEM_ERROR".equals(msg.getRole())) {
+            return new AssistantMessage("【系统提示】上一轮 AI 回复失败，原因：" + msg.getContent());
+        }
+
+        if ("USER".equals(msg.getRole())) {
+            return new UserMessage(msg.getContent());
+        }
+        return null;
     }
 
     /**

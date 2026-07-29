@@ -254,7 +254,7 @@ export function appendThinkingToken(
  * 完成后气泡仍保留在原位，用户可展开回顾，解决「割裂」位置跳跃问题。
  *
  * @param messages 当前消息
- * @param taskId 任务ID
+ * @param taskId 任务ID，为空时使用 fallback 匹配
  * @param status "OK" | "FAILED"
  * @returns 更新后的消息
  */
@@ -268,13 +268,14 @@ export function finalizeProgressBubble(
         return messages;
     }
 
-    // 最终 id 使用 taskId 前缀，流式 id 只用于前端占位不参与持久化比较
+    // 最终 id 使用 taskId 前缀，taskId 为空时使用气泡自身 id 兜底
+    const finalIdPrefix = taskId || found.message.id;
     const updated = [...messages];
     const totalSteps = found.message.executionEvents.length;
     const badge = status === "OK" ? "✅" : "❌";
     updated[found.index] = {
         ...found.message,
-        id: `final-progress-${taskId || found.message.id}`,
+        id: `final-progress-${finalIdPrefix}`,
         content: `${badge} 执行详情 (${totalSteps} 步)`,
         bubbleType: "PROGRESS"
     };
@@ -285,7 +286,7 @@ export function finalizeProgressBubble(
  * 完成 THINKING 气泡：无思考内容时整条移除，有内容时保留并折叠。
  *
  * @param messages 当前消息
- * @param taskId 任务ID
+ * @param taskId 任务ID，为空时使用 fallback 匹配
  * @returns 更新后的消息
  */
 export function finalizeThinkingBubble(messages: AgentChatMessageDto[], taskId: string): AgentChatMessageDto[] {
@@ -302,11 +303,13 @@ export function finalizeThinkingBubble(messages: AgentChatMessageDto[], taskId: 
         return updated;
     }
 
+    // 最终 id 使用 taskId 前缀，taskId 为空时使用气泡自身 id 兜底
+    const finalIdPrefix = taskId || found.message.id;
     const updated = [...messages];
     const charCount = trimmed.length;
     updated[found.index] = {
         ...found.message,
-        id: `final-thinking-${taskId || found.message.id}`,
+        id: `final-thinking-${finalIdPrefix}`,
         content: `✅ 思考过程 (约 ${charCount} 字)`,
         bubbleType: "THINKING"
     };
@@ -316,6 +319,7 @@ export function finalizeThinkingBubble(messages: AgentChatMessageDto[], taskId: 
 /**
  * 替换流式临时回复气泡为最终消息内容。
  * 不再把 executionEvents 合并进回复气泡（已独立到 PROGRESS 气泡）。
+ * <p>当 taskId 为空时，依次使用 messageId、turnId 作为 fallback，确保每轮 FINAL 消息 ID 唯一。</p>
  *
  * @param messages 当前消息
  * @param event 最终事件
@@ -323,8 +327,12 @@ export function finalizeThinkingBubble(messages: AgentChatMessageDto[], taskId: 
  */
 export function replaceFinalMessage(messages: AgentChatMessageDto[], event: AgentChatProgressEventDto): AgentChatMessageDto[] {
     const isFailed = (event as any).type === "ERROR" || event.eventType === "ERROR";
+
+    // taskId 为空时，依次使用 messageId、turnId 作为 fallback，确保每轮 FINAL 消息 ID 唯一
+    const finalId = event.taskId || event.messageId || event.turnId || "streaming";
+
     const message: AgentChatMessageDto = {
-        id: `final-${event.taskId}`,
+        id: `final-${finalId}`,
         taskId: event.taskId,
         turnId: event.turnId || "",
         role: isFailed ? "SYSTEM_ERROR" : "ASSISTANT",
