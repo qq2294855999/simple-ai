@@ -52,6 +52,18 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
         log.debug("执行事件已记录：turnId={}, eventType={}, sequenceNo={}", turnId, event.getEventType(), executionEvent.getSequenceNo());
     }
 
+    @Override
+    public void clearTurnSequence(String turnId) {
+
+        // 轮次主键为空时无需清理
+        if (turnId == null || turnId.isBlank()) {
+            return;
+        }
+
+        // 移除轮次序号计数器，释放内存避免长期运行后 Map 无限膨胀
+        turnSequenceMap.remove(turnId);
+    }
+
     /**
      * 构建执行事件实体。
      * <p>将调度进度事件映射为 ExecutionEvent，事件类型直接使用原始 eventType。</p>
@@ -163,7 +175,7 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
 
     /**
      * 截断响应内容。
-     * <p>STEP_COMPLETED 和 AI_COMPLETED 事件保留响应摘要（最大500字符），其余不记录。</p>
+     * <p>STEP_COMPLETED、AI_COMPLETED、AI_TOKEN、AI_THINKING_TOKEN 事件保留响应摘要（最大500字符），其余不记录。</p>
      *
      * @param event 调度进度事件
      * @return 截断后的响应内容
@@ -171,8 +183,8 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
     private String truncateResponseContent(CommandDispatchProgressEvent event) {
         String eventType = event.getEventType();
 
-        // 步骤完成和 AI 完成事件记录响应摘要
-        if ("STEP_COMPLETED".equals(eventType) || "AI_COMPLETED".equals(eventType)) {
+        // 步骤完成、AI 完成以及流式 token 事件记录响应摘要
+        if ("STEP_COMPLETED".equals(eventType) || "AI_COMPLETED".equals(eventType) || "AI_TOKEN".equals(eventType) || "AI_THINKING_TOKEN".equals(eventType)) {
             return truncateText(event.getPayload(), 500);
         }
         return "";

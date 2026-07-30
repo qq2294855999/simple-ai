@@ -1,6 +1,5 @@
 package com.simple.ai.common.dto.agent;
 
-import com.simple.ai.common.dto.command.CapabilityResultDto;
 import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
 import com.simple.ai.common.entity.agentExecutor.AgentExecutor;
@@ -87,10 +86,10 @@ public class AgentContextSnapshot {
     private List<AtomicCommand> atomicCommands;
 
     /**
-     * 执行器实时能力命令列表（从 system.capability 获取，用于与本地命令交叉校验）
+     * 执行器实时能力命令列表原始 JSON（从 system.capability 获取，直接存储不做解析）。
      */
-    @Schema(description = "执行器实时能力命令列表")
-    private List<CapabilityResultDto.CommandItem> commandCapabilities;
+    @Schema(description = "执行器实时能力命令列表原始 JSON")
+    private String commandCapabilities;
 
     /**
      * 快照版本号，用于后续兼容升级。

@@ -7,7 +7,7 @@ import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
 import com.simple.ai.common.dto.agentRule.FindAllAgentRuleRequest;
 import com.simple.ai.common.dto.agentSkill.FindAllAgentSkillRequest;
 import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
-import com.simple.ai.common.dto.command.CapabilityResultDto;
+
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.subAgentRelation.FindAllSubAgentRelationRequest;
 import com.simple.ai.common.entity.agentClient.AgentClient;
@@ -388,24 +388,27 @@ public class AgentContextAssembler {
         builder.append("<current_session>\n");
 
         // 客户端信息：从完整对象取名称和在线状态，不暴露 clientId
+        // 属性值必须转义，防止名称中双引号截断 XML
         AgentClient client = context.getClient();
         if (client != null) {
-            builder.append("  <client name=\"").append(safeStr(client.getClientName()));
+            builder.append("  <client name=\"").append(escapeXmlAttr(client.getClientName()));
             builder.append("\" online=\"").append(client.getIsOnline() != null && client.getIsOnline()).append("\" />\n");
         }
 
         // 执行器信息：从完整对象取编码、名称、描述，不暴露 executorId
+        // 属性值必须转义，防止描述中特殊字符破坏 XML
         AgentExecutor executor = context.getExecutor();
         if (executor != null) {
-            builder.append("  <executor code=\"").append(safeStr(executor.getExecutorCode()));
-            builder.append("\" name=\"").append(safeStr(executor.getExecutorName()));
-            builder.append("\" desc=\"").append(safeStr(executor.getDescription())).append("\" />\n");
+            builder.append("  <executor code=\"").append(escapeXmlAttr(executor.getExecutorCode()));
+            builder.append("\" name=\"").append(escapeXmlAttr(executor.getExecutorName()));
+            builder.append("\" desc=\"").append(escapeXmlAttr(executor.getDescription())).append("\" />\n");
         }
 
         // 协议信息：从完整对象取名称，不暴露 protocolId
+        // 属性值必须转义，防止名称中特殊字符破坏 XML
         Protocol protocol = context.getProtocol();
         if (protocol != null && protocol.getProtocolName() != null && !protocol.getProtocolName().isBlank()) {
-            builder.append("  <protocol name=\"").append(protocol.getProtocolName()).append("\" />\n");
+            builder.append("  <protocol name=\"").append(escapeXmlAttr(protocol.getProtocolName())).append("\" />\n");
         }
 
         builder.append("</current_session>\n\n");
@@ -422,6 +425,30 @@ public class AgentContextAssembler {
     }
 
     /**
+     * 转义 XML 属性值，防止双引号、&、<、> 等特殊字符破坏 XML 结构。
+     * <p>用于将业务文本写入 XML 属性（如 {@code code="..."}）时，
+     * 必须先转义，否则用户输入的双引号会截断属性值导致 XML 破损。
+     * 与 CDATA 包裹互补：CDATA 适用于标签体内容，属性值无法使用 CDATA。</p>
+     *
+     * @param value 原始值
+     * @return 转义后的安全字符串（null 返回空串）
+     */
+    private String escapeXmlAttr(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        // 按 XML 规范顺序转义：& 必须最先处理，避免二次转义
+        String result = value;
+        result = result.replace("&", "&amp;");
+        result = result.replace("<", "&lt;");
+        result = result.replace(">", "&gt;");
+        result = result.replace("\"", "&quot;");
+        result = result.replace("'", "&apos;");
+        return result;
+    }
+
+    /**
      * 追加智能体定义提示词。
      *
      * <p>告知 AI 自己的身份信息，不暴露 agentId（AI 无需直接操作ID）。</p>
@@ -430,16 +457,19 @@ public class AgentContextAssembler {
      * @param agentDefinition 智能体定义
      */
     private void appendAgentDefinition(StringBuilder builder, AgentDefinition agentDefinition) {
-        builder.append("<system_iron_rule>\n");
-        builder.append(AgentIronRuleConstant.SYSTEM_IRON_RULE);
-        builder.append("\n</system_iron_rule>\n\n");
 
+        // 系统铁律为大段 Markdown 文本，用 CDATA 包裹避免特殊字符（&、<、|）破坏 XML 解析
+        builder.append("<system_iron_rule><![CDATA[\n");
+        builder.append(AgentIronRuleConstant.SYSTEM_IRON_RULE);
+        builder.append("\n]]></system_iron_rule>\n\n");
+
+        // 智能体定义字段为用户输入的业务文本，可能含特殊字符，用 CDATA 包裹保护
         builder.append("<agent>\n");
-        builder.append("  <name>").append(agentDefinition.getName()).append("</name>\n");
-        builder.append("  <definition>").append(agentDefinition.getDefinitionDesc()).append("</definition>\n");
-        builder.append("  <first_principle>").append(agentDefinition.getFirstPrinciple()).append("</first_principle>\n");
-        builder.append("  <second_rule>").append(agentDefinition.getSecondRule()).append("</second_rule>\n");
-        builder.append("  <third_skill>").append(agentDefinition.getThirdSkill()).append("</third_skill>\n");
+        builder.append("  <name>").append(safeStr(agentDefinition.getName())).append("</name>\n");
+        builder.append("  <definition><![CDATA[").append(safeStr(agentDefinition.getDefinitionDesc())).append("]]></definition>\n");
+        builder.append("  <first_principle><![CDATA[").append(safeStr(agentDefinition.getFirstPrinciple())).append("]]></first_principle>\n");
+        builder.append("  <second_rule><![CDATA[").append(safeStr(agentDefinition.getSecondRule())).append("]]></second_rule>\n");
+        builder.append("  <third_skill><![CDATA[").append(safeStr(agentDefinition.getThirdSkill())).append("]]></third_skill>\n");
         builder.append("</agent>\n\n");
     }
 
@@ -456,11 +486,12 @@ public class AgentContextAssembler {
         builder.append("<rules>\n");
 
         // 遍历直属规则，将定义描述、触发条件和触发动作写入提示词
+        // 用户输入的业务文本可能含特殊字符，用 CDATA 包裹保护
         for (AgentRule rule : rules) {
             builder.append("  <rule>\n");
-            builder.append("    <desc>").append(rule.getDefinitionDesc()).append("</desc>\n");
-            builder.append("    <condition>").append(rule.getTriggerCondition()).append("</condition>\n");
-            builder.append("    <action>").append(rule.getTriggerAction()).append("</action>\n");
+            builder.append("    <desc><![CDATA[").append(safeStr(rule.getDefinitionDesc())).append("]]></desc>\n");
+            builder.append("    <condition><![CDATA[").append(safeStr(rule.getTriggerCondition())).append("]]></condition>\n");
+            builder.append("    <action><![CDATA[").append(safeStr(rule.getTriggerAction())).append("]]></action>\n");
             builder.append("  </rule>\n");
         }
         builder.append("</rules>\n\n");
@@ -479,11 +510,12 @@ public class AgentContextAssembler {
         builder.append("<skills>\n");
 
         // 遍历直属技能，将定义描述、执行内容和返回格式写入提示词
+        // 用户输入的业务文本可能含特殊字符，用 CDATA 包裹保护
         for (AgentSkill skill : skills) {
             builder.append("  <skill>\n");
-            builder.append("    <desc>").append(skill.getDefinitionDesc()).append("</desc>\n");
-            builder.append("    <content>").append(skill.getExecContent()).append("</content>\n");
-            builder.append("    <format>").append(skill.getReturnDataFormat()).append("</format>\n");
+            builder.append("    <desc><![CDATA[").append(safeStr(skill.getDefinitionDesc())).append("]]></desc>\n");
+            builder.append("    <content><![CDATA[").append(safeStr(skill.getExecContent())).append("]]></content>\n");
+            builder.append("    <format><![CDATA[").append(safeStr(skill.getReturnDataFormat())).append("]]></format>\n");
             builder.append("  </skill>\n");
         }
         builder.append("</skills>\n\n");
@@ -521,18 +553,19 @@ public class AgentContextAssembler {
         builder.append("<atomic_commands>\n");
 
         // 告知 AI 使用 executeAtomicCommand 工具来执行这些命令
-        builder.append("  <instruction>");
+        // 说明文本用 CDATA 包裹，避免括号等特殊字符干扰 XML 解析
+        builder.append("  <instruction><![CDATA[");
         builder.append("你可以通过 executeAtomicCommand 工具直接向执行器下发以下命令。");
         builder.append("调用时 commandContent 填命令编码（如 system.capability、app.ensure），");
-        builder.append("requestParams 填命令所需的参数（JSON 格式的键值对）。</instruction>\n");
+        builder.append("requestParams 填命令所需的参数（JSON 格式的键值对）。]]></instruction>\n");
 
-        // 遍历原子命令，列出名称、编码和作用
+        // 遍历原子命令，利用 XML 属性简化结构，减少嵌套层级
+        // code/name/role 均为短文本，适合用属性表达键值对
+        // 属性值必须转义，防止命令名称中双引号截断 XML
         for (AtomicCommand cmd : atomicCommands) {
-            builder.append("  <command>\n");
-            builder.append("    <code>").append(safeStr(cmd.getCommand())).append("</code>\n");
-            builder.append("    <name>").append(safeStr(cmd.getName())).append("</name>\n");
-            builder.append("    <role>").append(safeStr(cmd.getRole())).append("</role>\n");
-            builder.append("  </command>\n");
+            builder.append("  <command code=\"").append(escapeXmlAttr(cmd.getCommand()));
+            builder.append("\" name=\"").append(escapeXmlAttr(cmd.getName()));
+            builder.append("\" role=\"").append(escapeXmlAttr(cmd.getRole())).append("\" />\n");
         }
         builder.append("</atomic_commands>\n\n");
     }
@@ -552,14 +585,15 @@ public class AgentContextAssembler {
         builder.append("<memories>\n");
 
         // 遍历已发布记忆，将记忆名称、摘要和参数定义写入提示词供 AI 意图识别
+        // 用户输入的业务文本可能含特殊字符，用 CDATA 包裹保护
         for (AgentMemory memory : memories) {
             builder.append("  <memory>\n");
-            builder.append("    <name>").append(memory.getMemoryName()).append("</name>\n");
-            builder.append("    <summary>").append(memory.getSummary() != null ? memory.getSummary() : "").append("</summary>\n");
+            builder.append("    <name><![CDATA[").append(safeStr(memory.getMemoryName())).append("]]></name>\n");
+            builder.append("    <summary><![CDATA[").append(safeStr(memory.getSummary())).append("]]></summary>\n");
 
             // 补充参数定义，供AI判断用户输入是否提供了足够参数
             if (memory.getParamsDefinition() != null && !memory.getParamsDefinition().isBlank()) {
-                builder.append("    <params_definition>").append(memory.getParamsDefinition()).append("</params_definition>\n");
+                builder.append("    <params_definition><![CDATA[").append(memory.getParamsDefinition()).append("]]></params_definition>\n");
             }
 
             builder.append("  </memory>\n");
@@ -643,25 +677,24 @@ public class AgentContextAssembler {
     }
 
     /**
-     * 将执行器能力命令列表写入已有快照 JSON。
-     * <p>在创建会话时，先调用 {@link #assembleForSnapshot} 获取基础快照，
-     * 再调用 system.capability 获取执行器实时能力，最后通过本方法将能力列表
-     * 合并到快照中，刷新版本号后返回。</p>
+     * 将执行器能力命令的原始 JSON 字符串写入已有快照。
+     * <p>直接存储 WebSocket 返回的原始数据，不做解析也不入库，
+     * 供后续会话使用时按需读取。</p>
      *
      * @param snapshotJson 基础快照 JSON
-     * @param capabilities 执行器能力命令列表
+     * @param capabilitiesJson 执行器能力命令的原始 JSON 字符串
      * @return 合并后的快照 JSON
      */
-    public String enrichSnapshotWithCapabilities(String snapshotJson, List<CapabilityResultDto.CommandItem> capabilities) {
+    public String enrichSnapshotWithCapabilities(String snapshotJson, String capabilitiesJson) {
         AssertUtils.notEmpty(snapshotJson, "快照 JSON 不能为空");
 
         AgentContextSnapshot snapshot = JsonUtils.toJsonObj(snapshotJson, AgentContextSnapshot.class);
         AssertUtils.notEmpty(snapshot, "快照 JSON 解析失败");
 
-        // 写入执行器能力命令列表
-        snapshot.setCommandCapabilities(capabilities);
+        // 直接写入原始 JSON 字符串
+        snapshot.setCommandCapabilities(capabilitiesJson);
 
-        // 更新快照版本号（次版本递增，表示数据内容刷新）
+        // 更新快照版本号
         snapshot.setVersion(SNAPSHOT_VERSION);
         snapshot.setCreatedAt(System.currentTimeMillis());
 

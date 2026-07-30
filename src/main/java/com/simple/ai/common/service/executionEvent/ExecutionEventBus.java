@@ -19,4 +19,12 @@ public interface ExecutionEventBus {
      * @param event  调度进度事件
      */
     void recordEvent(String turnId, String taskId, CommandDispatchProgressEvent event);
+
+    /**
+     * 清理指定轮次的内存序号计数器。
+     * <p>轮次完成后调用，释放 turnSequenceMap 中对应 turnId 的条目，避免内存泄漏。</p>
+     *
+     * @param turnId 对话轮次主键
+     */
+    void clearTurnSequence(String turnId);
 }

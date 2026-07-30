@@ -3,14 +3,11 @@ package com.simple.ai.service.agentChat;
 import com.simple.ai.common.constant.WebSocketConstant;
 import com.simple.ai.common.dto.agent.AgentContext;
 import com.simple.ai.common.dto.agentChat.*;
-import com.simple.ai.common.dto.atomicCommand.FindAllAtomicCommandRequest;
 import com.simple.ai.common.dto.chatTurn.FindAllChatTurnRequest;
 import com.simple.ai.common.dto.command.*;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatSession.AgentChatSession;
-import com.simple.ai.common.entity.agentClient.AgentClient;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
-import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.chatTurn.ChatTurn;
 import com.simple.ai.common.entity.executionEvent.ExecutionEvent;
 import com.simple.ai.common.entity.task.Task;
@@ -25,7 +22,6 @@ import com.simple.ai.common.service.command.CommandDispatchService;
 import com.simple.ai.common.service.executionEvent.ExecutionEventBus;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
 import com.simple.ai.common.view.agentChatSession.AgentChatSessionView;
-import com.simple.ai.common.view.agentClient.AgentClientView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.chatTurn.ChatTurnView;
@@ -109,12 +105,6 @@ class DefaultAgentChatService implements AgentChatService {
     private AtomicCommandView atomicCommandView;
 
     /**
-     * 客户端实例视图，用于查询客户端绑定的执行器ID
-     */
-    @Autowired
-    private AgentClientView agentClientView;
-
-    /**
      * 智能体上下文组装器
      */
     @Autowired
@@ -174,26 +164,16 @@ class DefaultAgentChatService implements AgentChatService {
         // 校验执行客户端在线状态，避免后续 WebSocket 调用无响应等待超时
         AssertUtils.isTrue(isClientOnline(request.getClientId()), "执行客户端[{}]不在线，请先启动客户端", request.getClientId());
 
-        // 查询客户端实例，获取其绑定的执行器ID用于关联原子命令
-        AgentClient agentClient = agentClientView.findById(request.getClientId());
-        AssertUtils.notEmpty(agentClient, "客户端[{}]不存在", request.getClientId());
-        AssertUtils.notEmpty(agentClient.getExecutorId(), "客户端[{}]未绑定执行器", request.getClientId());
-
-        // 获取当前登录用户ID，用于原子命令私域隔离
+        // 获取当前登录用户ID
         String currentUserId = LoginUserUtils.getUserTemporary().getUserId();
         AssertUtils.notEmpty(currentUserId, "当前登录用户身份为空");
 
         // 创建期装配快照：查询全部资产并序列化为 JSON
         String snapshotJson = agentContextAssembler.assembleForSnapshot(request.getAgentId(), request.getClientId());
 
-        // 通过 WebSocket 同步查询执行器能力，获取支持的原子命令列表
-        List<CapabilityResultDto.CommandItem> capabilities = fetchCapabilities(request.getClientId());
-
-        // 将执行器能力命令 upsert 到本地 atomic_command 表，关联执行器ID和用户ID
-        upsertCapabilityCommands(capabilities, agentClient.getExecutorId(), currentUserId);
-
-        // 将能力命令列表合并到快照中
-        snapshotJson = agentContextAssembler.enrichSnapshotWithCapabilities(snapshotJson, capabilities);
+        // 通过 WebSocket 查询执行器能力，获取原始 JSON 直接写入快照，不做解析也不入库
+        String capabilitiesJson = fetchCapabilitiesRaw(request.getClientId());
+        snapshotJson = agentContextAssembler.enrichSnapshotWithCapabilities(snapshotJson, capabilitiesJson);
 
         // 创建持久化会话，保存完整上下文配置（含快照）
         AgentChatSession session = createSessionEntity(agentDefinition, request.getModelId(), request.getClientId(), snapshotJson);
@@ -301,6 +281,9 @@ class DefaultAgentChatService implements AgentChatService {
             CommandDispatchResponse disconnectResponse = buildDispatchFailureResponse(e);
             String assistantMessageId = saveFinalMessage(session, disconnectResponse, null);
             chatTurnService.completeTurn(turnId, assistantMessageId, "");
+
+            // 客户端断开后轮次已结束，清理内存序号计数器避免泄漏
+            executionEventBus.clearTurnSequence(turnId);
             throw e;
         }
 
@@ -321,6 +304,9 @@ class DefaultAgentChatService implements AgentChatService {
 
         // 完成本轮对话，关联AI回复消息
         chatTurnService.completeTurn(turnId, assistantMessageId, "");
+
+        // 轮次结束后清理内存序号计数器，避免长期运行后 Map 无限膨胀
+        executionEventBus.clearTurnSequence(turnId);
 
         // 记忆蒸馏不再自动触发，改为由用户或指定体明确要求蒸馏正确线路后再执行
     }
@@ -402,8 +388,9 @@ class DefaultAgentChatService implements AgentChatService {
 
     /**
      * 构建组合事件消费者，在透传事件的同时记录执行轨迹。
-     * <p>AI_TOKEN 和 AI_THINKING_TOKEN 是流式 token 片段，不记录为执行事件，仅透传给 SSE。</p>
-     * <p>内部事件统一映射为 PROGRESS 后输出 SSE。</p>
+     * <p>所有调度事件（含 AI_TOKEN、AI_THINKING_TOKEN 流式 token）均落库为执行事件，
+     * 确保前端可见的全部事件都有持久化审计轨迹。</p>
+     * <p>内部事件统一映射为稳定 SSE 事件后透传给前端。</p>
      *
      * @param turnId        对话轮次主键
      * @param eventConsumer 原始事件消费者（SSE 通道）
@@ -420,36 +407,19 @@ class DefaultAgentChatService implements AgentChatService {
             };
         }
 
-        // 组合消费：执行事件落库（流式 token 片段除外），再映射为稳定事件透传给 SSE
+        // 组合消费：所有调度事件均落库为执行事件，再映射为稳定事件透传给 SSE
         return event -> {
-            if (!isStreamToken(event)) {
-                try {
-                    executionEventBus.recordEvent(turnId, "", event);
-                } catch (RuntimeException e) {
+            try {
+                executionEventBus.recordEvent(turnId, "", event);
+            } catch (RuntimeException e) {
 
-                    // 执行轨迹落库异常不影响主流程
-                    log.warn("执行事件记录失败，turnId={}, eventType={}", turnId, event.getEventType(), e);
-                }
+                // 执行轨迹落库异常不影响主流程
+                log.warn("执行事件记录失败，turnId={}, eventType={}", turnId, event.getEventType(), e);
             }
             if (eventConsumer != null) {
                 eventConsumer.accept(mapToSseEvent(event));
             }
         };
-    }
-
-    /**
-     * 判断事件是否为流式 token 片段，此类事件不记录为执行事件。
-     *
-     * @param event 调度进度事件
-     * @return 是否为流式 token
-     */
-    private boolean isStreamToken(CommandDispatchProgressEvent event) {
-        if (event == null || event.getEventType() == null) {
-            return false;
-        }
-
-        // AI_TOKEN 和 AI_THINKING_TOKEN 是逐个字符/单词的流式片段，仅 SSE 消费
-        return "AI_TOKEN".equals(event.getEventType()) || "AI_THINKING_TOKEN".equals(event.getEventType());
     }
 
     @Override
@@ -592,15 +562,13 @@ class DefaultAgentChatService implements AgentChatService {
     }
 
     /**
-     * 通过 WebSocket 同步查询执行器能力，获取支持的原子命令列表。
-     * <p>调用 system.capability 系统命令，通过框架级 sendSyncMsg 阻塞等待执行器返回 COMMAND_RESULT，
-     * 解析其中的 data 数组（裸命令列表）并返回。超时或返回失败时抛出异常，
-     * 阻断会话创建。</p>
+     * 通过 WebSocket 查询执行器能力，返回 data 字段的原始 JSON 字符串。
+     * <p>不做解析也不入库，直接写入快照供后续会话使用。</p>
      *
      * @param clientId 客户端ID
-     * @return 执行器支持的原子命令元信息列表
+     * @return 执行器能力 data 的原始 JSON 字符串
      */
-    private List<CapabilityResultDto.CommandItem> fetchCapabilities(String clientId) {
+    private String fetchCapabilitiesRaw(String clientId) {
         // 构建 system.capability 批量命令请求
         String commandId = UUID.randomUUID().toString();
         ExecutorCommandItem item = new ExecutorCommandItem().setCommandId(commandId)
@@ -627,22 +595,15 @@ class DefaultAgentChatService implements AgentChatService {
         AssertUtils.isTrue(executorResult.getSuccess() != null && executorResult.getSuccess(), "执行器能力查询失败: %s",
                            executorResult.getError() != null ? executorResult.getError().getDetail() : "未知错误");
 
-        // 解析 COMMAND_RESULT.data 中的命令列表（执行器返回裸数组，非 {commands: [...]} 结构）
+        // 直接返回 data 字段的原始 JSON 字符串，不做解析也不入库
         Object data = executorResult.getData();
         AssertUtils.notEmpty(data, "执行器能力查询返回数据为空");
 
-        // 将原始数据序列化为 JSON 字符串后直接解析为命令列表
-        String dataJson = JsonUtils.toJsonStr(data);
-        List<CapabilityResultDto.CommandItem> capabilities = JsonUtils.toList(dataJson, CapabilityResultDto.CommandItem.class);
-        AssertUtils.notEmpty(capabilities, "执行器能力查询结果解析失败");
-
-        return capabilities;
+        return JsonUtils.toJsonStr(data);
     }
 
     /**
-     * 从 sendSyncMsg 返回值中提取 ExecutorCommandResultResponse
-     * <p>sendSyncMsg 返回的是回执中 data 字段的值，即 SepMessage JSON 对象。
-     * 需要将其反序列化为 SepMessage 后提取 payload 再转为 ExecutorCommandResultResponse。</p>
+     * 从 sendSyncMsg 返回值中提取 ExecutorCommandResultResponse。
      *
      * @param result sendSyncMsg 返回值（JSONObject/Map）
      * @return 执行器命令结果响应
@@ -659,81 +620,6 @@ class DefaultAgentChatService implements AgentChatService {
         } catch (Exception e) {
             throw new RuntimeException("解析执行器返回数据失败", e);
         }
-    }
-
-    /**
-     * 将执行器能力命令 upsert 到本地 atomic_command 表。
-     * <p>按命令编码（command）批量查询已有记录，内存中比对后拆分为更新列表和新增列表，
-     * 分别使用批量更新和批量插入操作，避免逐条数据库交互。
-     * 同时为每条命令关联执行器ID和用户ID，确保命令与执行器绑定且私域隔离。</p>
-     *
-     * @param capabilities 执行器能力命令列表
-     * @param executorId   执行器主键，关联 agent_executor.id
-     * @param userId       用户归属ID，确保每个用户的原子命令私域隔离
-     */
-    private void upsertCapabilityCommands(List<CapabilityResultDto.CommandItem> capabilities, String executorId, String userId) {
-        if (capabilities == null || capabilities.isEmpty()) {
-            return;
-        }
-
-        transactionTemplate.executeWithoutResult(status -> {
-
-            // 收集所有命令编码，一次性批量查询已有记录
-            List<String> commandCodes = capabilities.stream().map(CapabilityResultDto.CommandItem::getCode).filter(code -> code != null && !code.isBlank()).collect(Collectors.toList());
-            if (commandCodes.isEmpty()) {
-                return;
-            }
-
-            // 批量查询已有命令记录，按编码建立索引
-            FindAllAtomicCommandRequest batchQueryReq = new FindAllAtomicCommandRequest();
-            batchQueryReq.setCommands(commandCodes);
-            batchQueryReq.setStatus(Status.ON);
-            List<AtomicCommand> existingCommands = atomicCommandView.findAll(batchQueryReq);
-            Map<String, AtomicCommand> existingMap = existingCommands.stream().collect(Collectors.toMap(AtomicCommand::getCommand, cmd -> cmd, (a, b) -> a));
-
-            // 内存中比对，拆分为需更新列表和需新增列表
-            List<AtomicCommand> toUpdate = new ArrayList<>();
-            List<AtomicCommand> toInsert = new ArrayList<>();
-            for (CapabilityResultDto.CommandItem item : capabilities) {
-                String code = item.getCode();
-                if (code == null || code.isBlank()) {
-                    continue;
-                }
-                AtomicCommand existing = existingMap.get(code);
-                if (existing != null) {
-
-                    // 更新已有命令的名称、角色、状态、执行器ID和用户ID
-                    existing.setName(item.getName());
-                    existing.setRole(item.getDescription());
-                    existing.setStatus(Status.ON);
-                    existing.setExecutorId(executorId);
-                    existing.setUserId(userId);
-                    toUpdate.add(existing);
-                } else {
-
-                    // 构建新增命令记录，关联执行器ID和用户ID
-                    AtomicCommand newCommand = new AtomicCommand();
-                    newCommand.setName(item.getName());
-                    newCommand.setCommand(code);
-                    newCommand.setRole(item.getDescription());
-                    newCommand.setStatus(Status.ON);
-                    newCommand.setRemark("由执行端 system.capability 同步");
-                    newCommand.setExecutorId(executorId);
-                    newCommand.setUserId(userId);
-                    toInsert.add(newCommand);
-                }
-            }
-
-            // 批量更新已有记录
-            if (!toUpdate.isEmpty()) {
-                atomicCommandView.updateById(toUpdate);
-            }
-
-            // 批量新增记录
-            if (!toInsert.isEmpty()) {
-                atomicCommandView.saves(toInsert);
-            }
-        });
     }
 
     /**

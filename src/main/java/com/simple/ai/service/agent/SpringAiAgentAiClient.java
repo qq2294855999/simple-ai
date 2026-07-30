@@ -5,6 +5,7 @@ import com.simple.ai.common.dto.agent.AgentAiResponse;
 import com.simple.ai.common.dto.aiModel.AiModelRuntimeConfig;
 import com.simple.ai.common.entity.agentChatMessage.AgentChatMessage;
 import com.simple.ai.common.entity.agentChatRawLog.AgentChatRawLog;
+import com.simple.ai.common.enums.AgentChatMessageRoleProcess;
 import com.simple.ai.common.properties.SimpleAiProperties;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.view.agentChatMessage.AgentChatMessageView;
@@ -579,7 +580,7 @@ class SpringAiAgentAiClient implements AgentAiClient {
 
         for (int i = allMessages.size() - 1; i >= 0; i--) {
             AgentChatMessage msg = allMessages.get(i);
-            if (!"USER".equals(msg.getRole())) {
+            if (!AgentChatMessageRoleProcess.USER.equals(msg.getRole())) {
                 continue;
             }
             // 跳过最近一条 USER 消息（当前消息，已通过 .user() 单独发送）
@@ -622,16 +623,16 @@ class SpringAiAgentAiClient implements AgentAiClient {
      * @return Spring AI Message 对象，不支持的角色返回 null
      */
     private Message toSpringAiMessage(AgentChatMessage msg) {
-        if ("ASSISTANT".equals(msg.getRole())) {
+        if (AgentChatMessageRoleProcess.ASSISTANT.equals(msg.getRole())) {
             return new AssistantMessage(msg.getContent());
         }
 
         // SYSTEM_ERROR 消息也作为 AssistantMessage 注入历史，让 AI 感知上一轮失败原因
-        if ("SYSTEM_ERROR".equals(msg.getRole())) {
+        if (AgentChatMessageRoleProcess.SYSTEM_ERROR.equals(msg.getRole())) {
             return new AssistantMessage("【系统提示】上一轮 AI 回复失败，原因：" + msg.getContent());
         }
 
-        if ("USER".equals(msg.getRole())) {
+        if (AgentChatMessageRoleProcess.USER.equals(msg.getRole())) {
             return new UserMessage(msg.getContent());
         }
         return null;
