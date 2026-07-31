@@ -388,8 +388,9 @@ class DefaultAgentChatService implements AgentChatService {
 
     /**
      * 构建组合事件消费者，在透传事件的同时记录执行轨迹。
-     * <p>所有调度事件（含 AI_TOKEN、AI_THINKING_TOKEN 流式 token）均落库为执行事件，
-     * 确保前端可见的全部事件都有持久化审计轨迹。</p>
+     * <p>调度事件透传给前端 SSE 用于聊天流展示（含 AI_TOKEN、AI_THINKING_TOKEN 流式 token）；
+     * 但仅"执行了什么步骤、向 websocket 发了什么命令"类事件落库为执行轨迹，
+     * AI 回复内容类事件（AI_TOKEN/AI_THINKING_TOKEN/AI_COMPLETED）由 ExecutionEventBus 过滤，不落库。</p>
      * <p>内部事件统一映射为稳定 SSE 事件后透传给前端。</p>
      *
      * @param turnId        对话轮次主键

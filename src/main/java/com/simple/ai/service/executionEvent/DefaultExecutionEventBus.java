@@ -44,12 +44,30 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
     public void recordEvent(String turnId, String taskId, CommandDispatchProgressEvent event) {
         AssertUtils.notEmpty(turnId, "轮次主键不能为空");
 
+        // AI 回复相关事件（流式 token 与完整回复）仅作为聊天流临时内容，不落库为执行轨迹
+        if (isAiResponseEvent(event)) {
+            return;
+        }
+
         // 构建事件实体并持久化
         ExecutionEvent executionEvent = buildExecutionEvent(turnId, taskId, event);
         executionEventView.save(executionEvent);
 
         // 调试日志记录事件落库
         log.debug("执行事件已记录：turnId={}, eventType={}, sequenceNo={}", turnId, event.getEventType(), executionEvent.getSequenceNo());
+    }
+
+    /**
+     * 判断事件是否为 AI 回复内容类事件。
+     * <p>AI_TOKEN、AI_THINKING_TOKEN、AI_COMPLETED 携带的是 AI 生成的回复文本，
+     * 属于聊天消息流内容而非"执行了什么步骤"，不记录为执行轨迹。</p>
+     *
+     * @param event 调度进度事件
+     * @return true 表示该事件为 AI 回复内容，应跳过落库
+     */
+    private boolean isAiResponseEvent(CommandDispatchProgressEvent event) {
+        String eventType = event.getEventType();
+        return "AI_TOKEN".equals(eventType) || "AI_THINKING_TOKEN".equals(eventType) || "AI_COMPLETED".equals(eventType);
     }
 
     @Override
@@ -175,7 +193,8 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
 
     /**
      * 截断响应内容。
-     * <p>STEP_COMPLETED、AI_COMPLETED、AI_TOKEN、AI_THINKING_TOKEN 事件保留响应摘要（最大500字符），其余不记录。</p>
+     * <p>STEP_COMPLETED 事件保留响应摘要（最大500字符），其余不记录。
+     * AI 回复类事件（AI_TOKEN/AI_THINKING_TOKEN/AI_COMPLETED）已在入口拦截，不进入本方法。</p>
      *
      * @param event 调度进度事件
      * @return 截断后的响应内容
@@ -183,8 +202,8 @@ class DefaultExecutionEventBus implements ExecutionEventBus {
     private String truncateResponseContent(CommandDispatchProgressEvent event) {
         String eventType = event.getEventType();
 
-        // 步骤完成、AI 完成以及流式 token 事件记录响应摘要
-        if ("STEP_COMPLETED".equals(eventType) || "AI_COMPLETED".equals(eventType) || "AI_TOKEN".equals(eventType) || "AI_THINKING_TOKEN".equals(eventType)) {
+        // 步骤完成事件记录响应摘要
+        if ("STEP_COMPLETED".equals(eventType)) {
             return truncateText(event.getPayload(), 500);
         }
         return "";
