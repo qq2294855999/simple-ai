@@ -1,5 +1,7 @@
 package com.simple.ai.service.memory;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simple.ai.common.dto.command.AtomicCommandInvokeRequest;
 import com.simple.ai.common.dto.command.AtomicCommandInvokeResponse;
 import com.simple.ai.common.dto.command.CommandDispatchProgressEvent;
@@ -9,7 +11,6 @@ import com.simple.ai.common.entity.agentMemoryStep.AgentMemoryStep;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
-import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.ai.common.enums.AgentStepTypeProcess;
 import com.simple.ai.common.service.command.AtomicCommandExecutor;
 import com.simple.ai.common.service.memory.MemoryExecutor;
@@ -40,7 +41,7 @@ import java.util.regex.Pattern;
  * <p>按记忆步骤直接创建任务详情并下发原子命令到客户端执行，
  * 无需 AI 探索。步骤中的 {param} 占位符由用户输入参数替换。</p>
  *
- * <p>修复项：
+ * <p>特性：
  * <ul>
  *   <li>过滤 OFF 状态步骤，跳过禁用的步骤</li>
  *   <li>参数校验：步骤模板中存在未替换占位符时记录警告</li>
@@ -100,10 +101,10 @@ class DefaultMemoryExecutor implements MemoryExecutor {
             return new MemoryExecutionResult().setSuccess(false).setDetail("记忆不存在");
         }
 
-        // 防御性校验：仅已发布状态的记忆可执行
-        if (!AgentMemoryVersionStatusProcess.PUBLISHED.equals(memory.getVersionStatus())) {
-            log.error("记忆执行失败：记忆未发布，memoryId={}, versionStatus={}", memoryId, memory.getVersionStatus());
-            return new MemoryExecutionResult().setSuccess(false).setDetail("记忆未发布，无法执行");
+        // 防御性校验：仅启用状态的记忆可执行
+        if (!Status.ON.equals(memory.getStatus())) {
+            log.error("记忆执行失败：记忆未启用，memoryId={}, status={}", memoryId, memory.getStatus());
+            return new MemoryExecutionResult().setSuccess(false).setDetail("记忆未启用，无法执行");
         }
 
         // 参数校验：检查必填参数和占位符完整性
@@ -553,8 +554,8 @@ class DefaultMemoryExecutor implements MemoryExecutor {
         // 解析参数定义
         Map<String, Map<String, Object>> paramDefs;
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            paramDefs = mapper.readValue(paramsDefinition, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Map<String, Object>>>() {
+            ObjectMapper mapper = new ObjectMapper();
+            paramDefs = mapper.readValue(paramsDefinition, new TypeReference<Map<String, Map<String, Object>>>() {
             });
         } catch (Exception e) {
             log.warn("参数定义JSON解析失败，跳过参数校验：memoryId={}", memory.getId(), e);

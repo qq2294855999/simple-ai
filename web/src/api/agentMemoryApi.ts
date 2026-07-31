@@ -7,7 +7,6 @@ import type {
     CreateAgentMemoryRequestDto,
     ExecuteMemoryRequestDto,
     ExecuteMemoryResponseDto,
-    MemoryVersionHistoryResponseDto,
     ParamsDefinitionResponseDto,
     UpdateAgentMemoryRequestDto
 } from "../dto/agentMemory/AgentMemoryDto";
@@ -39,23 +38,11 @@ export const AgentMemoryApi = {
     deleteByIds: (ids: string[]) =>
         http.delete("/sys/agent-memory/deletes", {data: ids}),
 
-    /** 发布记忆 */
-    publish: (id: string) =>
-        http.put(`/sys/agent-memory/publish/${id}`),
-
-    /** 退役记忆 */
-    retire: (id: string) =>
-        http.put(`/sys/agent-memory/retire/${id}`),
-
     /** 获取参数定义 */
     getParamsDefinition: (id: string) =>
         http.get<ParamsDefinitionResponseDto>(`/sys/agent-memory/${id}/params-definition`),
 
     /** 执行记忆 */
     execute: (id: string, data: ExecuteMemoryRequestDto) =>
-        http.post<ExecuteMemoryResponseDto>(`/sys/agent-memory/${id}/execute`, data),
-
-    /** 查询版本历史 */
-    versionHistory: (id: string) =>
-        http.get<MemoryVersionHistoryResponseDto[]>(`/sys/agent-memory/${id}/version-history`)
+        http.post<ExecuteMemoryResponseDto>(`/sys/agent-memory/${id}/execute`, data)
 };

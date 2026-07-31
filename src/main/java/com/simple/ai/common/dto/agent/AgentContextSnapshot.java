@@ -56,9 +56,9 @@ public class AgentContextSnapshot {
     private List<SubAgentRelation> subAgentRelations;
 
     /**
-     * 已发布记忆列表（供AI意图识别参考）
+     * 启用记忆列表（供AI意图识别参考）
      */
-    @Schema(description = "已发布记忆列表")
+    @Schema(description = "启用记忆列表")
     private List<AgentMemory> memories;
 
     /**

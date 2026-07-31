@@ -2,6 +2,7 @@ package com.simple.ai.service.memory;
 
 import com.simple.ai.common.dto.agent.AgentAiRequest;
 import com.simple.ai.common.dto.agent.AgentAiResponse;
+import com.simple.ai.common.dto.agentMemory.CommandStep;
 import com.simple.ai.common.dto.agentMemory.FindAllAgentMemoryRequest;
 import com.simple.ai.common.dto.atomicCommand.FindOneAtomicCommandRequest;
 import com.simple.ai.common.dto.command.CommandDispatchRequest;
@@ -12,7 +13,6 @@ import com.simple.ai.common.entity.executionEvent.ExecutionEvent;
 import com.simple.ai.common.entity.task.Task;
 import com.simple.ai.common.entity.taskDetail.TaskDetail;
 import com.simple.ai.common.enums.AgentExecutionStatusProcess;
-import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.service.memory.MemoryDistiller;
 import com.simple.ai.common.view.agentMemory.AgentMemoryView;
@@ -21,6 +21,7 @@ import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.executionEvent.ExecutionEventView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
+import com.simple.common.core.utils.AssertUtils;
 import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
  * 记忆蒸馏器默认实现。
  *
  * <p>从 task + task_details 提炼执行轨迹，通过 AI 识别参数占位符，
- * 创建 agent_memory (DRAFT) + agent_memory_step × N。
+ * 创建 agent_memory (启用态) + agent_memory_step × N。
  * 复用当前会话的 AI 模型完成参数识别和步骤提炼。</p>
  *
  * @author qty
@@ -77,8 +78,10 @@ class DefaultMemoryDistiller implements MemoryDistiller {
     private AgentMemoryStepView agentMemoryStepView;
 
     /**
-     * AI 调用客户端，用于参数识别
+     * AI 调用客户端，用于参数识别。
+     * 延迟注入打破 SpringAiAgentAiClient→AgentToolRegistry→MemoryToolCallback→DefaultMemoryDistiller 的循环依赖。
      */
+    @Lazy
     @Autowired
     private AgentAiClient agentAiClient;
 
@@ -121,7 +124,6 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         }
 
         // 过滤失败步骤，仅保留成功步骤用于参数识别和步骤提炼
-        // 修订场景下部分步骤已失败，失败步骤不应纳入新版本记忆
         List<TaskDetail> successDetails = taskDetails.stream().filter(d -> !AgentExecutionStatusProcess.FAILED.equals(d.getExecStatus())).toList();
         if (successDetails.isEmpty()) {
             log.warn("记忆蒸馏跳过：任务无成功步骤，taskId={}", taskId);
@@ -137,24 +139,9 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         // 调用 AI 识别参数占位符（非事务，避免长事务持有数据库连接）
         DistillResult distillResult = identifyParameters(task, successDetails, originalRequest);
 
-        // 判断蒸馏场景：任务已关联记忆ID时为修订场景，否则为首次探索沉淀
-        boolean isRevision = task.getMemoryId() != null && !task.getMemoryId().isBlank();
-
-        // 修订场景下，查找旧记忆（非事务读取，后续在保存事务中重新读取并退役）
-        AgentMemory oldMemory = null;
-        if (isRevision) {
-            oldMemory = agentMemoryView.findById(task.getMemoryId());
-
-            // 校验旧记忆与当前任务属于同一智能体，防止数据错误导致误退役
-            if (oldMemory != null && !task.getAgentId().equals(oldMemory.getAgentId())) {
-                log.error("记忆修订跳过：旧记忆与任务不属于同一智能体，taskId={}, taskAgentId={}, memoryAgentId={}", task.getId(), task.getAgentId(), oldMemory.getAgentId());
-                oldMemory = null;
-            }
-        }
-
         // 在独立事务中执行保存操作，将AI调用与数据库写入分离
         // 通过代理调用确保 @Transactional 注解生效，避免自调用绕过 Spring AOP
-        self.saveDistillResult(task, successDetails, originalRequest, distillResult, isRevision, oldMemory, events);
+        self.saveDistillResult(task, successDetails, originalRequest, distillResult, events);
     }
 
     /**
@@ -166,28 +153,14 @@ class DefaultMemoryDistiller implements MemoryDistiller {
      * @param successDetails  成功步骤列表
      * @param originalRequest 原始调度请求
      * @param distillResult   AI参数识别结果
-     * @param isRevision      是否为修订场景
-     * @param oldMemory       修订场景下的旧记忆
      * @param events          执行事件列表
      */
     @Transactional(rollbackFor = Exception.class)
-    void saveDistillResult(Task task, List<TaskDetail> successDetails, CommandDispatchRequest originalRequest, DistillResult distillResult, boolean isRevision, AgentMemory oldMemory,
+    void saveDistillResult(Task task, List<TaskDetail> successDetails, CommandDispatchRequest originalRequest, DistillResult distillResult,
                            List<ExecutionEvent> events) {
 
-        // 修订场景下，在事务内重新读取旧记忆并退役，确保操作原子性
-        if (isRevision && oldMemory != null) {
-            AgentMemory freshOldMemory = agentMemoryView.findById(oldMemory.getId());
-            if (freshOldMemory != null && (AgentMemoryVersionStatusProcess.DRAFT.equals(freshOldMemory.getVersionStatus()) || AgentMemoryVersionStatusProcess.PUBLISHED.equals(
-                            freshOldMemory.getVersionStatus()))) {
-                AgentMemoryVersionStatusProcess previousStatus = freshOldMemory.getVersionStatus();
-                freshOldMemory.setVersionStatus(AgentMemoryVersionStatusProcess.RETIRED);
-                agentMemoryView.updateById(freshOldMemory);
-                log.info("旧版本记忆已退役：memoryId={}, versionNo={}, previousStatus={}", freshOldMemory.getId(), freshOldMemory.getVersionNo(), previousStatus);
-            }
-        }
-
-        // 创建记忆草稿
-        AgentMemory memory = createMemoryDraft(task, successDetails, originalRequest, distillResult, isRevision, oldMemory);
+        // 创建记忆
+        AgentMemory memory = createMemoryDraft(task, successDetails, originalRequest, distillResult);
         agentMemoryView.save(memory);
 
         // 从任务详情提炼记忆步骤
@@ -195,6 +168,62 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         agentMemoryStepView.saves(steps);
 
         log.info("记忆蒸馏完成：memoryId={}, memoryName={}, stepCount={}", memory.getId(), memory.getMemoryName(), steps.size());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void distillRevision(String memoryId, List<CommandStep> commandSteps, String paramsDefinitionJson, String memoryNameHint) {
+
+        // 加载原记忆，校验存在性
+        AgentMemory memory = agentMemoryView.findById(memoryId);
+        AssertUtils.notEmpty(memory, "主键为[{}]的记忆不存在", memoryId);
+
+        // 步骤入参非空校验：修订必须提供新命令序列
+        AssertUtils.isTrue(commandSteps != null && !commandSteps.isEmpty(), "修订步骤不能为空");
+
+        // 删除旧步骤，保留记忆主表
+        agentMemoryStepView.deleteByMemoryId(memoryId);
+
+        // 按命令序列构建新步骤，序列号从10递增
+        List<AgentMemoryStep> steps = new ArrayList<>();
+        int sequenceNo = 10;
+        for (int i = 0; i < commandSteps.size(); i++) {
+            CommandStep commandStep = commandSteps.get(i);
+            AgentMemoryStep step = new AgentMemoryStep();
+            step.setMemoryId(memoryId);
+            step.setSequenceNo(sequenceNo);
+            sequenceNo += 10;
+
+            // 原子命令编码由 AI 工具传入，ID 在执行时按编码兜底解析
+            step.setAtomicCommandCode(commandStep.getAtomicCommandCode() != null ? commandStep.getAtomicCommandCode() : "");
+            step.setAtomicCommandId("");
+
+            // 步骤名称优先取入参，缺省时按序号兜底
+            step.setStepName(commandStep.getStepName() != null && !commandStep.getStepName().isBlank() ? commandStep.getStepName() : "步骤" + (i + 1));
+            step.setArgsTemplate(commandStep.getArgsTemplate() != null ? commandStep.getArgsTemplate() : "");
+
+            // 超时与失败策略兜底默认值
+            step.setDelayMinMs(100);
+            step.setDelayMaxMs(500);
+            step.setTimeoutMs(commandStep.getTimeoutMs() != null ? commandStep.getTimeoutMs() : 30000);
+            step.setSuccessAssertion("");
+            step.setFailureStrategy(commandStep.getFailureStrategy() != null && !commandStep.getFailureStrategy().isBlank() ? commandStep.getFailureStrategy() : "STOP");
+            step.setStatus("ON");
+            steps.add(step);
+        }
+        agentMemoryStepView.saves(steps);
+
+        // 覆盖记忆名称和参数定义，保留 id/agentId/clientId/userId
+        if (memoryNameHint != null && !memoryNameHint.isBlank()) {
+            memory.setMemoryName(memoryNameHint);
+        }
+        memory.setParamsDefinition(paramsDefinitionJson != null && !paramsDefinitionJson.isBlank() ? paramsDefinitionJson : "{}");
+
+        // 标记本次修订原因，便于审计区分首次沉淀与覆盖修订
+        memory.setCreateReason("MEMORY_REVISE");
+        agentMemoryView.updateById(memory);
+
+        log.info("记忆修订完成（覆盖式）：memoryId={}, memoryName={}, stepCount={}", memoryId, memory.getMemoryName(), steps.size());
     }
 
     /**
@@ -371,18 +400,15 @@ class DefaultMemoryDistiller implements MemoryDistiller {
     }
 
     /**
-     * 创建记忆草稿。
+     * 创建记忆。
      *
      * @param task            来源任务
      * @param taskDetails     任务详情列表
      * @param originalRequest 原始调度请求（可能为null）
      * @param distillResult   AI参数识别结果
-     * @param isRevision      是否为修订场景
-     * @param oldMemory       修订场景下的旧记忆（可能为null）
-     * @return 记忆草稿
+     * @return 记忆
      */
-    private AgentMemory createMemoryDraft(Task task, List<TaskDetail> taskDetails, CommandDispatchRequest originalRequest, DistillResult distillResult, boolean isRevision,
-                                          AgentMemory oldMemory) {
+    private AgentMemory createMemoryDraft(Task task, List<TaskDetail> taskDetails, CommandDispatchRequest originalRequest, DistillResult distillResult) {
         AgentMemory memory = new AgentMemory();
         memory.setAgentId(task.getAgentId());
 
@@ -392,35 +418,15 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         // AI识别的参数定义优先，否则为空对象
         memory.setParamsDefinition(distillResult.paramsDefinition != null ? distillResult.paramsDefinition : "{}");
 
-        // 版本号计算：修订场景沿血脉链路追溯最大版本号后递增，首次探索从1开始
-        int nextVersionNo = isRevision && oldMemory != null ? calcNextVersionNo(oldMemory) : 1;
-        memory.setVersionNo(nextVersionNo);
-
-        memory.setVersionStatus(AgentMemoryVersionStatusProcess.DRAFT);
-
-        // 填充父记忆ID：修订场景指向旧记忆，首次探索为空字符串
-        // 使用空字符串而非null，与数据库DEFAULT ''保持一致，避免MyBatis-Plus NOT_NULL策略导致null不写入
-        memory.setParentMemoryId(isRevision && oldMemory != null ? oldMemory.getId() : "");
-
         memory.setSourceTaskId(task.getId());
         memory.setSummary(buildSummary(taskDetails));
 
-        // 修订场景使用MEMORY_REVISE，首次探索使用AI_EXPLORATION
-        memory.setCreateReason(isRevision ? "MEMORY_REVISE" : "AI_EXPLORATION");
+        // 首次探索沉淀
+        memory.setCreateReason("AI_EXPLORATION");
 
-        // 从原始请求中提取clientId和userId，原始请求解析失败时从旧记忆继承
+        // 从原始请求中提取clientId和userId
         String clientId = originalRequest != null && originalRequest.getClientId() != null ? originalRequest.getClientId() : "";
         String userId = originalRequest != null && originalRequest.getUserId() != null ? originalRequest.getUserId() : "";
-
-        // 修订场景下原始请求可能为null（旧数据格式），从旧记忆继承clientId和userId
-        if (isRevision && oldMemory != null) {
-            if (clientId.isBlank() && oldMemory.getClientId() != null) {
-                clientId = oldMemory.getClientId();
-            }
-            if (userId.isBlank() && oldMemory.getUserId() != null) {
-                userId = oldMemory.getUserId();
-            }
-        }
 
         memory.setClientId(clientId);
         memory.setUserId(userId);
@@ -587,65 +593,6 @@ class DefaultMemoryDistiller implements MemoryDistiller {
     }
 
     /**
-     * 计算修订场景的下一个版本号。
-     *
-     * <p>沿 parentMemoryId 血脉链路追溯所有版本，取最大版本号 + 1。
-     * 避免并发修订或异常中断后恢复时产生版本号冲突。</p>
-     *
-     * <p>子代遍历时使用 visited 集合去重，防止数据异常导致环路引用时无限循环。</p>
-     *
-     * @param oldMemory 被修订的旧记忆
-     * @return 下一个版本号
-     */
-    private int calcNextVersionNo(AgentMemory oldMemory) {
-        int maxVersionNo = oldMemory.getVersionNo() != null ? oldMemory.getVersionNo() : 0;
-
-        // 沿 parentMemoryId 链路向上追溯，收集所有祖先版本号
-        String parentId = oldMemory.getParentMemoryId();
-        int maxDepth = 50;
-        while (parentId != null && !parentId.isBlank() && maxDepth-- > 0) {
-            AgentMemory parent = agentMemoryView.findById(parentId);
-            if (parent == null) {
-                break;
-            }
-            int parentVersionNo = parent.getVersionNo() != null ? parent.getVersionNo() : 0;
-            maxVersionNo = Math.max(maxVersionNo, parentVersionNo);
-            parentId = parent.getParentMemoryId();
-        }
-
-        // 按 parentMemoryId 定向查询后代版本，避免全量加载该智能体下所有记忆
-        // visited 集合防止环路引用导致无限循环
-        Set<String> visited = new HashSet<>();
-        List<String> toVisit = new ArrayList<>();
-        toVisit.add(oldMemory.getId());
-        visited.add(oldMemory.getId());
-        while (!toVisit.isEmpty()) {
-            String currentId = toVisit.remove(toVisit.size() - 1);
-
-            // 仅查询 parentMemoryId 指向当前记忆的子版本
-            FindAllAgentMemoryRequest childRequest = new FindAllAgentMemoryRequest();
-            childRequest.setParentMemoryId(currentId);
-            List<AgentMemory> children = agentMemoryView.findAll(childRequest);
-
-            for (AgentMemory child : children) {
-
-                // 跳过已访问的记忆，防止环路引用
-                if (visited.contains(child.getId())) {
-                    log.warn("版本链路检测到环路引用，跳过：memoryId={}", child.getId());
-                    continue;
-                }
-
-                int childVersionNo = child.getVersionNo() != null ? child.getVersionNo() : 0;
-                maxVersionNo = Math.max(maxVersionNo, childVersionNo);
-                toVisit.add(child.getId());
-                visited.add(child.getId());
-            }
-        }
-
-        return maxVersionNo + 1;
-    }
-
-    /**
      * 蒸馏结果内部类，承载 AI 参数识别的输出。
      */
     private static class DistillResult {
@@ -663,6 +610,6 @@ class DefaultMemoryDistiller implements MemoryDistiller {
         /**
          * 步骤序号到参数模板的映射
          */
-        java.util.Map<Integer, String> stepArgsTemplates = new java.util.HashMap<>();
+        Map<Integer, String> stepArgsTemplates = new HashMap<>();
     }
 }

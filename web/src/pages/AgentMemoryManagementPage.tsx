@@ -3,7 +3,6 @@ import {Button, Dropdown, Form, Input, Modal, Popconfirm, Select, Space, Spin, T
 import type {ColumnsType} from "antd/es/table";
 import {MoreOutlined} from "@ant-design/icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate} from "react-router-dom";
 import {usePreventDoubleClickHook} from "../hooks/usePreventDoubleClickHook";
 import {useScrollSelect} from "../hooks/useScrollSelect";
 import {ToastUtil} from "../utils/ToastUtil";
@@ -19,28 +18,26 @@ import type {
 } from "../dto/agentMemory/AgentMemoryDto";
 
 /**
- * 获取版本状态中文标签。
+ * 获取状态中文标签。
  *
- * @param status 版本状态码
+ * @param status 状态
  * @returns 状态中文
  */
-function getVersionStatusLabel(status: number): string {
-    if (status === 1) return "草稿";
-    if (status === 2) return "已发布";
-    if (status === 3) return "已退役";
-    return String(status);
+function getStatusLabel(status: string): string {
+    if (status === "ON") return "启用";
+    if (status === "OFF") return "停用";
+    return status || "-";
 }
 
 /**
- * 获取版本状态Tag颜色。
+ * 获取状态Tag颜色。
  *
- * @param status 版本状态码
+ * @param status 状态
  * @returns Tag颜色
  */
-function getVersionStatusColor(status: number): string {
-    if (status === 1) return "blue";
-    if (status === 2) return "green";
-    if (status === 3) return "default";
+function getStatusColor(status: string): string {
+    if (status === "ON") return "green";
+    if (status === "OFF") return "default";
     return "default";
 }
 
@@ -63,7 +60,6 @@ function getCreateReasonLabel(reason: string): string {
  * @author qty
  */
 export function AgentMemoryManagementPage() {
-    const navigate = useNavigate();
     const [dataSource, setDataSource] = useState<AgentMemoryPageResponseDto[]>([]);
     const [loading, setLoading] = useState(false);
     const [total, setTotal] = useState(0);
@@ -72,7 +68,6 @@ export function AgentMemoryManagementPage() {
     // 搜索条件
     const [keyword, setKeyword] = useState("");
     const [filterAgentId, setFilterAgentId] = useState<string | undefined>(undefined);
-    const [filterVersionStatus, setFilterVersionStatus] = useState<number | undefined>(undefined);
     const [pageIndex, setPageIndex] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
@@ -118,15 +113,14 @@ export function AgentMemoryManagementPage() {
                 current: pageIndex,
                 size: pageSize,
                 memoryName: keyword || undefined,
-                agentId: filterAgentId,
-                versionStatus: filterVersionStatus
+                agentId: filterAgentId
             });
             setDataSource(result.records || []);
             setTotal(result.total || 0);
         } finally {
             setLoading(false);
         }
-    }, [pageIndex, pageSize, keyword, filterAgentId, filterVersionStatus]);
+    }, [pageIndex, pageSize, keyword, filterAgentId]);
 
     loadDataRef.current = loadData;
 
@@ -144,7 +138,6 @@ export function AgentMemoryManagementPage() {
     const handleReset = useCallback(() => {
         setKeyword("");
         setFilterAgentId(undefined);
-        setFilterVersionStatus(undefined);
         setPageIndex(1);
         setTimeout(() => loadDataRef.current?.(), 0);
     }, []);
@@ -209,20 +202,6 @@ export function AgentMemoryManagementPage() {
         loadDataRef.current?.();
     }, []);
 
-    // 发布
-    const handlePublish = useCallback(async (id: string) => {
-        await AgentMemoryApi.publish(id);
-        ToastUtil.success("发布成功");
-        loadDataRef.current?.();
-    }, []);
-
-    // 退役
-    const handleRetire = useCallback(async (id: string) => {
-        await AgentMemoryApi.retire(id);
-        ToastUtil.success("退役成功");
-        loadDataRef.current?.();
-    }, []);
-
     // 打开执行弹窗
     const openExecModal = useCallback(async (id: string) => {
         try {
@@ -282,12 +261,11 @@ export function AgentMemoryManagementPage() {
     const columns = useMemo<ColumnsType<AgentMemoryPageResponseDto>>(() => [
         {title: "智能体", dataIndex: "agentName", width: 120, ellipsis: true, render: v => <Tooltip title={v}>{v || "-"}</Tooltip>},
         {title: "记忆名称", dataIndex: "memoryName", width: 180, ellipsis: true, render: v => <Tooltip title={v}>{v}</Tooltip>},
-        {title: "版本号", dataIndex: "versionNo", width: 70},
         {
-            title: "版本状态",
-            dataIndex: "versionStatus",
+            title: "状态",
+            dataIndex: "status",
             width: 90,
-            render: (s: number) => <Tag color={getVersionStatusColor(s)}>{getVersionStatusLabel(s)}</Tag>
+            render: (s: string) => <Tag color={getStatusColor(s)}>{getStatusLabel(s)}</Tag>
         },
         {title: "摘要", dataIndex: "summary", width: 200, ellipsis: true, render: v => <Tooltip title={v}>{v || "-"}</Tooltip>},
         {title: "创建原因", dataIndex: "createReason", width: 90, render: (v: string) => getCreateReasonLabel(v)},
@@ -304,14 +282,10 @@ export function AgentMemoryManagementPage() {
         {
             title: "操作", width: 160,
             render: (_: unknown, record: AgentMemoryPageResponseDto) => {
-                const isDraft = record.versionStatus === 1;
-                const isPublished = record.versionStatus === 2;
+                const isEnabled = record.status === "ON";
                 const menuItems: MenuProps["items"] = [
                     {key: "detail", label: "查看详情"},
-                    isDraft ? {key: "publish", label: "发布"} : null,
-                    isPublished ? {key: "retire", label: "退役"} : null,
-                    isPublished ? {key: "execute", label: "执行"} : null,
-                    {key: "versionHistory", label: "版本历史"},
+                    isEnabled ? {key: "execute", label: "执行"} : null,
                     {
                         key: "delete",
                         label: <Popconfirm title="确认删除该记忆？" okButtonProps={{danger: true}} onConfirm={() => handleDelete(record.id)}>删除</Popconfirm>,
@@ -323,17 +297,8 @@ export function AgentMemoryManagementPage() {
                     if (key === "detail") {
                         void handleViewDetail(record.id);
                     }
-                    if (key === "publish") {
-                        void handlePublish(record.id);
-                    }
-                    if (key === "retire") {
-                        void handleRetire(record.id);
-                    }
                     if (key === "execute") {
                         void openExecModal(record.id);
-                    }
-                    if (key === "versionHistory") {
-                        navigate("/agent-memory-version?memoryId=" + record.id);
                     }
                 };
 
@@ -347,7 +312,7 @@ export function AgentMemoryManagementPage() {
                 );
             }
         }
-    ], [openEditModal, handlePublish, handleRetire, openExecModal, handleDelete, handleViewDetail, navigate]);
+    ], [openEditModal, openExecModal, handleDelete, handleViewDetail]);
 
     return (
         <div>
@@ -372,18 +337,6 @@ export function AgentMemoryManagementPage() {
                         options={agents.map(a => ({label: a.name, value: a.id}))}
                         onPopupScroll={onAgentsPopupScroll}
                         notFoundContent={agentsLoading ? <Spin size="small"/> : "暂无数据"}
-                    />
-                    <Select
-                        placeholder="版本状态"
-                        value={filterVersionStatus}
-                        onChange={setFilterVersionStatus}
-                        style={{width: 120, height: 36}}
-                        allowClear
-                        options={[
-                            {label: "草稿", value: 1},
-                            {label: "已发布", value: 2},
-                            {label: "已退役", value: 3}
-                        ]}
                     />
                     <Button type="primary" onClick={handleSearch}>搜索</Button>
                     <Button onClick={handleReset}>重置</Button>
@@ -540,11 +493,9 @@ export function AgentMemoryManagementPage() {
                 {detailData && (
                     <div style={{lineHeight: 2}}>
                         <div><b>记忆名称：</b>{detailData.memoryName}</div>
-                        <div><b>版本号：</b>v{detailData.versionNo}</div>
-                        <div><b>版本状态：</b><Tag
-                            color={getVersionStatusColor(detailData.versionStatus)}>{getVersionStatusLabel(detailData.versionStatus)}</Tag></div>
+                        <div><b>状态：</b><Tag
+                            color={getStatusColor(detailData.status)}>{getStatusLabel(detailData.status)}</Tag></div>
                         <div><b>创建原因：</b>{getCreateReasonLabel(detailData.createReason)}</div>
-                        {detailData.parentMemoryName && <div><b>父版本：</b>{detailData.parentMemoryName}</div>}
                         <div><b>摘要：</b>{detailData.summary || "-"}</div>
                         <div><b>步骤数：</b>{detailData.steps?.length || 0}</div>
                         <div><b>备注：</b>{detailData.remark || "-"}</div>

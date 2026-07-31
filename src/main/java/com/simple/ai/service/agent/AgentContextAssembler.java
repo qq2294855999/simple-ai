@@ -19,7 +19,6 @@ import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.protocol.Protocol;
 import com.simple.ai.common.entity.subAgentRelation.SubAgentRelation;
-import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.ai.common.view.agentClient.AgentClientView;
 import com.simple.ai.common.view.agentDefinition.AgentDefinitionView;
 import com.simple.ai.common.view.agentExecutor.AgentExecutorView;
@@ -179,7 +178,7 @@ public class AgentContextAssembler {
         publishProgressSafe("正在加载子智能体");
         List<SubAgentRelation> subAgentRelations = loadSubAgentRelations(agentId);
 
-        // 查询智能体启用候选记忆（仅已发布版本）
+        // 查询智能体启用候选记忆
         publishProgressSafe("正在加载记忆");
         List<AgentMemory> memories = loadMemories(agentId);
 
@@ -248,7 +247,7 @@ public class AgentContextAssembler {
     }
 
     /**
-     * 查询智能体候选记忆（仅已发布版本）。
+     * 查询智能体候选记忆（仅启用状态）。
      *
      * @param agentId 智能体ID
      * @return 智能体记忆列表
@@ -257,9 +256,6 @@ public class AgentContextAssembler {
         FindAllAgentMemoryRequest request = new FindAllAgentMemoryRequest();
         request.setAgentId(agentId);
         request.setStatus(Status.ON);
-
-        // 仅加载已发布版本的记忆供AI意图识别匹配
-        request.setVersionStatus(AgentMemoryVersionStatusProcess.PUBLISHED);
         return agentMemoryView.findAll(request);
     }
 
@@ -584,7 +580,7 @@ public class AgentContextAssembler {
         }
         builder.append("<memories>\n");
 
-        // 遍历已发布记忆，将记忆名称、摘要和参数定义写入提示词供 AI 意图识别
+        // 遍历启用记忆，将记忆名称、摘要和参数定义写入提示词供 AI 意图识别
         // 用户输入的业务文本可能含特殊字符，用 CDATA 包裹保护
         for (AgentMemory memory : memories) {
             builder.append("  <memory>\n");
@@ -599,6 +595,15 @@ public class AgentContextAssembler {
             builder.append("  </memory>\n");
         }
         builder.append("</memories>\n\n");
+
+        // 记忆能力工具使用说明，告知 AI 如何查询、获取步骤、蒸馏和修订记忆
+        builder.append("<memory_tools_guide>\n");
+        builder.append("  你可以通过以下工具操作记忆：\n");
+        builder.append("  - queryMemory 工具：查询匹配的记忆，参数 keyword（搜索关键词）\n");
+        builder.append("  - getMemorySteps 工具：获取某记忆的完整步骤序列，参数 memoryId（由 queryMemory 返回）\n");
+        builder.append("  - createMemory 工具：探索成功后蒸馏记忆，参数 taskId（来源任务ID）\n");
+        builder.append("  - reviseMemory 工具：覆盖修订已有记忆，参数 memoryId + steps + paramsDefinition\n");
+        builder.append("</memory_tools_guide>\n\n");
     }
 
     /**

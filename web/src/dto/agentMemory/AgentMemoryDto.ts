@@ -14,8 +14,6 @@ export interface AgentMemoryPageRequestDto {
     agentId?: string;
     /** 记忆名称模糊搜索 */
     memoryName?: string;
-    /** 版本状态筛选：1=DRAFT, 2=PUBLISHED, 3=RETIRED */
-    versionStatus?: number;
     /** 状态筛选 */
     status?: string;
 }
@@ -32,14 +30,8 @@ export interface AgentMemoryPageResponseDto {
     agentId: string;
     /** 智能体名称 */
     agentName: string;
-    /** 父记忆ID */
-    parentMemoryId: string;
     /** 记忆名称模板 */
     memoryName: string;
-    /** 版本号 */
-    versionNo: number;
-    /** 版本状态：1=DRAFT, 2=PUBLISHED, 3=RETIRED */
-    versionStatus: number;
     /** 记忆摘要 */
     summary: string;
     /** 创建原因 */
@@ -66,18 +58,10 @@ export interface AgentMemoryInfoResponseDto {
     id: string;
     /** 智能体ID */
     agentId: string;
-    /** 父记忆ID */
-    parentMemoryId: string;
-    /** 父记忆名称 */
-    parentMemoryName: string;
     /** 记忆名称模板 */
     memoryName: string;
     /** 参数定义JSON */
     paramsDefinition: string;
-    /** 版本号 */
-    versionNo: number;
-    /** 版本状态 */
-    versionStatus: number;
     /** 来源任务ID */
     sourceTaskId: string;
     /** 记忆摘要 */
@@ -182,8 +166,6 @@ export interface ExecuteMemoryResponseDto {
     execStatus: string;
     /** 记忆ID */
     memoryId: string;
-    /** 记忆版本号快照 */
-    memoryVersionNo: number;
 }
 
 /**
@@ -200,26 +182,4 @@ export interface ParamsDefinitionResponseDto {
     paramsDefinition: string;
     /** 步骤列表 */
     steps: AgentMemoryStepDto[];
-}
-
-/**
- * 记忆版本历史响应。
- *
- * @author qty
- */
-export interface MemoryVersionHistoryResponseDto {
-    /** 记忆ID */
-    id: string;
-    /** 版本号 */
-    versionNo: number;
-    /** 版本状态 */
-    versionStatus: number;
-    /** 父记忆ID */
-    parentMemoryId: string;
-    /** 创建原因 */
-    createReason: string;
-    /** 记忆摘要 */
-    summary: string;
-    /** 创建时间 */
-    createTime: string;
 }

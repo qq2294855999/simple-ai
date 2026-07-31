@@ -10,6 +10,7 @@ import com.simple.ai.common.service.memory.MemoryMatcher;
 import com.simple.common.core.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -19,7 +20,7 @@ import java.util.Map;
 /**
  * 记忆匹配器默认实现。
  *
- * <p>通过 AI 意图识别将用户输入与已发布记忆进行匹配，
+ * <p>通过 AI 意图识别将用户输入与启用记忆进行匹配，
  * 同时从用户输入中提取 params_definition 定义的参数值。
  * AI 在同一次调用中完成意图识别和参数提取，
  * 避免多次 AI 调用带来的延迟和成本。</p>
@@ -31,8 +32,10 @@ import java.util.Map;
 class DefaultMemoryMatcher implements MemoryMatcher {
 
     /**
-     * AI 调用客户端
+     * AI 调用客户端。
+     * 延迟注入打破 SpringAiAgentAiClient→AgentToolRegistry→MemoryToolCallback→DefaultMemoryDistiller 的循环依赖。
      */
+    @Lazy
     @Autowired
     private AgentAiClient agentAiClient;
 
@@ -66,8 +69,8 @@ class DefaultMemoryMatcher implements MemoryMatcher {
      * 构造意图识别+参数提取提示词。
      *
      * <p>AI 需要同时完成两件事：
-     * 1. 判断用户输入最匹配哪个记忆
-     * 2. 从用户输入中提取该记忆 params_definition 定义的参数值</p>
+     * 判断用户输入最匹配哪个记忆；
+     * 从用户输入中提取该记忆 params_definition 定义的参数值。</p>
      *
      * @param userInput 用户输入
      * @param memories  候选记忆列表
@@ -76,8 +79,8 @@ class DefaultMemoryMatcher implements MemoryMatcher {
     private String buildIntentAndExtractionPrompt(String userInput, List<AgentMemory> memories) {
         StringBuilder builder = new StringBuilder();
         builder.append("你是一个意图识别和参数提取助手。请完成以下两个任务：\n");
-        builder.append("1. 判断用户输入最匹配以下哪个记忆\n");
-        builder.append("2. 从用户输入中提取该记忆参数定义中声明的参数值\n\n");
+        builder.append("第一，判断用户输入最匹配以下哪个记忆\n");
+        builder.append("第二，从用户输入中提取该记忆参数定义中声明的参数值\n\n");
         builder.append("用户输入：").append(userInput).append("\n\n");
         builder.append("候选记忆列表：\n");
 

@@ -11,7 +11,6 @@ import com.simple.ai.common.dto.command.CommandDispatchRequest;
 import com.simple.ai.common.dto.command.CommandDispatchResponse;
 import com.simple.ai.common.dto.taskDetail.FindAllTaskDetailRequest;
 import com.simple.ai.common.entity.agentDefinition.AgentDefinition;
-import com.simple.ai.common.entity.agentMemory.AgentMemory;
 import com.simple.ai.common.entity.agentSkill.AgentSkill;
 import com.simple.ai.common.entity.atomicCommand.AtomicCommand;
 import com.simple.ai.common.entity.task.Task;
@@ -23,11 +22,9 @@ import com.simple.ai.common.exception.ClientDisconnectedException;
 import com.simple.ai.common.service.agent.AgentAiClient;
 import com.simple.ai.common.service.command.CommandDispatchService;
 import com.simple.ai.common.service.command.SubAgentDispatchService;
-import com.simple.ai.common.service.memory.MemoryDistiller;
 import com.simple.ai.common.service.memory.MemoryExecutor;
 import com.simple.ai.common.service.memory.MemoryMatchResult;
 import com.simple.ai.common.service.memory.MemoryMatcher;
-import com.simple.ai.common.view.agentMemory.AgentMemoryView;
 import com.simple.ai.common.view.atomicCommand.AtomicCommandView;
 import com.simple.ai.common.view.task.TaskView;
 import com.simple.ai.common.view.taskDetail.TaskDetailView;
@@ -38,7 +35,6 @@ import com.simple.common.core.utils.JsonUtils;
 import com.simple.common.mp.common.enums.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,12 +85,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private MemoryExecutor memoryExecutor;
 
     /**
-     * 记忆蒸馏器（AI探索成功后提炼记忆）
-     */
-    @Autowired
-    private MemoryDistiller memoryDistiller;
-
-    /**
      * 智能体 AI 调用客户端
      */
     @Autowired
@@ -130,19 +120,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     @Autowired
     private TaskDetailView taskDetailView;
 
-    /**
-     * 记忆视图，用于兜底查询记忆版本号
-     */
-    @Autowired
-    private AgentMemoryView agentMemoryView;
-
-    /**
-     * 自注入代理，确保 @Transactional(propagation = REQUIRES_NEW) 注解通过 Spring AOP 代理生效
-     */
-    @Lazy
-    @Autowired
-    private DefaultCommandDispatchService self;
-
     @Override
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CommandDispatchResponse dispatch(CommandDispatchRequest request) {
@@ -174,6 +151,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     /**
      * 执行智能体命令内部调度（显式传递运行时上下文）。
      *
+     * <p>命中记忆时创建 Task + TaskDetail 按记忆步骤直接执行；
+     * 未命中记忆时不创建 Task，仅执行 AI 探索生成响应并通过 execution_event 落库。</p>
+     *
      * @param request          命令调度请求
      * @param runtimeContext   聊天运行时上下文
      * @param progressConsumer 进度事件消费者
@@ -196,52 +176,74 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         // 校验子智能体递归深度，防止配置环路导致无限调度
         AssertUtils.isTrue(recursionDepth <= MAX_SUB_AGENT_DEPTH, "子智能体递归调度超过安全深度");
 
-        // 创建任务主记录并标记执行中
-        Task task = createRunningTask(request, parentTaskId);
-        publishProgress(progressConsumer, request, task, "TASK_CREATED", "任务已创建", "", Boolean.FALSE, "");
-
         try {
             // 使用运行时上下文中的 AgentContext，避免重复查询数据库
-            publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
             AgentContext context = runtimeContext.getAgentContext();
-            publishContextTraceProgress(progressConsumer, request, task, context);
 
-            // AI意图识别匹配已发布记忆，同时提取参数值
-            publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
+            // AI意图识别匹配启用记忆，同时提取参数值
             MemoryMatchResult matchResult = memoryMatcher.match(request.getCommandContent(), context);
-            publishMemoryMatchProgress(progressConsumer, request, task, matchResult.isMatched() ? matchResult.getMemoryId() : null);
 
-            // 命中记忆时将AI提取的参数合并到请求中，供MemoryExecutor替换占位符
-            if (matchResult.isMatched() && matchResult.getExtractedParams() != null && !matchResult.getExtractedParams().isEmpty()) {
-                mergeExtractedParams(request, matchResult.getExtractedParams());
+            if (matchResult.isMatched()) {
+                // === 记忆命中路径：创建 Task + TaskDetail，按记忆步骤直接执行 ===
+                Task task = createRunningTask(request, parentTaskId);
+                try {
+                    // 发布创建成功和装配进度
+                    publishProgress(progressConsumer, request, task, "TASK_CREATED", "任务已创建", "", Boolean.FALSE, "");
+                    publishProgress(progressConsumer, request, task, "CONTEXT_ASSEMBLING", "正在装配智能体上下文", "", Boolean.FALSE, "");
+                    publishContextTraceProgress(progressConsumer, request, task, context);
+
+                    // 发布记忆匹配结果
+                    publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
+                    publishMemoryMatchProgress(progressConsumer, request, task, matchResult.getMemoryId());
+
+                    // 命中记忆时将AI提取的参数合并到请求中，供MemoryExecutor替换占位符
+                    if (matchResult.getExtractedParams() != null && !matchResult.getExtractedParams().isEmpty()) {
+                        mergeExtractedParams(request, matchResult.getExtractedParams());
+                    }
+
+                    // 按记忆步骤直接执行（内部自行管理任务成功/失败标记）
+                    String responseContent = executeMemoryDirectly(task, request, context, matchResult.getMemoryId(), progressConsumer);
+
+                    publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
+                    return buildSuccessResponse(task, responseContent);
+                } catch (ClientDisconnectedException e) {
+
+                    // 客户端断开属于正常行为，不标记任务失败，直接向上传播中断执行
+                    throw e;
+                } catch (Exception e) {
+                    String failureReason = resolveFailureReason(e);
+
+                    // 保存失败任务详情，确保失败链路可追踪且不重复落库
+                    saveFailedTaskDetailIfAbsent(task, request, failureReason);
+
+                    // 标记任务执行失败（executeMemoryDirectly 已在内层标记过，此处为幂等操作）
+                    if (!AgentExecutionStatusProcess.FAILED.equals(task.getExecStatus())) {
+                        markTaskFailed(task, failureReason);
+                    }
+                    publishProgress(progressConsumer, request, task, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, failureReason);
+                    return buildFailedResponse(task, failureReason);
+                }
+            } else {
+                // === AI 探索路径：不创建 Task/TaskDetail，仅 execution_event 落库（taskId 填 ""） ===
+                try {
+                    publishAiProgress(progressConsumer, request, "MEMORY_MISSED", "未命中候选记忆，转入 AI 探索", "", Boolean.FALSE, "");
+
+                    AgentAiResponse aiResponse = executeAiExplorationWithoutTask(request, context, progressConsumer, runtimeContext);
+                    return buildAiExplorationResponse(aiResponse);
+                } catch (ClientDisconnectedException e) {
+
+                    // 客户端断开属于正常行为，直接向上传播中断执行
+                    throw e;
+                } catch (Exception e) {
+                    String failureReason = resolveFailureReason(e);
+                    publishAiProgress(progressConsumer, request, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, failureReason);
+                    return buildFailedResponseWithoutTask(failureReason);
+                }
             }
-
-            // 执行智能体命令流程
-            String responseContent = executeCommand(task, request, context, matchResult, progressConsumer, recursionDepth, runtimeContext);
-
-            // 记忆直执行路径已自行管理任务状态，仅AI探索路径需要外层标记
-            if (!matchResult.isMatched()) {
-                markTaskSuccess(task, responseContent);
-            }
-
-            publishProgress(progressConsumer, request, task, "TASK_COMPLETED", "任务执行成功", responseContent, Boolean.TRUE, "");
-            return buildSuccessResponse(task, responseContent);
         } catch (ClientDisconnectedException e) {
 
-            // 客户端断开属于正常行为，不标记任务失败，直接向上传播中断执行
+            // 客户端断开直接向上传播
             throw e;
-        } catch (Exception e) {
-            String failureReason = resolveFailureReason(e);
-
-            // 保存失败任务详情，确保失败链路可追踪且不重复落库
-            saveFailedTaskDetailIfAbsent(task, request, failureReason);
-
-            // 标记任务执行失败（记忆直执行路径已在内层标记过，此处为幂等操作）
-            if (!AgentExecutionStatusProcess.FAILED.equals(task.getExecStatus())) {
-                markTaskFailed(task, failureReason);
-            }
-            publishProgress(progressConsumer, request, task, "TASK_FAILED", "任务执行失败", "", Boolean.TRUE, failureReason);
-            return buildFailedResponse(task, failureReason);
         }
     }
 
@@ -279,7 +281,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
             AgentContext context = agentContextAssembler.assemble(request);
             publishContextTraceProgress(progressConsumer, request, task, context);
 
-            // AI意图识别匹配已发布记忆，同时提取参数值
+            // AI意图识别匹配启用记忆，同时提取参数值
             publishProgress(progressConsumer, request, task, "MEMORY_MATCHING", "正在匹配候选记忆", "", Boolean.FALSE, "");
             MemoryMatchResult matchResult = memoryMatcher.match(request.getCommandContent(), context);
             publishMemoryMatchProgress(progressConsumer, request, task, matchResult.isMatched() ? matchResult.getMemoryId() : null);
@@ -328,7 +330,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     private Task createRunningTask(CommandDispatchRequest request, String parentTaskId) {
         Task task = new Task();
         task.setMemoryId("");
-        task.setMemoryVersionNo(null);
         task.setAgentId(request.getAgentId());
         task.setTaskName(request.getCommandName());
         task.setParentTaskId(parentTaskId == null ? "" : parentTaskId);
@@ -366,18 +367,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         if (matchResult.isMatched()) {
             String matchedMemoryId = matchResult.getMemoryId();
             task.setMemoryId(matchedMemoryId);
-
-            // 从上下文候选记忆中查找版本号快照，确保任务记录可追溯执行时的记忆版本
-            context.getMemories().stream().filter(m -> matchedMemoryId.equals(m.getId())).findFirst().ifPresent(m -> task.setMemoryVersionNo(m.getVersionNo()));
-
-            // 兜底：若候选记忆列表中未找到匹配项（数据不一致场景），从数据库重新查询
-            if (task.getMemoryVersionNo() == null) {
-                AgentMemory memory = agentMemoryView.findById(matchedMemoryId);
-                if (memory != null) {
-                    task.setMemoryVersionNo(memory.getVersionNo());
-                }
-            }
-
             taskView.updateById(task);
             publishProgress(progressConsumer, request, task, "MEMORY_EXECUTING", "按记忆直接执行", matchedMemoryId, Boolean.FALSE, "");
             return executeMemoryDirectly(task, request, context, matchedMemoryId, progressConsumer);
@@ -408,13 +397,9 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         if (execResult.isSuccess()) {
             markTaskSuccess(task, execResult.getDetail());
         } else {
-            // 先标记任务失败再触发修订，确保蒸馏器读取到 FAILED 状态的任务
+            // 标记任务失败，保留作执行历史，修订改由 Web 重新探索入口触发
             String failureDetail = execResult.getDetail() != null ? execResult.getDetail() : "记忆执行失败";
             markTaskFailed(task, failureDetail);
-
-            // 记忆执行失败时触发AI重新介入，修订记忆版本
-            // 通过代理调用确保 @Transactional(propagation = REQUIRES_NEW) 生效
-            self.triggerMemoryRevision(task, memoryId);
 
             // 抛出异常，让外层统一走失败路径（保存失败详情、发布失败进度）
             throw new RuntimeException(failureDetail);
@@ -426,7 +411,7 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
      * 执行 AI 探索流程。
      *
      * <p>AI 输出结构化 AgentExecutionPlan JSON，包含命令列表和校验规则。
-     * 探索成功后触发记忆沉淀判定，按规则生成 DRAFT 版本记忆。</p>
+     * 探索成功后由 AI 通过 createMemory 工具触发记忆蒸馏，沉淀为可复用记忆。</p>
      *
      * @param task 任务主记录
      * @param request 命令调度请求
@@ -1032,52 +1017,6 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
     }
 
     /**
-     * 触发记忆沉淀。
-     *
-     * <p>AI 探索成功后，由 MemoryDistiller 从 task + task_details 提炼记忆。
-     * 复用当前会话的 AI 模型识别参数占位符，创建 agent_memory (DRAFT) + agent_memory_step × N。</p>
-     *
-     * @param task       任务主记录
-     * @param request    命令调度请求
-     * @param aiResponse AI 响应
-     */
-    private void triggerMemoryPrecipitation(Task task, CommandDispatchRequest request, AgentAiResponse aiResponse) {
-
-        // AI 探索成功后，由 MemoryDistiller 从 task + task_details 提炼记忆
-        try {
-            memoryDistiller.distill(task.getId());
-        } catch (RuntimeException e) {
-
-            // 沉淀失败不影响主流程
-            log.warn("记忆沉淀失败，taskId={}", task.getId(), e);
-        }
-    }
-
-    /**
-     * 触发记忆修订。
-     * <p>记忆执行失败时，由 MemoryDistiller 重新蒸馏任务执行轨迹，
-     * 生成新版本记忆（createReason=MEMORY_REVISE，versionNo递增）。</p>
-     * <p>使用 REQUIRES_NEW 传播级别在独立事务中执行蒸馏，
-     * 避免内层事务标记 rollback-only 后导致外层事务提交时抛出 UnexpectedRollbackException。</p>
-     *
-     * @param task     失败的任务
-     * @param memoryId 失败的记忆ID
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public void triggerMemoryRevision(Task task, String memoryId) {
-
-        // 记忆执行失败后触发AI重新介入，蒸馏新版本记忆
-        try {
-            log.info("触发记忆修订：taskId={}, memoryId={}", task.getId(), memoryId);
-            memoryDistiller.distill(task.getId());
-        } catch (RuntimeException e) {
-
-            // 修订失败不影响主流程
-            log.warn("记忆修订失败，taskId={}, memoryId={}", task.getId(), memoryId, e);
-        }
-    }
-
-    /**
      * 解析完整失败原因。
      *
      * @param exception 异常对象
@@ -1169,5 +1108,142 @@ class DefaultCommandDispatchService implements CommandDispatchService, InternalC
         response.setProviderName(task.getProviderName());
         response.setModelId(task.getModelId());
         response.setModelCode(task.getModelCode());
+    }
+
+    // ==================== AI 探索路径（无 Task）====================
+
+    /**
+     * 执行 AI 探索流程（无 Task/TaskDetail）。
+     * <p>不创建 Task/TaskDetail，仅调用 AI 生成响应内容。
+     * execution_event 由外层 chatStream 的 EventSender / ExecutionEventBus 落库（taskId 填 ""）。</p>
+     *
+     * @param request          命令调度请求
+     * @param context          智能体上下文
+     * @param progressConsumer 进度事件消费者
+     * @param runtimeContext   聊天运行时上下文
+     * @return AI 调用响应
+     */
+    private AgentAiResponse executeAiExplorationWithoutTask(CommandDispatchRequest request, AgentContext context, Consumer<CommandDispatchProgressEvent> progressConsumer,
+                                                            AgentChatRuntimeContext runtimeContext) {
+        publishAiProgress(progressConsumer, request, "AI_STARTED", "AI 开始生成探索方案", request.getCommandContent(), Boolean.FALSE, "");
+
+        AgentAiRequest aiRequest = buildAiRequest(request, context);
+        AgentAiResponse aiResponse = agentAiClient.chatStream(aiRequest, runtimeContext, token -> publishAiTokenContentProgress(progressConsumer, request, token),
+                                                              thinkingChunk -> publishAiThinkingChunkProgress(progressConsumer, request, thinkingChunk));
+
+        AssertUtils.isTrue(Boolean.TRUE.equals(aiResponse.getSuccess()), "AI探索执行失败");
+        publishAiProgress(progressConsumer, request, "AI_COMPLETED", "AI 探索方案生成完成", aiResponse.getResponseContent(), Boolean.FALSE, "");
+
+        return aiResponse;
+    }
+
+    /**
+     * 构建 AI 探索成功响应。
+     * <p>AI 探索路径不创建 Task，taskId 为空。
+     * thinkingContent 取自 AI 响应，由 DefaultAgentChatService 落库到 agent_chat_message。</p>
+     *
+     * @param aiResponse AI 调用响应
+     * @return 命令调度响应
+     */
+    private CommandDispatchResponse buildAiExplorationResponse(AgentAiResponse aiResponse) {
+        CommandDispatchResponse response = new CommandDispatchResponse();
+        response.setTaskId("");
+        response.setExecStatus(AgentExecutionStatusProcess.SUCCESS);
+        response.setResponseContent(aiResponse.getResponseContent());
+        response.setFailureReason("");
+        response.setThinkingContent(aiResponse.getThinkingContent() != null ? aiResponse.getThinkingContent() : "");
+        response.setThinkingContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT);
+        response.setProviderId(aiResponse.getProviderId());
+        response.setProviderName(aiResponse.getProviderName());
+        response.setModelId(aiResponse.getModelId());
+        response.setModelCode(aiResponse.getModelCode());
+        return response;
+    }
+
+    /**
+     * 构建 AI 探索失败响应（无 Task）。
+     *
+     * @param failureReason 失败原因
+     * @return 命令调度响应
+     */
+    private CommandDispatchResponse buildFailedResponseWithoutTask(String failureReason) {
+        CommandDispatchResponse response = new CommandDispatchResponse();
+        response.setTaskId("");
+        response.setExecStatus(AgentExecutionStatusProcess.FAILED);
+        response.setResponseContent("");
+        response.setFailureReason(failureReason);
+        response.setThinkingContent("");
+        response.setThinkingContentFormat(AgentChatMessageFormatProcess.PLAIN_TEXT);
+        return response;
+    }
+
+    /**
+     * 发布 AI 探索路径进度事件（无 Task 对象）。
+     * <p>taskId 和 sessionId 从 request 取用，其他设置空值。
+     * 事件由 DefaultAgentChatService 的 buildCompositeConsumer 接收后通过 ExecutionEventBus.recordEvent(turnId, "", event) 落库。</p>
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request          命令调度请求
+     * @param eventType        事件类型
+     * @param message          事件消息
+     * @param payload          事件数据
+     * @param completed        是否完成
+     * @param failureReason    失败原因
+     */
+    private void publishAiProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request, String eventType, String message, String payload,
+                                   Boolean completed, String failureReason) {
+
+        // 未传入进度消费者时跳过事件发布
+        if (progressConsumer == null) {
+            return;
+        }
+        CommandDispatchProgressEvent event = new CommandDispatchProgressEvent();
+        event.setTaskId("");
+        event.setSessionId(request.getSessionId());
+        event.setEventType(eventType);
+        event.setStepId("");
+        event.setStepName(message);
+        event.setExecStatus(null);
+        event.setMessage(message);
+        event.setPayload(resolveSafeProgressPayload(eventType, payload));
+        event.setCompleted(completed);
+        event.setFailureReason(failureReason);
+        event.setProviderName("");
+        event.setModelCode("");
+
+        // 必须重新抛出异常，让调用方感知客户端断开并中断后台任务
+        progressConsumer.accept(event);
+    }
+
+    /**
+     * 发布 AI 流式 token 进度事件（无 Task）。
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request          命令调度请求
+     * @param token            token 内容
+     */
+    private void publishAiTokenContentProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request, String token) {
+
+        // token 为空时不发布流式事件
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        publishAiProgress(progressConsumer, request, "AI_TOKEN", "AI 生成内容片段", token, Boolean.FALSE, "");
+    }
+
+    /**
+     * 发布 AI 推理思考过程 token 进度事件（无 Task）。
+     *
+     * @param progressConsumer 进度事件消费者
+     * @param request          命令调度请求
+     * @param thinkingChunk    思考内容片段
+     */
+    private void publishAiThinkingChunkProgress(Consumer<CommandDispatchProgressEvent> progressConsumer, CommandDispatchRequest request, String thinkingChunk) {
+
+        // 思考内容为空时不发布流式事件
+        if (thinkingChunk == null || thinkingChunk.isBlank()) {
+            return;
+        }
+        publishAiProgress(progressConsumer, request, "AI_THINKING_TOKEN", "AI 推理思考片段", thinkingChunk, Boolean.FALSE, "");
     }
 }

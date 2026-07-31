@@ -2,7 +2,6 @@ package com.simple.ai.common.entity.agentMemory;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.common.mp.common.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -48,24 +47,6 @@ public class AgentMemory {
      */
     @TableField(value = "params_definition")
     private String paramsDefinition;
-
-    /**
-     * 当前版本号
-     */
-    @TableField(value = "version_no")
-    private Integer versionNo;
-
-    /**
-     * 版本状态
-     */
-    @TableField(value = "version_status")
-    private AgentMemoryVersionStatusProcess versionStatus;
-
-    /**
-     * 父记忆ID，修订场景下指向被修订的旧版本记忆，首次探索沉淀时为空
-     */
-    @TableField(value = "parent_memory_id")
-    private String parentMemoryId;
 
     /**
      * 来源任务ID（首次沉淀时的任务）

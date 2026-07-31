@@ -22,7 +22,4 @@ public class ExecuteMemoryResponse {
 
     @Schema(description = "记忆ID")
     private String memoryId;
-
-    @Schema(description = "记忆版本号快照")
-    private Integer memoryVersionNo;
 }

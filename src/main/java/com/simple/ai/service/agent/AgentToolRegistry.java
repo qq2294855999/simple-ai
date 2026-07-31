@@ -11,6 +11,7 @@ import com.simple.ai.common.service.agentDefinition.AgentDefinitionService;
 import com.simple.ai.common.service.agentExecutor.AgentExecutorService;
 import com.simple.ai.common.service.agentRule.AgentRuleService;
 import com.simple.ai.common.service.agentSkill.AgentSkillService;
+import com.simple.ai.service.agent.tool.MemoryToolCallback;
 import com.simple.ai.service.agentChat.ChatEventSender;
 import com.simple.ai.service.command.DefaultAtomicCommandExecutor;
 import com.simple.common.core.utils.AssertUtils;
@@ -39,6 +40,12 @@ public class AgentToolRegistry {
      */
     @Autowired
     private DefaultAtomicCommandExecutor defaultAtomicCommandExecutor;
+
+    /**
+     * 记忆能力 AI 工具回调组件
+     */
+    @Autowired
+    private MemoryToolCallback memoryToolCallback;
 
     // ──────────────────────────── CREATE 工具（8个）────────────────────────────
 
@@ -361,5 +368,47 @@ public class AgentToolRegistry {
                                                 + "命令内容应匹配已注册的原子命令名称或命令正文（如 system.capability、执行脚本内容等）。" + "返回执行结果包含 success 标志、结果数据或失败原因。")
                                    .inputType(AtomicCommandInvokeRequest.class)
                                    .build();
+    }
+
+    // ──────────────────────────── Memory 工具（4个）────────────────────────────
+
+    /**
+     * 查询匹配的记忆工具（委托 MemoryToolCallback）。
+     *
+     * @return 工具回调
+     */
+    @Bean
+    public ToolCallback queryMemory() {
+        return memoryToolCallback.queryMemory();
+    }
+
+    /**
+     * 获取记忆步骤工具（委托 MemoryToolCallback）。
+     *
+     * @return 工具回调
+     */
+    @Bean
+    public ToolCallback getMemorySteps() {
+        return memoryToolCallback.getMemorySteps();
+    }
+
+    /**
+     * 蒸馏创建记忆工具（委托 MemoryToolCallback）。
+     *
+     * @return 工具回调
+     */
+    @Bean
+    public ToolCallback createMemory() {
+        return memoryToolCallback.createMemory();
+    }
+
+    /**
+     * 覆盖修订记忆工具（委托 MemoryToolCallback）。
+     *
+     * @return 工具回调
+     */
+    @Bean
+    public ToolCallback reviseMemory() {
+        return memoryToolCallback.reviseMemory();
     }
 }

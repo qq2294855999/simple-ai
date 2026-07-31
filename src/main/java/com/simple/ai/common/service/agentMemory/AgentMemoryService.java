@@ -52,22 +52,6 @@ public interface AgentMemoryService {
     void deleteByIds(List<String> ids);
 
     /**
-     * 发布记忆版本。
-     * <p>将 DRAFT 状态的记忆发布为 PUBLISHED，使其可被记忆匹配器使用。</p>
-     *
-     * @param id 记忆ID
-     */
-    void publish(String id);
-
-    /**
-     * 退役记忆版本。
-     * <p>将 PUBLISHED 状态的记忆退役为 RETIRED，使其不再被记忆匹配器命中。</p>
-     *
-     * @param id 记忆ID
-     */
-    void retire(String id);
-
-    /**
      * 获取记忆的参数定义。
      * <p>返回参数定义JSON和步骤列表，用于前端动态生成执行表单。</p>
      *
@@ -85,13 +69,4 @@ public interface AgentMemoryService {
      * @return 执行响应（含任务ID和执行状态）
      */
     ExecuteMemoryResponse execute(String id, ExecuteMemoryRequest request);
-
-    /**
-     * 查询记忆版本历史。
-     * <p>沿 parentMemoryId 链路向上追溯，返回该记忆的完整版本演进链。</p>
-     *
-     * @param id 记忆ID
-     * @return 版本历史列表（按版本号降序）
-     */
-    java.util.List<MemoryVersionHistoryResponse> findVersionHistory(String id);
 }

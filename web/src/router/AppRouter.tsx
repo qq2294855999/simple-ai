@@ -14,7 +14,6 @@ import {ProtocolCreatePage} from "../pages/ProtocolCreatePage";
 import {ProtocolEditPage} from "../pages/ProtocolEditPage";
 import {ProtocolDetailPage} from "../pages/ProtocolDetailPage";
 import {AgentClientManagementPage} from "../pages/AgentClientManagementPage";
-import {AgentMemoryVersionPage} from "../pages/AgentMemoryVersionPage";
 import {AtomicCommandManagementPage} from "../pages/AtomicCommandManagementPage";
 import {TaskManagementPage} from "../pages/TaskManagementPage";
 import {AiModelProviderManagementPage} from "../pages/AiModelProviderManagementPage";
@@ -58,7 +57,6 @@ export const AppRouter = createBrowserRouter([
         {path: "agent-protocol/:id/edit", element: <ProtocolEditPage/>},
         {path: "agent-protocol/:id", element: <ProtocolDetailPage/>},
         {path: "agent-client", element: <AgentClientManagementPage/>},
-        {path: "agent-memory-version", element: <AgentMemoryVersionPage/>},
       { path: "atomic-command", element: <AtomicCommandManagementPage /> },
       { path: "task", element: <TaskManagementPage /> },
       { path: "ai-model-provider", element: <AiModelProviderManagementPage /> },

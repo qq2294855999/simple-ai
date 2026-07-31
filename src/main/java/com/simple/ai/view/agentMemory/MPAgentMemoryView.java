@@ -35,7 +35,6 @@ class MPAgentMemoryView implements AgentMemoryView {
         LambdaQueryWrapper<AgentMemory> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ObjUtil.isNotEmpty(pageRequest.getAgentId()), AgentMemory::getAgentId, pageRequest.getAgentId())
                .like(ObjUtil.isNotEmpty(pageRequest.getMemoryName()), AgentMemory::getMemoryName, pageRequest.getMemoryName())
-               .eq(ObjUtil.isNotEmpty(pageRequest.getVersionStatus()), AgentMemory::getVersionStatus, pageRequest.getVersionStatus())
                .eq(ObjUtil.isNotEmpty(pageRequest.getStatus()), AgentMemory::getStatus, pageRequest.getStatus())
                .orderByDesc(AgentMemory::getCreateTime);
         return repository.selectPage(page, wrapper);
@@ -109,9 +108,7 @@ class MPAgentMemoryView implements AgentMemoryView {
         LambdaQueryWrapper<AgentMemory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ObjUtil.isNotEmpty(findAllRequest.getId()), AgentMemory::getId, findAllRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getAgentId()), AgentMemory::getAgentId, findAllRequest.getAgentId())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getParentMemoryId()), AgentMemory::getParentMemoryId, findAllRequest.getParentMemoryId())
                     .like(ObjUtil.isNotEmpty(findAllRequest.getMemoryName()), AgentMemory::getMemoryName, findAllRequest.getMemoryName())
-                    .eq(ObjUtil.isNotEmpty(findAllRequest.getVersionStatus()), AgentMemory::getVersionStatus, findAllRequest.getVersionStatus())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getUserId()), AgentMemory::getUserId, findAllRequest.getUserId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getSourceTaskId()), AgentMemory::getSourceTaskId, findAllRequest.getSourceTaskId())
                     .eq(ObjUtil.isNotEmpty(findAllRequest.getStatus()), AgentMemory::getStatus, findAllRequest.getStatus())
@@ -132,7 +129,6 @@ class MPAgentMemoryView implements AgentMemoryView {
         queryWrapper.eq(ObjUtil.isNotEmpty(findOneRequest.getId()), AgentMemory::getId, findOneRequest.getId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getAgentId()), AgentMemory::getAgentId, findOneRequest.getAgentId())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getMemoryName()), AgentMemory::getMemoryName, findOneRequest.getMemoryName())
-                    .eq(ObjUtil.isNotEmpty(findOneRequest.getVersionStatus()), AgentMemory::getVersionStatus, findOneRequest.getVersionStatus())
                     .eq(ObjUtil.isNotEmpty(findOneRequest.getStatus()), AgentMemory::getStatus, findOneRequest.getStatus())
                     .ne(ObjUtil.isNotEmpty(neRequest.getId()), AgentMemory::getId, neRequest.getId())
                     .ne(ObjUtil.isNotEmpty(neRequest.getAgentId()), AgentMemory::getAgentId, neRequest.getAgentId());

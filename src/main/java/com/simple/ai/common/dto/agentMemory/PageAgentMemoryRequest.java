@@ -1,6 +1,5 @@
 package com.simple.ai.common.dto.agentMemory;
 
-import com.simple.ai.common.enums.AgentMemoryVersionStatusProcess;
 import com.simple.common.mp.common.enums.Status;
 import com.simple.common.mp.page.PageBase;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,9 +21,6 @@ public class PageAgentMemoryRequest extends PageBase {
 
     @Schema(description = "记忆名称模板")
     private String memoryName;
-
-    @Schema(description = "版本状态")
-    private AgentMemoryVersionStatusProcess versionStatus;
 
     @Schema(description = "状态")
     private Status status;

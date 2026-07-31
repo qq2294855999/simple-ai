@@ -163,8 +163,6 @@
             am.id,
             am.agent_id as agentId,
             am.memory_name as memoryName,
-            am.version_no     as versionNo,
-            am.version_status as versionStatus,
             am.summary,
             am.create_reason  as createReason,
             am.create_time as createTime,

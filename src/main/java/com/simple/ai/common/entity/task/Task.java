@@ -46,12 +46,6 @@ public class Task {
     private String memoryId;
 
     /**
-     * 执行时的记忆版本号快照
-     */
-    @TableField(value = "memory_version_no")
-    private Integer memoryVersionNo;
-
-    /**
      * 智能体主键。
      *
      * <p>由任务创建服务根据调度请求或所属记忆写入，前端不得传递。</p>
